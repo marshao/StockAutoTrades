@@ -1,6 +1,6 @@
-import autopy
+#import autopy
 import wx
-import win32gui
+#import win32gui
 
 
 
