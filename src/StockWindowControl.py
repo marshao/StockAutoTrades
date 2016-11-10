@@ -34,6 +34,7 @@ import win32gui, win32com.client, win32api, win32con
 from win32con import *
 from time import sleep
 import time
+import io
 
 
 
@@ -44,8 +45,8 @@ WM_CHAR = 0x0102
 logMesg = 'Log Start'
 
 conf = {'stockInHandFile':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
-        'outputDir':'D:\Personal\DataMining\31_Projects\01.Finance\03.StockAutoTrades\output',
-        'installDir':'D:\Personal\DataMining\31_Projects\01.Finance\03.StockAutoTrades\\',
+        'outputDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
+        'installDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
         'confFile':'conf.ini',
         'opLog':'operlog.txt',
         'trLog':'tradeLog.txt'}
@@ -278,12 +279,18 @@ def windowsInitiation():
         print attrsWindow
         
         if saveStockInfor(mainWindowHwnd) == False: 
-            logMesg = 'Sorry, system can not initialize Trading Software at ' + timeTag()
+            logMesg = '\n Sorry, system can not initialize Trading Software at ' + timeTag()
         else:
-            logMesg = 'Yes, system initialized Trading Software successfully at ' + timeTag()
+            logMesg = '\n Yes, system initialized Trading Software successfully at ' + timeTag()
+        
+        updateAsset()
+        print assetInfor
+        
+        updateQuotePrice()
+        print stockTrades
                         
     except:
-        logMesg = 'Sorry, system can not initialize Trading Software at ' + timeTag()
+        logMesg = '\n Sorry, system can not initialize Trading Software at ' + timeTag()
     
     print logMesg
     writelog(logMesg) 
@@ -296,37 +303,27 @@ def closeStockWindow():
     win32api.keybd_event(115,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
     win32api.keybd_event(VK_MENU,win32con.KEYEVENTF_KEYUP,0)
     
-
-    
-
-
 def buyPage():
-    
+    #win32gui.SetForeGroundWindow(mainWindowHwnd)
     # Active Buy Window
     win32api.keybd_event(VK_F1,0,0,0) #释放按键
     win32api.keybd_event(VK_F1,0,win32con.KEYEVENTF_KEYUP,0)
     sleep(1)   
 
 def salePage():
-    
+    #setForeGroundWindow(mainWindowHwnd)
+    #win32gui.SetForegroundWindow(mainWindowHwnd)
     # Active Buy Window
     win32api.keybd_event(VK_F2,0,0,0) #释放按键
     win32api.keybd_event(VK_F2,0,win32con.KEYEVENTF_KEYUP,0)
     sleep(1)  
     
 def stockHoldingPage():
-        
+    #win32gui.SetForeGroundWindow(mainWindowHwnd)    
     # Active Infor Window
     win32api.keybd_event(VK_F4,0,0,0) #释放按键
     win32api.keybd_event(VK_F4,0,win32con.KEYEVENTF_KEYUP,0)
     sleep(1) 
-    
-    '''
-    # Active W
-    win32api.SendMessage(attrsWindow['mainWindowHandle'], win32con.WM_KEYDOWN, ord('W'), None)
-    win32api.SendMessage(attrsWindow['mainWindowHandle'], win32con.WM_KEYUP, ord('W'), None)
-    sleep(1)  
-    '''
     
 def buyStock(stockTrades):
     
@@ -337,38 +334,41 @@ def buyStock(stockTrades):
     # Active Buy Window
     buyPage()
     
-    #Send stockCode
-    for char in stockCode:
-        win32api.SendMessage(attrsBuyWindow['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
-    print "message sent"
-
-    #Send tradeAmount
-    for char in tradeAmount:
-        win32api.SendMessage(attrsBuyWindow['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
-    print "Amount sent"
+    try:
+        #Send stockCode
+        for char in stockCode:
+            win32api.SendMessage(attrsBuyWindow['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+        print "message sent"
     
-    #Send tradePrice
-    for char in tradePrice:
-        win32api.SendMessage(attrsBuyWindow['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
-    print "Price sent"   
+        #Send tradeAmount
+        for char in tradeAmount:
+            win32api.SendMessage(attrsBuyWindow['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Amount sent"
+        
+        #Send tradePrice
+        for char in tradePrice:
+            win32api.SendMessage(attrsBuyWindow['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Price sent"   
     
-    #Send Sale Command
-    sleep(1)    
-    win32api.keybd_event(66,0,0,0)
-    win32api.keybd_event(66,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
-    
-    #Send Y to Confirm the buy
-    sleep(1)
-    win32api.keybd_event(89,0,0,0)
-    win32api.keybd_event(89,0,win32con.KEYEVENTF_KEYUP,0)
-    
-    #Send Enter to confirm any message
-    sleep(1)
-    win32api.keybd_event(VK_RETURN, 0, 0, 0)
-    win32api.keybd_event(VK_RETURN,0,win32con.KEYEVENTF_KEYUP,0)
-
+        #Send Sale Command
+        sleep(1)    
+        win32api.keybd_event(66,0,0,0)
+        win32api.keybd_event(66,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
+        
+        #Send Y to Confirm the buy
+        sleep(1)
+        win32api.keybd_event(89,0,0,0)
+        win32api.keybd_event(89,0,win32con.KEYEVENTF_KEYUP,0)
+        
+        #Send Enter to confirm any message
+        sleep(1)
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN,0,win32con.KEYEVENTF_KEYUP,0)
+        logMesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.'%(stockCode, tradePrice, tradeAmount)
+    except:
+        logMesg = '\n Sorry, system cannot issue a BUY command of stock code %s, buy price %s, buy amount %s'%(stockCode, tradePrice, tradeAmount)
     #write to log file
-    writelog()
+    writelog(logMesg, conf['trLog'])
     
 def saleStock(stockTrades):
     
@@ -379,45 +379,125 @@ def saleStock(stockTrades):
     # Active Buy Window
     salePage()  
     
-    #Send stockCode
-    for char in stockCode:
-        win32api.SendMessage(attrsSaleWindow['saleStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
-    print "message sent"
-
-    #Send tradeAmount
-    for char in tradeAmount:
-        win32api.SendMessage(attrsSaleWindow['saleAmountHandle'], win32con.WM_CHAR, ord(char), None)
-    print "Amount sent"
+    try:
+        #Send stockCode
+        for char in stockCode:
+            win32api.SendMessage(attrsSaleWindow['saleStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+        print "message sent"
     
-    #Send tradePrice
-    for char in tradePrice:
-        win32api.SendMessage(attrsSaleWindow['salePriceHandle'], win32con.WM_CHAR, ord(char), None)
-    print "Price sent"   
-    
-    #Send Buy Command
-    sleep(1)    
-    win32api.keybd_event(83,0,0,0)
-    win32api.keybd_event(83,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
-    
-    #Send Y to Confirm the Sale
-    sleep(1)
-    win32api.keybd_event(89,0,0,0)
-    win32api.keybd_event(89,0,win32con.KEYEVENTF_KEYUP,0)
-    
-    #Send Enter to confirm any message
-    sleep(1)
-    win32api.keybd_event(VK_RETURN, 0, 0, 0)
-    win32api.keybd_event(VK_RETURN,0,win32con.KEYEVENTF_KEYUP,0)
-    
+        #Send tradeAmount
+        for char in tradeAmount:
+            win32api.SendMessage(attrsSaleWindow['saleAmountHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Amount sent"
+        
+        #Send tradePrice
+        for char in tradePrice:
+            win32api.SendMessage(attrsSaleWindow['salePriceHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Price sent"   
+        
+        #Send Buy Command
+        sleep(1)    
+        win32api.keybd_event(83,0,0,0)
+        win32api.keybd_event(83,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
+        
+        #Send Y to Confirm the Sale
+        sleep(1)
+        win32api.keybd_event(89,0,0,0)
+        win32api.keybd_event(89,0,win32con.KEYEVENTF_KEYUP,0)
+        
+        #Send Enter to confirm any message
+        sleep(1)
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN,0,win32con.KEYEVENTF_KEYUP,0)
+        
+        logMesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.'%(stockCode, tradePrice, tradeAmount)
+    except:
+        logMesg = '\n Sorry, system cannot issue a SALE command of stock code %s, buy price %s, buy amount %s'%(stockCode, tradePrice, tradeAmount)
     #write to log file
-    writelog()
+    writelog(logMesg, conf['trLog'])
      
+def setTradePrice(price, priceIndex, trade = 'b'):
+    
+    price = str(price)
+    if trade == 's':
+        salePage()
+    else:
+        buyPage()
+        
+    if priceIndex == 'b1':
+        stockTrades['tradePrice'] = stockTrades['buyPrice1']
+    elif priceIndex == 'b2':
+        stockTrades['tradePrice'] = stockTrades['buyPrice2']
+    elif priceIndex == 'b0':
+        stockTrades['tradePrice'] = stockTrades['buyLastPrice']
+    elif priceIndex == 's1':
+        stockTrades['tradePrice'] = stockTrades['salePrice2']
+    elif priceIndex == 's2':
+        stockTrades['tradePrice'] = stockTrades['salePrice2']
+    elif priceIndex == 's0':
+        stockTrades['tradePrice'] = stockTrades['saleLastPrice']
+    elif priceIndex == 'c0':
+        stockTrades['tradePrice'] = price
+    else:
+        pass
+        
+def setStockCode(stockCode='000003', trade = 'b'):
+    
+    if trade == 's':
+        salePage()
+    else:
+        buyPage()
+        
+    if len(stockCode) == 6:
+        stockTrades['stockCode'] = stockCode
+        logMesg = '/n Set stock code to %s at ' %stockCode , timeTag()
+        for char in stockCode:
+            win32api.SendMessage(attrsBuyWindow['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+    else:
+        logMesg = '/n ERROR: Set a wrong stock code %s at ' %stockCode, timeTag()
+    
 
-def setTradePrice(price):
-    stockTrades['tradePrice'] = price
+        
+    writelog(logMesg)    
+    
+def setTradeAmount(tradeAmount = '1000', trade ='b'):
+    if trade == 's':
+        salePage()
+    else:
+        buyPage()
+    
+    if int(tradeAmount) <= 0:
+        logMesg = '/n ERROR: System cannot take a nagtive trade amount'
+    else:
+        stockTrades['tradeAmount'] = tradeAmount
+        logMesg = '/n System set tradeAmount to %s' %tradeAmount
+        #Send tradeAmount
+        for char in tradeAmount:
+            win32api.SendMessage(attrsBuyWindow['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
 
+
+    writelog(logMesg)
+    
 def updateQuotePrice():
-    pass
+    buyPage()
+    
+    stockTrades['buyLastPrice'] = win32gui.GetWindowText(attrsBuyWindow['buyLastPriceHandle'])
+    stockTrades['buyPrice1'] = win32gui.GetWindowText(attrsBuyWindow['buyPrice1Handle'])
+    stockTrades['buyPrice2'] = win32gui.GetWindowText(attrsBuyWindow['buyPrice2Handle'])
+    
+    stockTrades['saleLastPrice'] = win32gui.GetWindowText(attrsSaleWindow['saleLastPriceHandle'])
+    stockTrades['salePrice1'] = win32gui.GetWindowText(attrsSaleWindow['salePrice1Handle'])
+    stockTrades['salePrice2'] = win32gui.GetWindowText(attrsSaleWindow['salePrice2Handle'])
+
+def updateAsset():
+    '''
+    Read Asset information from the external file
+    '''
+    stockHoldingPage()
+    assetInfor['cashAvaliable'] = win32gui.GetWindowText(attrsWindow['cashAvaliableHandle'])
+    assetInfor['stockValue'] = win32gui.GetWindowText(attrsWindow['stockValueHandle'])
+    assetInfor['totalAsset'] = win32gui.GetWindowText(attrsWindow['totalAssetHandle'])
+    
 
 def getMenu(hwnd):
     print win32gui.GetMenu(hwnd)
@@ -439,8 +519,6 @@ def setWindowTop(hwnd):
    win32gui.MoveWindow(hwnd, 0,0,800,600, True)
    #win32gui.BringWindowToTop(hwnd)
    
-
-  
 def findWindowByNameEx(parentHWND, childAfter, windowClass, windowName):
     shell = win32com.client.Dispatch("WScript.Shell")
     shell.SendKeys('%')
@@ -466,15 +544,14 @@ def getActiveWindow():
     print hwnd
     return hwnd
     
-
 def getHandleByControlID(parentHwnd, controlID):
     #print win32gui.GetDlgCtrlID(controlID)
     print win32gui.GetDlgItem(parentHwnd, controlID)
     
 def writelog(logMesg = logMesg, logPath = conf['opLog']):
-    pass
-
-
+    fullPath = conf['outputDir'] + logPath
+    with open(fullPath, 'a') as log:
+        log.writelines(logMesg)
     
 def saveStockInfor(hwnd):
     
@@ -482,7 +559,10 @@ def saveStockInfor(hwnd):
     #windowName = 'Save As'
     #dirWindowClass = 'Edit'
     
-   
+    assetInfor['cashAvaliable'] = win32gui.GetWindowText(attrsWindow['cashAvaliableHandle'])
+    assetInfor['stockValue'] = win32gui.GetWindowText(attrsWindow['stockValueHandle'])
+    assetInfor['totalAsset'] = win32gui.GetWindowText(attrsWindow['totalAssetHandle'])
+    print assetInfor
     #stockHoldingPage()
     try:
         win32api.keybd_event(VK_CONTROL,0,0,0)
@@ -514,16 +594,21 @@ def saveStockInfor(hwnd):
         sleep(1)
         win32api.keybd_event(VK_MENU,0,win32con.KEYEVENTF_KEYUP,0)
         
-        logMesg = 'Congratulation, system saved stocks in hand message successfully at ' + timeTag()
+        sleep(1)
+        win32api.keybd_event(VK_MENU,0,0,0)
+        win32api.keybd_event(89,0,0,0)
+        win32api.keybd_event(89,0,win32con.KEYEVENTF_KEYUP,0)
+        win32api.keybd_event(VK_MENU,0,win32con.KEYEVENTF_KEYUP,0)
+        
+        logMesg = '\n Congratulation, system saved stocks in hand message successfully at ' + timeTag()
         saved = True
     except:
-        logMesg = 'Sorry, system cannot save stocks in hand message at ' + timeTag()
+        logMesg = '\n Sorry, system cannot save stocks in hand message at \n' + timeTag()
         saved = False
     
     writelog(logMesg)
     print logMesg
-    return saved 
-        
+    return saved        
     
 def timeTag():
     return time.asctime(time.localtime(time.time()))
@@ -544,6 +629,21 @@ def main():
     #findStockWindowByName(2495344, 0, None, windowName)
     
     #win32gui.EnumChildWindows(attrsWindow['mainWindowHandle'], callbacktest, None)
+    sleep(1)
+    
+    setStockCode('300218')
+    setTradeAmount('10000')
+    sleep(3)
+    
+    print "waiting for prices"
+    
+    updateQuotePrice()
+    print 'test of setStockCode and setTradeAmount', stockTrades
+    
+    sleep(1)
+    setTradePrice(price = 20, priceIndex='c0', trade= 'b')
+    
+    print 'test of setTradePrice', stockTrades   
        
     '''
     Buy/Sale Stock
@@ -558,9 +658,7 @@ def main():
     #hwndMainWindowStock = attrsWindow.get('mainWindowHandle',0)
       
     #print "Stock Holding Information: ", win32gui.GetWindowText(857134)
-    
-  
-    
+        
     
 if __name__ == '__main__':
     main()

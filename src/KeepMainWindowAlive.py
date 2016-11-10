@@ -11,7 +11,7 @@ def findStockWindow(windowClass, windowName):
     shell.SendKeys('%')
     refreshButton[4] = win32gui.FindWindow(windowClass, windowName)
     win32gui.MoveWindow(refreshButton[4], 0,0,800,600, True)
-    print 'main window handle is: ', refreshButton[4]
+
     
     
 
@@ -20,7 +20,7 @@ def hitButton(buttonHwnd):
     shell = win32com.client.Dispatch("WScript.Shell")
     shell.SendKeys('%')
     win32api.SendMessage(buttonHwnd, win32con.BM_CLICK, 0, 0)
-    print 'Refreshed on button ', buttonHwnd
+    #print 'Refreshed on button ', buttonHwnd
 
     #win32api.keybd_event(VK_TAB,0,0,0)
     #win32api.keybd_event(VK_TAB,win32con.KEYEVENTF_KEYUP,0)    
@@ -30,10 +30,10 @@ def EnumChildWindowProc(buttonHwnd, code):
         winRec = win32gui.GetWindowRect(buttonHwnd)
         if winRec[0] == refreshButton[0] and winRec[1] == refreshButton[1]:
             refreshButton[3] = buttonHwnd
-            print 'Found Refresh Button: ', buttonHwnd
+            #print 'Found Refresh Button: ', buttonHwnd
             if refreshButton[3]==0:
                 refreshButton[3] = buttonHwnd
-                print 'assigned refresh button handle'
+                #print 'assigned refresh button handle'
 
 def main():
     
