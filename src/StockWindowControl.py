@@ -35,6 +35,7 @@ from win32con import *
 from time import sleep
 import time
 import io
+import DBConnector
 
 
 
@@ -278,7 +279,7 @@ def windowsInitiation():
         win32gui.EnumChildWindows(mainWindowHwnd, EnumChildWindowProc, 'Infor')
         print attrsWindow
         
-        if saveStockInfor(mainWindowHwnd) == False: 
+        if saveStockInforToFile(mainWindowHwnd) == False: 
             logMesg = '\n Sorry, system can not initialize Trading Software at ' + timeTag()
         else:
             logMesg = '\n Yes, system initialized Trading Software successfully at ' + timeTag()
@@ -553,7 +554,7 @@ def writelog(logMesg = logMesg, logPath = conf['opLog']):
     with open(fullPath, 'a') as log:
         log.writelines(logMesg)
     
-def saveStockInfor(hwnd):
+def saveStockInforToFile(hwnd):
     
     filename = conf['stockInHandFile']    
     #windowName = 'Save As'
@@ -609,6 +610,7 @@ def saveStockInfor(hwnd):
     writelog(logMesg)
     print logMesg
     return saved        
+
     
 def timeTag():
     return time.asctime(time.localtime(time.time()))
