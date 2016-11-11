@@ -450,11 +450,11 @@ def setStockCode(stockCode='000003', trade = 'b'):
         
     if len(stockCode) == 6:
         stockTrades['stockCode'] = stockCode
-        logMesg = '/n Set stock code to %s at ' %stockCode , timeTag()
+        logMesg = '\n Set stock code to %s at ' %stockCode , timeTag()
         for char in stockCode:
             win32api.SendMessage(attrsBuyWindow['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
     else:
-        logMesg = '/n ERROR: Set a wrong stock code %s at ' %stockCode, timeTag()
+        logMesg = '\n ERROR: Set a wrong stock code %s at ' %stockCode, timeTag()
     
 
         
@@ -467,10 +467,10 @@ def setTradeAmount(tradeAmount = '1000', trade ='b'):
         buyPage()
     
     if int(tradeAmount) <= 0:
-        logMesg = '/n ERROR: System cannot take a nagtive trade amount'
+        logMesg = '\n ERROR: System cannot take a nagtive trade amount'
     else:
         stockTrades['tradeAmount'] = tradeAmount
-        logMesg = '/n System set tradeAmount to %s' %tradeAmount
+        logMesg = '\n System set tradeAmount to %s' %tradeAmount
         #Send tradeAmount
         for char in tradeAmount:
             win32api.SendMessage(attrsBuyWindow['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
