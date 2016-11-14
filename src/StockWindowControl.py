@@ -48,7 +48,7 @@ logMesg = 'Log Start'
 conf = {'stockInHandFile':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
         'outputDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
         'installDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
-        'confFile':'conf.ini',
+        'confFile':'__conf__.ini',
         'opLog':'operlog.txt',
         'trLog':'tradeLog.txt'}
 
@@ -128,7 +128,7 @@ def EnumWindowProc(hwnd, tradeCode):
     
     hwndStock = 0    
     if win32gui.GetWindowText(hwnd) == tradeWindows.get('mainWindowName')[0]:
-        attrsWindow['mainWindowHanle'] = hwnd
+        __attrsWindow__['mainWindowHanle'] = hwnd
     '''
 def getHandleByXY(hwnd, x, y, attrs, sizeKey, handleKey):
     if (x == tradeWindowsProperties[sizeKey][0]) and (y == tradeWindowsProperties[sizeKey][1] and attrs[handleKey]=='0'):
@@ -255,7 +255,7 @@ def windowsInitiation():
     
     
     #win32gui.EnumWindows(EnumWindowProc, None)
-    #print "Parrent Window Hwnd is %d" %attrsWindow['mainWindowHandle']
+    #print "Parrent Window Hwnd is %d" %__attrsWindow__['mainWindowHandle']
     mainWindowHwnd = attrsWindow['mainWindowHandle']
     #secondWindowHwnd = getHandleByControlID(mainWindowHwnd, controlID)
     setForeGroundWindow(mainWindowHwnd)
@@ -630,7 +630,7 @@ def main():
     windowName = '参考总资产（含港股通）'
     #findStockWindowByName(2495344, 0, None, windowName)
     
-    #win32gui.EnumChildWindows(attrsWindow['mainWindowHandle'], callbacktest, None)
+    #win32gui.EnumChildWindows(__attrsWindow__['mainWindowHandle'], callbacktest, None)
     sleep(1)
     
     setStockCode('300218')
@@ -649,15 +649,15 @@ def main():
        
     '''
     Buy/Sale Stock
-    buyStock(stockTrades)
-    saleStock(stockTrades)
+    buyStock(__stockTrades__)
+    saleStock(__stockTrades__)
     '''
     #sleep(1)
     #buyPage()
     #sleep(1)
     #saveStockInfor(None)
     
-    #hwndMainWindowStock = attrsWindow.get('mainWindowHandle',0)
+    #hwndMainWindowStock = __attrsWindow__.get('mainWindowHandle',0)
       
     #print "Stock Holding Information: ", win32gui.GetWindowText(857134)
         
