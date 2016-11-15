@@ -1,8 +1,10 @@
 #!/usr/local/bin/python
-# coding: UTF-8
+# coding: GBK
 
 import MySQLdb
-import os, time
+import os, time, pandas
+from datetime import datetime
+from sqlalchemy import create_engine
 
 
 __metclass__ = type
@@ -10,75 +12,143 @@ __metclass__ = type
 
 class C_StockFileManagement:
     def __init__(self):
-        self._outputDir__ = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
-        self._installDir__ = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
-        self._stockRecordDir__ = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
-        self._stockInhandFile__ = 'stockInhand.csv'
-        self.__logMesg__ = ''
-        self.__opLog__ = 'operLog.txt'
-        self.__stockCode__ = '证券代码'
-        self.__db__ = MySQLdb.connect(host='10.175.10.231',
-                                 port=3306,
-                                 user='marshao',
-                                 passwd='123',
-                                 db='DB_StockDataBackTest')
+        self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
+        self._input_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
+        self._install_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
+        self._stock_record_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
+        self._stock_inhand_file = 'stockInhand.csv'
+        self._log_mesg = ''
+        self._op_log = 'operLog.txt'
+        self._stock_code = ''
+        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
 
     def __del__(self):
-        self.__db__.close()
+        pass
 
-    def __isFileExist__(self, path):
+    def _is_file_exist(self, path):
         return os.path.isfile(path)
 
 
-    def readStockInhandToDB(self):
-        fullPath = self._outputDir__ + self._stockInhandFile__
+    def read_stock_inhand_to_db(self):
+        fullPath = self._output_dir + self._stock_inhand_file
         data =[]
-        colCount = 12 # 12 item in each line
-        add_StockInHand = ("INSERT INTO tb_StockInhand ('stockCode','stockName','stockRemain',"
-                           "'stockAvaliable','baseCost','currentCost','currentValue','profit',"
-                           "'profitRate','stockMarket','averageBuyPrice','datetime') "
-                           "VALUES (%s, %s, %INT, %INT , %DECIMAL, %DECIMAL ,%DECIMAL ,%DECIMAL ,%DECIMAL "
-                           "%s, %DECIMAL , %DATE)")
-        if self.__isFileExist__(fullPath):
+        line = []
+        col_count = 12
+        i = 0
+
+        if self._is_file_exist(fullPath):
             lines = open(fullPath, 'r').read().split()
-            #cursor = self.__getDBConnector__()
+            cursor = self._get_cursor()
             for word in lines:
-                data.append(self.__convert_encoding__(word, 'UTF-8'))
+                if i > 11:
+                    if (i % col_count) == 0 and i == 12:
+                        line.append(self._convert_encoding(word, 'UTF-8'))
+                        i += 1
+                    elif(i % col_count) == 0 and i != 12:
+                        data.append(line)
+                        line = []
+                        line.append(self._convert_encoding(word, 'UTF-8'))
+                        i += 1
+                    elif (i % col_count) == 2:
+                        line.append(int(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 3:
+                        line.append(int(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 4:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 5:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 6:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 7:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 8:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    elif (i % col_count) == 11:
+                        line.append(float(self._convert_encoding(word, 'UTF-8')))
+                        i += 1
+                    else:
+                        i += 1
+                else:
+                    i += 1
+            i = 0
 
-            print
+            df = pandas.DataFrame(data)
+            df.columns = ['stockCode','stockRemain','stockAvaliable', 'baseCost','currentCost','currentValue','profit','profitRate','averageBuyPrice']
+            df.to_sql('tb_StockInhand', self._engine, if_exists='append', index=False)
 
-            #print type(data)
-            #df = pandas.DataFrame(data)
-
-
+            self._log_mesg = 'Stock inhand information saved successfully at ', self._time_tag()
         else:
-            self.__logMesg__ = 'There is no stockInhandFileExist at ', self.__timeTag__()
+            self._log_mesg = 'There is no stock inhand file exist at ', self._time_tag()
 
-        self.__writelog__(self.__opLog__)
+        self._write_log(self._log_mesg, self._op_log)
 
-    def __getDBConnector__(self):
-        #cursor = self.__db__.cursor()
-        #return cursor
+    def _time_tag(self):
+        time_stamp_local = time.asctime(time.localtime(time.time()))
+        time_stamp = datetime.now()
+        only_date = time_stamp.date()
+        return time_stamp_local
 
-    def __timeTag__(self):
-        return time.asctime(time.localtime(time.time()))
-
-    def __writelog__(self, logPath):
-        fullPath = self._outputDir__ + logPath
+    def _write_log(self,log_mesg, logPath):
+        fullPath = self._output_dir + logPath
         with open(fullPath, 'a') as log:
-            log.writelines(self.__logMesg__)
+            log.writelines(log_mesg)
 
-    def __convert_encoding__(self, lines, new_coding='UTF-8'):
-        encoding = 'GB2312'
-        data = lines.decode(encoding)
-        data = data.encode(new_coding)
+    def _convert_encoding(self, lines, new_coding='UTF-8'):
+        try:
+            encoding = 'GB2312'
+            data = lines.decode(encoding)
+            data = data.encode(new_coding)
+        except:
+            data = 'DecodeError'
         return data
+
+    def read_stock_code_to_db(self):
+        add_stock_code = ("INSERT INTO tb_StockCodes "
+                          "(stock_code, stock_name, stock_market, stock_trad) "
+                          "SELECT * FROM (SELECT %(stockCode)s,%(stockName)s, %(stockMarket)s, %(stockTrad)s ) AS tmp "
+                          "WHERE NOT EXISTS "
+                          "(SELECT stock_code FROM tb_StockCodes WHERE stock_code = %(stockCode)s) LIMIT 1 ")
+        connection = self._engine.connect()
+        trans = connection.begin()
+        # "Read Stock Codes from the source folder"
+        for root, dirs, files in os.walk(self._input_dir):
+            for eachFile in files:
+
+                file = self._input_dir + eachFile
+                # rint eachFile[2:8]
+                with open(file, 'r') as f:
+                    content = f.readline()
+                # print content[7:20]
+
+                data_stock_code = {
+                    'stockCode': eachFile[2:8],
+                    'stockName': self._convert_encoding(content[7:16]),
+                    'stockMarket': eachFile[0:2],
+                    'stockTrad': 1,
+                    'stockCode': eachFile[2:8],
+                }
+                # Write Stock codes into Database
+                try:
+                    connection.execute(add_stock_code, data_stock_code)
+                    trans.commit()
+                    print "stock code added"
+                except:
+                    print "stock add failed"
+                    trans.rollback()
+
 
 def main():
     fm = C_StockFileManagement()
 
-    fm.readStockInhandToDB()
-
+    #fm.read_stock_inhand_to_db()
+    fm.read_stock_code_to_db()
 
 
 if __name__ == '__main__':
