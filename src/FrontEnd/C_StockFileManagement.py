@@ -55,12 +55,7 @@ class C_StockFileManagement:
             # cursor = self._get_cursor()
             for word in lines:
                 if i > 11:
-                    if (i % col_count) == 0 and i == 12:
-                        line.append(self._convert_encoding(word, 'UTF-8'))
-                        i += 1
-                    elif(i % col_count) == 0 and i != 12:
-                        data.append(line)
-                        line = []
+                    if (i % col_count) == 0:
                         line.append(self._convert_encoding(word, 'UTF-8'))
                         i += 1
                     elif (i % col_count) == 2:
@@ -87,11 +82,13 @@ class C_StockFileManagement:
                     elif (i % col_count) == 11:
                         line.append(float(self._convert_encoding(word, 'UTF-8')))
                         i += 1
+                        data.append(line)
+                        line = []
                     else:
                         i += 1
                 else:
                     i += 1
-            i = 0
+            #i = 0
 
             df = pandas.DataFrame(data)
             df.columns = ['stockCode','stockRemain','stockAvaliable', 'baseCost','currentCost','currentValue','profit','profitRate','averageBuyPrice']
