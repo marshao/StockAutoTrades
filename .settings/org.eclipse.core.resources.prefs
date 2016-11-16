@@ -1,5 +1,7 @@
 eclipse.preferences.version=1
 encoding//src/DBConnector.py=GBK
+encoding//src/FrontEnd/C_StockFileManagement.py=GBK
 encoding//src/KeepMainWindowAlive.py=GBK
 encoding//src/StockFileManagement.py=GBK
 encoding//src/StockWindowControl.py=GBK
+encoding//src/TradeSingalCalculation/fun_BackTest_Singal_Stock_Singal_Pattern_1024.py=utf-8
