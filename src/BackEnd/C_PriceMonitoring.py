@@ -25,10 +25,16 @@ class C_PriceMonitoring:
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._my_columns = ['stock_code', 'close_price', 'open_price', 'current_price', 'high_price','low_price','buy_price','sale_price','trading_volumn','trading_amount',
+                   'buy1_apply','buy1_price','buy2_apply','buy2_price','buy3_apply','buy3_price','buy4_apply','buy4_price','buy5_apply','buy5_price',
+                   'sale1_apply','sale1_price','sale2_apply','sale2_price','sale3_apply','sale3_price','sale4_apply','sale4_price','sale5_apply','sale5_price',
+                   'today','totime']
+        self._stock_minitue_data = pandas.DataFrame(columns = self._my_columns)
 
 
 
     def get_real_time_data(self, data_source, stock_code):
+        '''
         if stock_code == None:
             i = 1
             stock_code = self._stock_code[0]
@@ -47,14 +53,61 @@ class C_PriceMonitoring:
 
         url = data_source + stock_code
         html = urllib.urlopen(url)
-        real_date = html.read()
-        #print real_date
-        self._process_real_time_data(real_date)
+        real_data = html.read()
+        print "real data are: ", real_data
 
-    def price_monitoring(self):
-        pass
+        '''
+
+        #Send real time data to process and use the returned list set to build a Pandas DataFrame
+        per_real_data = self.price_monitoring(data_source, stock_code)
+
+        # 将返回的per_real_data 增加到DF stock_real_data中
+        print "new data added"
+        for row in per_real_data:
+            self._stock_minitue_data.loc[len(self._stock_minitue_data)] = row
+
+
+    def price_monitoring(self, data_source, stock_code):
+        if stock_code == None:
+            i = 1
+            stock_code = self._stock_code[0]
+            count = len(self._stock_code)
+            if i <= (count - 1):
+                stock_code = stock_code+ ',' + self._stock_code[i]
+                i += 1
+        if data_source == None:
+            data_source = self._data_source['sina']
+        else:
+            for each_key in self._data_source.keys():
+                if each_key == data_source:
+                    data_source = self._data_source[each_key]
+                else:
+                    data_source = self._data_source['sina']
+
+        url = data_source + stock_code
+        html = urllib.urlopen(url)
+        real_data = html.read()
+        #Send real time data to process and use the returned list set to build a Pandas DataFrame
+        per_real_data = self._process_real_time_data(real_data)
+        return  per_real_data
+
+    def _timer(self, func):
+        # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
+
+        #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
+        def wrapper():
+            start = time.clock()
+            while (start - time.clock()).seconds < 60:
+                func()
+            print "runed 1 min, and exit"
+        return wrapper
 
     def _process_real_time_data(self, real_data):
+        '''
+        :param real_data: Get the real time downloaded price data from Web Site, and converted each element of the prices
+         into right format.
+        :return: Return a list set of the price data back to calling function.
+        '''
         stock_data_set = real_data.split(';')
         #print stock_data_set
         stock_data_list = []
@@ -85,7 +138,8 @@ class C_PriceMonitoring:
                             stock_data_list.append(element[i])
                             i += 1
                         elif i == 0:
-                            stock_data_list.append('stock_code')
+                            #m = ((element[i].split('='))[0].split('_'))[2]
+                            stock_data_list.append(((element[i].split('='))[0].split('_'))[2])
                             i += 1
                         else:
                             i += 1
@@ -93,13 +147,22 @@ class C_PriceMonitoring:
                         i += 1
                 stock_data_ll.append(stock_data_list)
                 stock_data_list = []
-        print stock_data_ll
+        return stock_data_ll
         # here is not finish yet, still need to return the list back
 
 
 
     def _save_real_time_data_to_db(self, stock_code, period):
-        pass
+
+        get_real_time_data = self._timer(self.get_real_time_data(None,None))
+
+        # Need a while true loop in here to keep hearing the real time data
+        get_real_time_data()
+        self._stock_minitue_data.to_sql('tb_StockRealTimeData', self._engine, if_exists='append', index=False)
+        time.sleep(5)
+        print "Saved data into DB"
+        self._stock_minitue_data.drop(self._stock_minitue_data.index[:])
+        print "emptied DF", self._stock_minitue_data
 
     def _calculate_period_data_from_real_time(self):
         pass
