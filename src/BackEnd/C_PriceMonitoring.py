@@ -5,7 +5,7 @@ __metclass__ = type
 
 
 import os, time, pandas, urllib
-from datetime import datetime
+import datetime
 from sqlalchemy import create_engine
 
 
@@ -30,44 +30,25 @@ class C_PriceMonitoring:
                    'sale1_apply','sale1_price','sale2_apply','sale2_price','sale3_apply','sale3_price','sale4_apply','sale4_price','sale5_apply','sale5_price',
                    'today','totime']
         self._stock_minitue_data = pandas.DataFrame(columns = self._my_columns)
+        self._start_morning = datetime.time(9,30,0)
+        self._end_morning = datetime.time(11,30,0)
+        self._start_afternoon = datetime.time(13,30,0)
+        self._end_afternoon = datetime.time(15,30,0)
 
 
 
     def get_real_time_data(self, data_source, stock_code):
-        '''
-        if stock_code == None:
-            i = 1
-            stock_code = self._stock_code[0]
-            count = len(self._stock_code)
-            if i <= (count - 1):
-                stock_code = stock_code+ ',' + self._stock_code[i]
-                i += 1
-        if data_source == None:
-            data_source = self._data_source['sina']
-        else:
-            for each_key in self._data_source.keys():
-                if each_key == data_source:
-                    data_source = self._data_source[each_key]
-                else:
-                    data_source = self._data_source['sina']
-
-        url = data_source + stock_code
-        html = urllib.urlopen(url)
-        real_data = html.read()
-        print "real data are: ", real_data
-
-        '''
-
-        #Send real time data to process and use the returned list set to build a Pandas DataFrame
+        # 此函数负责拾取每60秒的数据更新
         per_real_data = self.price_monitoring(data_source, stock_code)
-
         # 将返回的per_real_data 增加到DF stock_real_data中
-        print "new data added"
+        print "new data found at ",self._time_tag()
         for row in per_real_data:
             self._stock_minitue_data.loc[len(self._stock_minitue_data)] = row
 
 
     def price_monitoring(self, data_source, stock_code):
+        # This function is able to get real current data when it is called.
+        # A list contain current data will be returned.
         if stock_code == None:
             i = 1
             stock_code = self._stock_code[0]
@@ -97,9 +78,11 @@ class C_PriceMonitoring:
         #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
         def wrapper():
             start = time.clock()
-            while (start - time.clock()).seconds < 60:
-                func()
-            print "runed 1 min, and exit"
+            while (time.clock() - start) < 60:
+                func(None, None)
+                end = time.clock()
+                time.sleep(5)
+                print "time spent of each run = ", (end - start)
         return wrapper
 
     def _process_real_time_data(self, real_data):
@@ -152,31 +135,34 @@ class C_PriceMonitoring:
 
 
 
-    def _save_real_time_data_to_db(self, stock_code, period):
-
-        get_real_time_data = self._timer(self.get_real_time_data(None,None))
-
-        # Need a while true loop in here to keep hearing the real time data
-        get_real_time_data()
-        self._stock_minitue_data.to_sql('tb_StockRealTimeData', self._engine, if_exists='append', index=False)
-        time.sleep(5)
-        print "Saved data into DB"
-        self._stock_minitue_data.drop(self._stock_minitue_data.index[:])
-        print "emptied DF", self._stock_minitue_data
+    def save_real_time_data_to_db(self):
+        get_real_time_data = self._timer(self.get_real_time_data)
+        while True:
+            current_time = datetime.datetime.now().time()
+            if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
+                # Need a while true loop in here to keep hearing the real time data
+                get_real_time_data()
+                self._stock_minitue_data.to_sql('tb_StockRealTimeData', self._engine, if_exists='append', index=False)
+                time.sleep(5)
+                #print "Saved data into DB"
+                self._stock_minitue_data.drop(self._stock_minitue_data.index[:], inplace= True)
+            else:
+                print "Not in transaction time, wait 10 min to try again."
+                time.sleep(600)
 
     def _calculate_period_data_from_real_time(self):
         pass
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
-        time_stamp = datetime.now()
+        time_stamp = datetime.datetime.now()
         only_date = time_stamp.date()
         return time_stamp_local
 
 
     def _time_tag_dateonly(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
-        time_stamp = datetime.now()
+        time_stamp = datetime.datetime.now()
         only_date = time_stamp.date()
         return only_date
 
@@ -197,7 +183,8 @@ class C_PriceMonitoring:
 def main():
     pp = C_PriceMonitoring()
     #pp.get_real_time_data('sina', 'sz300226')
-    pp.get_real_time_data(None, None)
+    #pp.get_real_time_data(None, None)
+    pp.save_real_time_data_to_db()
 
 if __name__ == '__main__':
     main()
