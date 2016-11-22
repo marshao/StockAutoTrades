@@ -43,8 +43,8 @@ class C_GettingData:
                                               'sale4_price','sale4_apply',  'sale5_price', 'sale5_apply',
                                               'time', 'net_chg','net_chg_percent','high_price','low_price','total_volumn', 'total_amount',
                                                 'turnover_rate', 'PE','circulation_market_value','total_market_value','PB','limit_up','limit_down']
-        self._x_min_columns = ['quote_time', 'open_price', 'high_price','low_price','close_price','trading_volumn']
-        self._1_min_columns = ['quote_time', 'price', 'trading_volumn']
+        self._x_min_columns = ['quote_time', 'open_price', 'high_price','low_price','close_price','trading_volumn','stock_code','period']
+        self._1_min_columns = ['quote_time', 'price', 'trading_volumn','stock_code']
         self._stock_minitue_data_DF = pandas.DataFrame(columns = self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns = self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
@@ -169,8 +169,18 @@ class C_GettingData:
                 print "Not in transaction time, wait 10 min to try again."
                 time.sleep(600)
 
-    def _calculate_period_data_from_real_time(self):
-        pass
+    def save_data_to_db_qq(self, data, period):
+        # save today's data (1min, 5min, 30min)
+        if period in self._x_min:
+            pass
+        elif period in self._x_period:
+            # save historical data (day, week)
+            pass
+        else:
+            # save real_time data
+            pass
+
+
 
     def _get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
         if period in self._x_period:
@@ -178,13 +188,13 @@ class C_GettingData:
             url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
             html = urllib.urlopen(url)
             data = html.read()
-            self._process_x_period_data_qq(data, period, fq)
+            self._process_x_period_data_qq(data, period, fq, stock_code)
         elif period in (self._x_min):
             if period == 'm1':
                 url = self._data_source['qq_1_min'] % (stock_code, stock_code)
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_1_min_data_qq(data)
+                self._process_1_min_data_qq(data, stock_code)
             else:
                 if period == 'm5':
                     q_count = self._q_count[1]
@@ -200,7 +210,7 @@ class C_GettingData:
                     url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_x_min_data_qq(data, period)
+                self._process_x_min_data_qq(data, period, stock_code)
         else:
             url = self._data_source['qq_realtime'] %stock_code
             html = urllib.urlopen(url)
@@ -209,7 +219,7 @@ class C_GettingData:
 
 
 
-    def _process_x_period_data_qq(self, data, period, fq):
+    def _process_x_period_data_qq(self, data, period, fq, stock_code):
         self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace = True)
         sPos = data.find(fq+period)+len(fq+period)+4
         ePos = data.find('"qt"')
@@ -231,11 +241,13 @@ class C_GettingData:
                     tmp_l[i-1] = 0.00
                     tmp_l.append(tmp_v)
                 i += 1
+            tmp_l.append(stock_code)
+            tmp_l.append(period)
             #print tmp_l
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
         #print self._x_min_data_DF
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-
+        print self._x_min_data_DF
         return self._x_min_data_DF
 
 
@@ -291,7 +303,7 @@ class C_GettingData:
         return self._real_time_data_DF
 
 
-    def _process_1_min_data_qq(self,data):
+    def _process_1_min_data_qq(self,data, stock_code):
         today = datetime.date.today().strftime('%Y-%m-%d')
         sPos = data.find('{"data":[')
         ePos = data.find('"date":')
@@ -303,12 +315,13 @@ class C_GettingData:
             tmp_l[0]=datetime.datetime.strptime(tmp_l[0],'%Y-%m-%d %H%M')
             tmp_l[1] = float(tmp_l[1])
             tmp_l[2] = float(tmp_l[2])
+            tmp_l.append(stock_code)
             self._1_min_data_DF.loc[len(self._1_min_data_DF)] = tmp_l
         self._1_min_data_DF.set_index('quote_time', inplace=True)
-        #print self._1_min_data_DF
+        print self._1_min_data_DF
         return self._1_min_data_DF
 
-    def _process_x_min_data_qq(self, data, x_min):
+    def _process_x_min_data_qq(self, data, x_min, stock_code):
         self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
         nPos = data.find(x_min)
         data = data[(nPos + 7):-5].split('],[')
@@ -320,9 +333,11 @@ class C_GettingData:
             while i < 6:
                 tmp_l[i] = float(tmp_l[i])
                 i += 1
+            tmp_l.append(stock_code)
+            tmp_l.append(x_min)
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        #print self._x_min_data_DF
+        print self._x_min_data_DF
         return self._x_min_data_DF
 
 
@@ -358,7 +373,7 @@ def main():
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    pp._get_data_qq(period='m1')
+    pp._get_data_qq(period='day')
 
 if __name__ == '__main__':
     main()
