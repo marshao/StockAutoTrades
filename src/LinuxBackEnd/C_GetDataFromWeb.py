@@ -170,14 +170,14 @@ class C_GettingData:
                 time.sleep(600)
 
     def save_data_to_db_qq(self, data, period):
-        # save today's data (1min, 5min, 30min)
+        # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
         if period in self._x_min:
             pass
         elif period in self._x_period:
-            # save historical data (day, week)
+            # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
             pass
         else:
-            # save real_time data
+            # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
             pass
 
 
