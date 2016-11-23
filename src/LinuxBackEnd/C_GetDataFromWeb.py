@@ -160,10 +160,10 @@ class C_GettingData:
 
     def service_getting_data(self):
         #get_data = self._timer(self.get_data_qq)
-        last_run = datetime.datetime.now()
+        last_run = time.clock()
         while True:
-            current = datetime.datetime.now()
-            current_time = current.time()
+            current = time.clock()
+            current_time = datetime.datetime.now().time()
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
                 # Need a while true loop in here to keep hearing the real time data
                 if current - last_run > 900: # read data from web site at every 15 min
@@ -175,7 +175,7 @@ class C_GettingData:
                         self.get_data_qq(stock, period='m30')
                         time.sleep(5)
                         self.get_data_qq(stock, period = 'real')
-                    last_run = datetime.datetime.now()
+                    last_run = time.clock()
                     self._log_mesg = 'Write data to DB at ', self._time_tag()
                     print self._log_mesg
             else:
@@ -454,7 +454,7 @@ def main():
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    pp.get_data_qq(period='real')
+    pp.service_getting_data()
 
 if __name__ == '__main__':
     main()
