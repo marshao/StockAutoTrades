@@ -6,7 +6,8 @@ __metclass__ = type
 
 import os, time, pandas, urllib, re
 import datetime
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Table, Column, MetaData
+from sqlalchemy.sql import select, and_, or_, not_
 
 
 class C_GettingData:
@@ -31,6 +32,7 @@ class C_GettingData:
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._metadata = MetaData(self._engine)
         self._my_real_time_DF_columns_sina = ['stock_code', 'close_price', 'open_price', 'current_price', 'high_price', 'low_price', 'buy_price', 'sale_price', 'trading_volumn', 'trading_amount',
                    'buy1_apply','buy1_price','buy2_apply','buy2_price','buy3_apply','buy3_price','buy4_apply','buy4_price','buy5_apply','buy5_price',
                    'sale1_apply','sale1_price','sale2_apply','sale2_price','sale3_apply','sale3_price','sale4_apply','sale4_price','sale5_apply','sale5_price',
@@ -49,23 +51,22 @@ class C_GettingData:
         self._x_min_data_DF = pandas.DataFrame(columns = self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
-        self._start_morning = datetime.time(9,30,0)
-        self._end_morning = datetime.time(11,30,0)
-        self._start_afternoon = datetime.time(13,30,0)
-        self._end_afternoon = datetime.time(15,30,0)
+        self._start_morning = datetime.time(9,31,0)
+        self._end_morning = datetime.time(11,31,0)
+        self._start_afternoon = datetime.time(13,31,0)
+        self._end_afternoon = datetime.time(18,30,0)
 
 
-
-    def get_real_time_data_sina(self, data_source, stock_code):
+    def __get_real_time_data_sina(self, data_source, stock_code):
         # 此函数负责拾取每60秒的数据更新
-        per_real_data = self.price_monitoring_sina(data_source, stock_code)
+        per_real_data = self.__price_monitoring_sina(data_source, stock_code)
         # 将返回的per_real_data 增加到DF stock_real_data中
         print "new data found at ",self._time_tag()
         for row in per_real_data:
             self._stock_minitue_data_DF.loc[len(self._stock_minitue_data_DF)] = row
 
 
-    def price_monitoring_sina(self, data_source, stock_code):
+    def __price_monitoring_sina(self, data_source, stock_code):
         # This function is able to get real current data when it is called.
         # A list contain current data will be returned.
         if stock_code == None:
@@ -88,25 +89,11 @@ class C_GettingData:
         html = urllib.urlopen(url)
         real_data = html.read()
         #Send real time data to process and use the returned list set to build a Pandas DataFrame
-        per_real_data = self._process_real_time_data_sina(real_data)
+        per_real_data = self.__process_real_time_data_sina(real_data)
         return  per_real_data
 
 
-
-    def _timer(self, func):
-        # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
-
-        #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
-        def wrapper():
-            start = time.clock()
-            while (time.clock() - start) < 60:
-                func(None, None)
-                end = time.clock()
-                time.sleep(5)
-                print "time spent of each run = ", (end - start)
-        return wrapper
-
-    def _process_real_time_data_sina(self, real_data):
+    def __process_real_time_data_sina(self, real_data):
         '''
         :param real_data: Get the real time downloaded price data from Web Site, and converted each element of the prices
          into right format.
@@ -154,8 +141,8 @@ class C_GettingData:
         return stock_data_ll
         # here is not finish yet, still need to return the list back
 
-    def save_real_time_data_to_db_sina(self):
-        get_real_time_data = self._timer(self.get_real_time_data_sina)
+    def __save_real_time_data_to_db_sina(self):
+        get_real_time_data = self._timer(self.__get_real_time_data_sina)
         while True:
             current_time = datetime.datetime.now().time()
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
@@ -169,33 +156,40 @@ class C_GettingData:
                 print "Not in transaction time, wait 10 min to try again."
                 time.sleep(600)
 
-    def save_data_to_db_qq(self, data, period):
-        # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
-        if period in self._x_min:
-            pass
-        elif period in self._x_period:
-            # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
-            pass
-        else:
-            # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
-            pass
 
 
+    def service_getting_data(self):
+        get_data = self._timer(self.get_data_qq)
+        while True:
+            current_time = datetime.datetime.now().time()
+            if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
+                # Need a while true loop in here to keep hearing the real time data
+                for stock in self._stock_code:
+                    get_data(stock, period = 'm5')
+                    time.sleep(5)
+                    get_data(stock, period='m1')
+                    time.sleep(5)
+                    get_data(stock, period='m30')
+            else:
+                print "Not in transaction time, wait 10 min to try again."
+                time.sleep(600)
 
-    def _get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
-        if period in self._x_period:
+    def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
+        if period in self._x_period: # precess day/week data
             fq = ('qfq' if fq not in (self._fq) else fq)
             url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
             html = urllib.urlopen(url)
             data = html.read()
             self._process_x_period_data_qq(data, period, fq, stock_code)
+            self._save_data_to_db_qq(period, stock_code)
         elif period in (self._x_min):
-            if period == 'm1':
+            if period == 'm1': # process 1 min data
                 url = self._data_source['qq_1_min'] % (stock_code, stock_code)
                 html = urllib.urlopen(url)
                 data = html.read()
                 self._process_1_min_data_qq(data, stock_code)
-            else:
+                self._save_data_to_db_qq(period, stock_code)
+            else: # process X min data
                 if period == 'm5':
                     q_count = self._q_count[1]
                     url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
@@ -211,12 +205,13 @@ class C_GettingData:
                 html = urllib.urlopen(url)
                 data = html.read()
                 self._process_x_min_data_qq(data, period, stock_code)
-        else:
+                self._save_data_to_db_qq(period, stock_code)
+        else: # process real time data
             url = self._data_source['qq_realtime'] %stock_code
             html = urllib.urlopen(url)
             data = html.read()
             self._process_real_time_data_qq(data)
-
+            self._save_data_to_db_qq(period, stock_code)
 
 
     def _process_x_period_data_qq(self, data, period, fq, stock_code):
@@ -247,11 +242,12 @@ class C_GettingData:
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
         #print self._x_min_data_DF
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        print self._x_min_data_DF
+        #print self._x_min_data_DF
         return self._x_min_data_DF
 
 
     def _process_real_time_data_qq(self, data):
+        self._real_time_data_DF.drop(self._real_time_data_DF.index[:], inplace=True)
         sPos = data.find('=')
         data = data[sPos+2:-3].split('~')
         tmp_l = []
@@ -300,10 +296,12 @@ class C_GettingData:
         tmp_l.append(float(data[47]))  # limit_up
         tmp_l.append(float(data[48]))  # limit_down
         self._real_time_data_DF.loc[len(self._real_time_data_DF)] = tmp_l
+        print self._real_time_data_DF
         return self._real_time_data_DF
 
 
     def _process_1_min_data_qq(self,data, stock_code):
+        self._1_min_data_DF.drop(self._1_min_data_DF.index[:], inplace=True)
         today = datetime.date.today().strftime('%Y-%m-%d')
         sPos = data.find('{"data":[')
         ePos = data.find('"date":')
@@ -318,7 +316,6 @@ class C_GettingData:
             tmp_l.append(stock_code)
             self._1_min_data_DF.loc[len(self._1_min_data_DF)] = tmp_l
         self._1_min_data_DF.set_index('quote_time', inplace=True)
-        print self._1_min_data_DF
         return self._1_min_data_DF
 
     def _process_x_min_data_qq(self, data, x_min, stock_code):
@@ -336,10 +333,87 @@ class C_GettingData:
             tmp_l.append(stock_code)
             tmp_l.append(x_min)
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
+            #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        print self._x_min_data_DF
+        #print self._x_min_data_DF
         return self._x_min_data_DF
 
+    def _save_data_to_db_qq(self, period, stock_code):
+        # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
+        # Data will be exanmed to avoid inserting duplicate rows into DB.
+        # Columns: stock_code, period, quote_time will be used to exanmed the duplicated row.
+        data = self._x_min_data_DF
+        if period in self._x_min:
+            # save x min data into DB
+            data = self._remove_duplicate_rows(period, stock_code)
+            if period != 'm1':
+                data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
+            else:
+                data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
+        elif period in self._x_period:
+            # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
+            data = self._remove_duplicate_rows(period, stock_code)
+            data.to_sql('tb_StockXPeriodRecords', self._engine, if_exists='append', index=True)
+        else:
+            # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
+            data = self._real_time_data_DF
+            data.to_sql('tb_StockRealTimeRecords', self._engine, if_exists='append', index=False)
+
+    def _remove_duplicate_rows(self, period, stock_code):
+        '''
+        Step 1: 从数据库中取出相应股票最后一个记录的时间戳
+        Step 2：从data 删除早于这个时间戳的记录
+        Step 3: 返回清理后的DataFrame
+        :param df:
+        :return:
+        '''
+        print "Jump into remove duplication"
+        conn = self._engine.connect()
+        if period in self._x_min: # process X min data
+            tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
+            s = select([tb.c.quote_time]). \
+                where(
+                and_(tb.c.period == period,
+                     tb.c.stock_code == stock_code)). \
+                order_by(tb.c.quote_time.desc()).limit(1)
+            data = self._x_min_data_DF
+        elif period == 'm1':# Process 1 min data
+            tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
+            s = select([tb.c.quote_time]). \
+                where(tb.c.stock_code == stock_code). \
+                order_by(tb.c.quote_time.desc()).limit(1)
+            data = self._1_min_data_DF
+        else: # process day / week data
+            tb = Table('tb_StockXPeriodRecords', self._metadata, autoload = True)
+            s = select([tb.c.quote_time]). \
+                where(
+                and_(tb.c.period == period,
+                     tb.c.stock_code == stock_code)). \
+                order_by(tb.c.quote_time.desc()).limit(1)
+            data = self._x_min_data_DF
+
+        result = conn.execute(s).fetchall()
+        if len(result) != 0:
+            print result
+            last_record_time = result[0][0]
+            print last_record_time
+            data = data.loc[lambda df: df.index > last_record_time, :]
+            return data
+        else:
+            return data
+
+    def _timer(self, func):
+        # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
+
+        #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
+        def wrapper():
+            start = time.clock()
+            while (time.clock() - start) < 900: # call function at every 15 min
+                func(None, None, None, None)
+                end = time.clock()
+                time.sleep(5)
+                print "time spent of each run = ", (end - start)
+        return wrapper
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -373,7 +447,7 @@ def main():
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    pp._get_data_qq(period='day')
+    pp.get_data_qq(period='real')
 
 if __name__ == '__main__':
     main()
