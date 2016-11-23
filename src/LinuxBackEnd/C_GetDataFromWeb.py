@@ -169,15 +169,19 @@ class C_GettingData:
             time.sleep(15)
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
                 # Need a while true loop in here to keep hearing the real time data
-                if current - last_run > 900: # read data from web site at every 15 min
+                if current - last_run > 9: # read data from web site at every 15 min
                     for stock in self._stock_code:
                         self.get_data_qq(stock, period = 'm5')
+                        print 'saved m5 data'
                         time.sleep(5)
                         self.get_data_qq(stock, period='m1')
+                        print 'saved m1 data'
                         time.sleep(5)
                         self.get_data_qq(stock, period='m30')
+                        print 'saved m30 data'
                         time.sleep(5)
                         self.get_data_qq(stock, period = 'real')
+                        print 'saved real time data'
                     last_run = time.time()
                     self._log_mesg = 'Write data to DB at ', self._time_tag()
                     print self._log_mesg
@@ -186,6 +190,9 @@ class C_GettingData:
                 time.sleep(600)
 
     def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
+        self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
+        self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
+        self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
         if period in self._x_period: # precess day/week data
             fq = ('qfq' if fq not in (self._fq) else fq)
             url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
@@ -254,6 +261,7 @@ class C_GettingData:
         #print self._x_min_data_DF
         self._x_min_data_DF.set_index('quote_time', inplace=True)
         #print self._x_min_data_DF
+        print "processed %s data" %period
         return self._x_min_data_DF
 
 
@@ -307,7 +315,7 @@ class C_GettingData:
         tmp_l.append(float(data[47]))  # limit_up
         tmp_l.append(float(data[48]))  # limit_down
         self._real_time_data_DF.loc[len(self._real_time_data_DF)] = tmp_l
-        print self._real_time_data_DF
+        print "processed real time data"
         return self._real_time_data_DF
 
 
@@ -327,10 +335,12 @@ class C_GettingData:
             tmp_l.append(stock_code)
             self._1_min_data_DF.loc[len(self._1_min_data_DF)] = tmp_l
         self._1_min_data_DF.set_index('quote_time', inplace=True)
+        print "processed 1 min data"
         return self._1_min_data_DF
 
     def _process_x_min_data_qq(self, data, x_min, stock_code):
         self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
+        #print self._x_min_data_DF
         nPos = data.find(x_min)
         data = data[(nPos + 7):-5].split('],[')
         p = re.compile(r'\d+.\d+')
@@ -343,10 +353,11 @@ class C_GettingData:
                 i += 1
             tmp_l.append(stock_code)
             tmp_l.append(x_min)
+            #print len(self._x_min_data_DF)
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        #print self._x_min_data_DF
+        print "processed %s data" %x_min
         return self._x_min_data_DF
 
     def _save_data_to_db_qq(self, period, stock_code):
@@ -381,19 +392,20 @@ class C_GettingData:
         print "Jump into remove duplication"
         conn = self._engine.connect()
         if period in self._x_min: # process X min data
-            tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
-            s = select([tb.c.quote_time]). \
-                where(
-                and_(tb.c.period == period,
-                     tb.c.stock_code == stock_code)). \
-                order_by(tb.c.quote_time.desc()).limit(1)
-            data = self._x_min_data_DF
-        elif period == 'm1':# Process 1 min data
-            tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
-            s = select([tb.c.quote_time]). \
-                where(tb.c.stock_code == stock_code). \
-                order_by(tb.c.quote_time.desc()).limit(1)
-            data = self._1_min_data_DF
+            if period != 'm1':
+                tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
+                s = select([tb.c.quote_time]). \
+                    where(
+                    and_(tb.c.period == period,
+                         tb.c.stock_code == stock_code)). \
+                    order_by(tb.c.quote_time.desc()).limit(1)
+                data = self._x_min_data_DF
+            else:# Process 1 min data
+                tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
+                s = select([tb.c.quote_time]). \
+                    where(tb.c.stock_code == stock_code). \
+                    order_by(tb.c.quote_time.desc()).limit(1)
+                data = self._1_min_data_DF
         else: # process day / week data
             tb = Table('tb_StockXPeriodRecords', self._metadata, autoload = True)
             s = select([tb.c.quote_time]). \
@@ -408,7 +420,8 @@ class C_GettingData:
             print result
             last_record_time = result[0][0]
             print last_record_time
-            data = data.loc[lambda df: df.index > last_record_time, :]
+            #data = data.loc[lambda df: df.index > last_record_time, :]
+            data = data[data.index > last_record_time]
             return data
         else:
             return data
@@ -458,6 +471,12 @@ def main():
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
     pp.service_getting_data()
+    #pp.get_data_qq(period = 'm5')
+    #pp.get_data_qq(period='m1')
+    #pp.get_data_qq(period='real')
+    #pp.get_data_qq(period='m30')
+    #pp.get_data_qq(period='day')
+    #pp.get_data_qq(period='week')
 
 if __name__ == '__main__':
     main()
