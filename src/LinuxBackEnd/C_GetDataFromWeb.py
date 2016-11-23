@@ -159,17 +159,25 @@ class C_GettingData:
 
 
     def service_getting_data(self):
-        get_data = self._timer(self.get_data_qq)
+        #get_data = self._timer(self.get_data_qq)
+        last_run = datetime.datetime.now()
         while True:
-            current_time = datetime.datetime.now().time()
+            current = datetime.datetime.now()
+            current_time = current.time()
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
                 # Need a while true loop in here to keep hearing the real time data
-                for stock in self._stock_code:
-                    get_data(stock, period = 'm5')
-                    time.sleep(5)
-                    get_data(stock, period='m1')
-                    time.sleep(5)
-                    get_data(stock, period='m30')
+                if current - last_run > 900: # read data from web site at every 15 min
+                    for stock in self._stock_code:
+                        self.get_data_qq(stock, period = 'm5')
+                        time.sleep(5)
+                        self.get_data_qq(stock, period='m1')
+                        time.sleep(5)
+                        self.get_data_qq(stock, period='m30')
+                        time.sleep(5)
+                        self.get_data_qq(stock, period = 'real')
+                    last_run = datetime.datetime.now()
+                    self._log_mesg = 'Write data to DB at ', self._time_tag()
+                    print self._log_mesg
             else:
                 print "Not in transaction time, wait 10 min to try again."
                 time.sleep(600)
@@ -404,7 +412,6 @@ class C_GettingData:
 
     def _timer(self, func):
         # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
-
         #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
         def wrapper():
             start = time.clock()
