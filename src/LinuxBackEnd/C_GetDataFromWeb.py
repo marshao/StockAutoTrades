@@ -470,7 +470,7 @@ def main():
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    pp.service_getting_data()
+    # pp.service_getting_data()
     #pp.get_data_qq(period = 'm5')
     #pp.get_data_qq(period='m1')
     #pp.get_data_qq(period='real')
