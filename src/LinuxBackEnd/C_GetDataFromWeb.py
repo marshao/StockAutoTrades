@@ -169,7 +169,7 @@ class C_GettingData:
             time.sleep(15)
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
                 # Need a while true loop in here to keep hearing the real time data
-                if current - last_run > 9: # read data from web site at every 15 min
+                if current - last_run > 900: # read data from web site at every 15 min
                     for stock in self._stock_code:
                         self.get_data_qq(stock, period = 'm5')
                         print 'saved m5 data'
@@ -470,7 +470,7 @@ def main():
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    # pp.service_getting_data()
+    pp.service_getting_data()
     #pp.get_data_qq(period = 'm5')
     #pp.get_data_qq(period='m1')
     #pp.get_data_qq(period='real')

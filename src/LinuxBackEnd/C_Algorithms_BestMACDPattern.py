@@ -70,7 +70,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df = df_stock_records
         #  The first loop, go through every MACD Pattern in df_MACD_index
         for j in progress(range(df_MACD_index.index.size)):
-            if loop_breaker > 100:
+            if loop_breaker > 1:
                 break
             loop_breaker += 1
 
@@ -126,9 +126,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 i += 1
             # Remove the no transaction record from the DB.
             df_save = df[df.Signal != 0]
-            df_save.to_sql('tb_StockIndex_MACD_HalfHour', con=self._engine, flavor='mysql', if_exists='append',
-                           index=True)
-            # print 'df == ',df.index.size
+            #df_save.to_sql('tb_StockIndex_MACD_HalfHour', con=self._engine, flavor='mysql', if_exists='append', index=True)
+            print 'df == ',df
             # print 'df_save', df_save.index.size
 
 
