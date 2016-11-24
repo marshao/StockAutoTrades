@@ -6,7 +6,7 @@ __metclass__ = type
 import datetime, time, progressbar
 import pandas as pd
 from sqlalchemy import create_engine, Table, Column, MetaData
-from sqlalchemy.sql import select, and_, or_, not_
+import multiprocessing as mp
 
 
 class C_Algorithems_BestPattern(object):
@@ -55,10 +55,34 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
-        self._MACD_singal_calculation(df_stock_records, df_MACD_index)
+        self._multi_tasks_cal_MACD_signals(df_MACD_index, df_stock_records)
         # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
 
-    def _MACD_singal_calculation(self, df_stock_records, df_MACD_index):
+    def _multi_tasks_cal_MACD_signals(self, df_MACD_index, df_stock_records):
+        tasks = df_MACD_index.index.size / 7
+        task_args = []
+        processor = 1
+        index_begin = 0
+        index_end = tasks
+        while processor <= 8:
+            df = df_MACD_index.index[index_begin:index_end]
+            task_args.append((df_stock_records, df,))
+            processor += 1
+            index_begin = index_end
+            if processor != 8:
+                index_end = processor * tasks
+            else:
+                index_end = df_MACD_index.index.size
+            print df
+        '''
+        pool = mp.Pool(7)
+        for t in task_args:
+            pool.apply_async(self._MACD_signal_calculation, t)
+        pool.close()
+        pool.join()
+        '''
+
+    def _MACD_signal_calculation(self, df_stock_records, df_MACD_index):
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
                    progressbar.Bar(marker='0', left='[', right=']'), ' ',
