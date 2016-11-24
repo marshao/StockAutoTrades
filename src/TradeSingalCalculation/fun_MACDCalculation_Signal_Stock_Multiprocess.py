@@ -225,7 +225,7 @@ for pattern_loop in range(7):
 pool = mp.Pool(7)
 		
 for t in task_args:
-	pool.apply_async(MACD_Cal, t)
+	pool.map_async(MACD_Cal, t)
 
 #result= [pool.apply_async(MACD_Cal, t) for t in task_args]
 

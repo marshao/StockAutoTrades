@@ -6,7 +6,7 @@ __metclass__ = type
 import datetime, time, progressbar
 import pandas as pd
 from sqlalchemy import create_engine, Table, Column, MetaData
-import multiprocessing as mp
+from multiprocessing import Pool
 
 
 class C_Algorithems_BestPattern(object):
@@ -38,12 +38,11 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _par(self, period):
         self._tb_MACDIndex = Table('tb_MACDIndex', self._metadata, autoload=True)
         self._tb_StockCodes = Table('tb_StockCodes', self._metadata, autoload=True)
+        self._tb_TradeSignal = Table('tb_StockIndex_MACD_New', self._metadata, autoload=True)
         if period in self._x_min:
-            self._tb_TradeSignal = Table('tb_StockIndex_MACD', self._metadata, autoload=True)
             self._tb_StockRecords = Table('tb_StockXMinRecords', self._metadata, autoload=True)
             self._tb_Trades = Table('tb_MACD_Trades', self._metadata, autoload=True)
         elif period in self._x_period:
-            self._tb_TradeSignal = Table('tb_StockIndex_MACD_HalfHour', self._metadata, autoload=True)
             self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
             self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
 
@@ -55,34 +54,60 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
-        self._multi_tasks_cal_MACD_signals(df_MACD_index, df_stock_records)
+        #self._MACD_signal_calculation(df_MACD_index, df_stock_records)
+        self._clean_table('tb_StockIndex_MACD_New')
+        self._multi_processors_cal_MACD_signals(df_MACD_index, df_stock_records)
         # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
 
-    def _multi_tasks_cal_MACD_signals(self, df_MACD_index, df_stock_records):
+    def _clean_table(self, table_name):
+        conn = self._engine.connect()
+        conn.execute("truncate %s" %table_name)
+        print "Table is cleaned"
+
+    def _multi_processors_cal_MACD_signals(self, df_MACD_index, df_stock_records):
+        print "Jumped into Multiprocessing "
+
+
+
         tasks = df_MACD_index.index.size / 7
         task_args = []
         processor = 1
         index_begin = 0
         index_end = tasks
         while processor <= 8:
-            df = df_MACD_index.index[index_begin:index_end]
-            task_args.append((df_stock_records, df,))
+            df = df_MACD_index[index_begin:index_end]
+            task_args.append((df, df_stock_records),)
+            #pool.apply_async(func=self._MACD_signal_calculation, args=(df, df_stock_records,))
             processor += 1
             index_begin = index_end
             if processor != 8:
                 index_end = processor * tasks
             else:
                 index_end = df_MACD_index.index.size
-            print df
-        '''
-        pool = mp.Pool(7)
+
+        pool = Pool(7)
         for t in task_args:
-            pool.apply_async(self._MACD_signal_calculation, t)
+            pool.map_async(self._MACD_signal_calculation(t[0], t[1]), ())
+        #pool.map_async(self._MACD_signal_calculation(task_args[1][0], task_args[1][1]), ())
         pool.close()
         pool.join()
+
+
+        '''
+        pl = []
+        for t in task_args:
+            pl.append(mp.Process(target = self._MACD_signal_calculation, args = t))
+
+        for p in pl:
+            p.start()
+            p.join()
         '''
 
-    def _MACD_signal_calculation(self, df_stock_records, df_MACD_index):
+
+
+
+    def _MACD_signal_calculation(self, df_MACD_index, df_stock_records):
+        print "Processing MACD Index"
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
                    progressbar.Bar(marker='0', left='[', right=']'), ' ',
@@ -94,9 +119,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df = df_stock_records
         #  The first loop, go through every MACD Pattern in df_MACD_index
         for j in progress(range(df_MACD_index.index.size)):
-            if loop_breaker > 1:
-                break
-            loop_breaker += 1
+            #if loop_breaker > 1:
+            #    break
+            #loop_breaker += 1
 
             short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
             long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
@@ -149,10 +174,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     pass
                 i += 1
             # Remove the no transaction record from the DB.
-            df_save = df[df.Signal != 0]
-            #df_save.to_sql('tb_StockIndex_MACD_HalfHour', con=self._engine, flavor='mysql', if_exists='append', index=True)
-            print 'df == ',df
-            # print 'df_save', df_save.index.size
+            df_save = df[df.Signal != 0].drop(df.columns[[0,2,3,4,5,7]], axis=1)
+            df_save.to_sql('tb_StockIndex_MACD_New', con=self._engine, flavor='mysql', if_exists='append', index=True)
 
 
 def _MACD_ending_profits(self):
@@ -181,7 +204,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 def main():
     MACDPattern = C_BestMACDPattern()
     MACDPattern._MACD_trading_signals()
-
+    #MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 if __name__ == '__main__':
     main()
