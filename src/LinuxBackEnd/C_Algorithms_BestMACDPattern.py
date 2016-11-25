@@ -337,10 +337,19 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             if MACD_trades.size != 0:
                 MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
 
-
-
     def _MACD_best_pattern(self):
-        pass
+        sql_select_ending_profits = ('select MACD_pattern_number, profit_rate from tb_MACD_Trades_HalfHour')
+        df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
+        grouped_df = df_MACD_ending_profits.groupby('MACD_pattern_number')
+        pattern_count = df_MACD_ending_profits['MACD_pattern_number'].value_counts()
+        # print grouped_df.size()
+        des = grouped_df.describe()
+        print  des[:30]
+
+        for name, group in grouped_df:
+            # print name, group
+            pass
+
 
 
     def _progress_monitor(self):
@@ -360,7 +369,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 def main():
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_ending_profits()
+    MACDPattern._MACD_best_pattern()
     #MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 if __name__ == '__main__':
