@@ -7,6 +7,7 @@ import datetime, time, progressbar
 import pandas as pd
 from sqlalchemy import create_engine, Table, Column, MetaData
 from multiprocessing import Pool
+import multiprocessing as mp
 
 
 class C_Algorithems_BestPattern(object):
@@ -67,8 +68,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, df_stock_records):
         print "Jumped into Multiprocessing "
 
-
-
+        sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = 'm30' and stock_code = 'sz300226'")
         tasks = df_MACD_index.index.size / 7
         task_args = []
         processor = 1
@@ -76,8 +76,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         index_end = tasks
         while processor <= 8:
             df = df_MACD_index[index_begin:index_end]
+            df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, index_col='quote_time')
             task_args.append((df, df_stock_records),)
-            #pool.apply_async(func=self._MACD_signal_calculation, args=(df, df_stock_records,))
+
             processor += 1
             index_begin = index_end
             if processor != 8:
@@ -85,23 +86,44 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             else:
                 index_end = df_MACD_index.index.size
 
+        '''
         pool = Pool(7)
-        for t in task_args:
-            pool.map_async(self._MACD_signal_calculation(t[0], t[1]), ())
-        #pool.map_async(self._MACD_signal_calculation(task_args[1][0], task_args[1][1]), ())
+        #for t in task_args:
+        #    pool.map_async(self._MACD_signal_calculation(t[0], t[1]), ())
+        pool.map_async(self._MACD_signal_calculation(task_args[0][0], task_args[0][1]), ())
+        pool.map_async(self._MACD_signal_calculation(task_args[1][0], task_args[1][1]), ())
         pool.close()
         pool.join()
 
-
         '''
-        pl = []
-        for t in task_args:
-            pl.append(mp.Process(target = self._MACD_signal_calculation, args = t))
+        p1 = mp.Process(target = self._MACD_signal_calculation, args = (task_args[0][0], task_args[0][1],))
+        p2 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[1][0], task_args[1][1],))
+        p3 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[2][0], task_args[2][1],))
+        p4 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[3][0], task_args[3][1],))
+        p5 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[4][0], task_args[4][1],))
+        p6 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[5][0], task_args[5][1],))
+        p7 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[6][0], task_args[6][1],))
 
-        for p in pl:
-            p.start()
-            p.join()
-        '''
+        p1.start()
+        p2.start()
+        p3.start()
+        p4.start()
+        p5.start()
+        p6.start()
+        p7.start()
+
+        p1.join()
+        p2.join()
+        p3.join()
+        p4.join()
+        p5.join()
+        p6.join()
+        p7.join()
+
+
+
+
+
 
 
 
@@ -174,27 +196,29 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     pass
                 i += 1
             # Remove the no transaction record from the DB.
+            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
             df_save = df[df.Signal != 0].drop(df.columns[[0,2,3,4,5,7]], axis=1)
-            df_save.to_sql('tb_StockIndex_MACD_New', con=self._engine, flavor='mysql', if_exists='append', index=True)
+            df_save.to_sql('tb_StockIndex_MACD_New', con=engine, flavor='mysql', if_exists='append', index=True)
 
 
-def _MACD_ending_profits(self):
-    pass
+
+    def _MACD_ending_profits(self):
+        pass
 
 
-def _MACD_best_pattern(self):
-    pass
+    def _MACD_best_pattern(self):
+        pass
 
 
-def _progress_monitor(self):
-    '''
-    Setting up progress bar to monitor the progress of whole program.
-    '''
-    widgets = ['MACD_Pattern_BackTest: ',
-               progressbar.Percentage(), ' ',
-               progressbar.Bar(marker='0', left='[', right=']'), ' ',
-               progressbar.ETA()]
-    progress = progressbar.ProgressBar(widgets=widgets)
+    def _progress_monitor(self):
+        '''
+        Setting up progress bar to monitor the progress of whole program.
+        '''
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
 
 
 class C_BestSARPattern(C_Algorithems_BestPattern):
