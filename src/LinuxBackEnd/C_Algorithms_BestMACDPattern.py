@@ -265,7 +265,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
         engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
 
-        for eachPattern in pattern_slices:
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        for eachPattern in progress(pattern_slices):
             sql_fetch_signals = ('select * from tb_StockIndex_MACD_New where MACD_pattern_number = %s')
             pattern = eachPattern[0]
             df_MACD_signals = pd.read_sql(sql_fetch_signals, params=(pattern,), con=engine)
