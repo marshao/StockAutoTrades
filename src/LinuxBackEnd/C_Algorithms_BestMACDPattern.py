@@ -211,19 +211,24 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records):
         total_pattern = len(MACD_patterns)
+        print total_pattern
         processors = 7
         index_beg = 0
         index_end = total_pattern / 7
         pattern_slices = []
+
         for i in range(8):
             if i != 7:
+                print "i:%s,  index_beg %s , index_end %s " %(i, index_beg, index_end)
                 pattern_slices.append(MACD_patterns[index_beg:index_end])
                 index_beg = index_end
-                index_end = i * (total_pattern / 7)
-            else:
-                pattern_slices.append(MACD_patterns[index_beg:])
-        # print pattern_slices[0][0][0]
-        self._MACD_ending_profits_calculation(df_stock_records, pattern_slices[0])
+                index_end = index_end + total_pattern/7
+            #else:
+            #    print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
+            #    pattern_slices.append(MACD_patterns[index_beg:])
+            #i += 1
+
+
         p1 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[0],))
         p2 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[1],))
         p3 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[2],))
@@ -231,7 +236,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p5 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[4],))
         p6 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[5],))
         p7 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[6],))
-        p8 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[7],))
+        #p8 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[7],))
         p1.start()
         p2.start()
         p3.start()
@@ -239,7 +244,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p5.start()
         p6.start()
         p7.start()
-        p8.start()
+        #p8.start()
         p1.join()
         p2.join()
         p3.join()
@@ -247,7 +252,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p5.join()
         p6.join()
         p7.join()
-        p8.join()
+        #p8.join()
+
+
 
     def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices):
         # df_StockIndex_MACD, df_stock_close_prices, MACD_TradeArray, MACD_Tradetype, EMA_short_windows, EMA_long_windows, DIF_windows, eachPattern
