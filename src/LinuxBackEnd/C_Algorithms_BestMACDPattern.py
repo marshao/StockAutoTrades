@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 from multiprocessing import Pool
 import multiprocessing as mp
+from BackEndMain import commu
 
 
 class C_Algorithems_BestPattern(object):
@@ -121,8 +122,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p6.join()
         p7.join()
 
-
-    def _MACD_signal_calculation(self, df_MACD_index, df_stock_records):
+    def _MACD_signal_calculation(self, df_MACD_index, df_stock_records, to_DB=True):
         print "Processing MACD Index"
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
@@ -192,7 +192,40 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             # Remove the no transaction record from the DB.
             engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
             df_save = df[df.Signal != 0].drop(df.columns[[0,2,3,4,5,7]], axis=1)
-            df_save.to_sql('tb_StockIndex_MACD_New', con=engine, flavor='mysql', if_exists='append', index=True)
+            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+        return df
+
+    def apply_best_MACD_pattern_to_data(self, pattern_number=17, period='m30', stock_code='sz300226'):
+        sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
+        df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
+                                    index_col='id_tb_MACDIndex')
+        sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+
+        df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
+                                       index_col='quote_time')
+        df_signals = self._MACD_signal_calculation(df_MACD_index, df_stock_records, to_DB=False)[-1:]
+        if df_signals.Signal[0] != 3:  # 3 need to be change to 0
+            # Get Stock Avaliable Informatoin
+            df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
+            stock_avaliable = df_stock_infor.stockAvaliable[0]
+            current_value = df_stock_infor.currentValue[0]
+            print stock_avaliable, current_value
+            # Get real time price information
+            self._get_stock_current_price(stock_code[2:])
+
+    def _checking_stock_in_hand(self, stock_code):
+        # Need to udpate stock_in_hand Information first
+        # This will request to send a code to frontend, and wait for response from confirmation from front end.
+        commu('1')  # update stock in hand information
+        sql_select_stock_infor = ("select stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
+        df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+        return df_stock_infor
+
+    def _get_stock_current_price(self, stock_code):
+        pass  ############
+        ### how to call the function to get current price
+
 
     def _MACD_ending_profits(self, period='m30', stock_code='sz300226'):
         # Fetch out Signal, EMA_short_window, EMA_long_window, DIF_window, quote_time, MACD_pattern_number from tb_StockIndex_MACD_New into a Pandas DF
@@ -253,8 +286,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p6.join()
         p7.join()
         #p8.join()
-
-
 
     def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices):
         # df_StockIndex_MACD, df_stock_close_prices, MACD_TradeArray, MACD_Tradetype, EMA_short_windows, EMA_long_windows, DIF_windows, eachPattern
@@ -338,15 +369,37 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
 
     def _MACD_best_pattern(self):
-        sql_select_ending_profits = ('select MACD_pattern_number, profit_rate from tb_MACD_Trades_HalfHour')
+        sql_select_ending_profits = ('select MACD_pattern_number, profit_rate, quote_time from tb_MACD_Trades_HalfHour')
         df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
-        grouped_df = df_MACD_ending_profits.groupby('MACD_pattern_number')
-        pattern_count = df_MACD_ending_profits['MACD_pattern_number'].value_counts()
+        gb_pattern = df_MACD_ending_profits.groupby('MACD_pattern_number')
         # print grouped_df.size()
-        des = grouped_df.describe()
-        print  des[:30]
+        # df_max = gb_pattern.max()
+        # df_max.sort_values(by ='profit_rate', inplace = True, ascending=False)
+        # print df_max[:20]
+        # df_last = gb_pattern.get_group(2367)
+        # df_last.sort_values(by ='quote_time', inplace = True, ascending=False)
+        # print df_last
+        # df_last.sort_values(by ='profit_rate', inplace = True, ascending=False)
+        # print df_last[:20]
+        df_last = []
+        tmp = [0]
+        for name, group in gb_pattern:
+            # print name
+            # tmp[0] = group.MACD_pattern_number[-1:]
+            # print "group value = ", group.profit_rate[-1:]
+            tmp[0] = group.profit_rate[-1:]
+            # print "tmp[0]=", tmp[0]
+            # print  group.profit_rate[-1:]
+            df_last.extend(tmp)
+            # print group[-1:]
+            # df_last.append()
+        print df_last
 
-        for name, group in grouped_df:
+        # print df_max[:20]
+        # print des[:20]
+        # print gb_pattern.get_group(1)
+
+        for name, group in gb_pattern:
             # print name, group
             pass
 
@@ -369,7 +422,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 def main():
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_best_pattern()
+    MACDPattern.apply_best_MACD_pattern_to_data()
     #MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 if __name__ == '__main__':
