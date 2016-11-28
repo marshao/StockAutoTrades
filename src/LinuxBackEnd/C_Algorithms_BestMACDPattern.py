@@ -10,6 +10,7 @@ from sqlalchemy.sql import select, and_, or_, not_
 from multiprocessing import Pool
 import multiprocessing as mp
 from BackEndMain import commu
+from C_GetDataFromWeb import *
 
 
 class C_Algorithems_BestPattern(object):
@@ -28,6 +29,23 @@ class C_Algorithems_BestPattern(object):
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
+
+    def _time_tag(self):
+        time_stamp_local = time.asctime(time.localtime(time.time()))
+        time_stamp = datetime.datetime.now()
+        only_date = time_stamp.date()
+        return time_stamp_local
+
+    def _time_tag_dateonly(self):
+        time_stamp_local = time.asctime(time.localtime(time.time()))
+        time_stamp = datetime.datetime.now()
+        only_date = time_stamp.date()
+        return only_date
+
+    def _write_log(self, log_mesg='', logPath='operLog.txt'):
+        fullPath = self._output_dir + logPath
+        with open(fullPath, 'a') as log:
+            log.writelines(log_mesg)
 
 class C_BestMACDPattern(C_Algorithems_BestPattern):
     '''
@@ -197,6 +215,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         return df
 
     def apply_best_MACD_pattern_to_data(self, pattern_number=17, period='m30', stock_code='sz300226'):
+        done = False
         sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
         df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
                                     index_col='id_tb_MACDIndex')
@@ -205,26 +224,74 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         df_signals = self._MACD_signal_calculation(df_MACD_index, df_stock_records, to_DB=False)[-1:]
+        # return  df_signals
         if df_signals.Signal[0] != 3:  # 3 need to be change to 0
             # Get Stock Avaliable Informatoin
-            df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
-            stock_avaliable = df_stock_infor.stockAvaliable[0]
-            current_value = df_stock_infor.currentValue[0]
-            print stock_avaliable, current_value
-            # Get real time price information
-            self._get_stock_current_price(stock_code[2:])
+            done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
+            if done:
+                # Get real time price information
+                done, df_current_price = self._get_stock_current_price(stock_code)
+                if done:
+                    self._send_trading_command(df_stock_infor, df_current_price, df_signals.Signal[0])
+        else:
+            self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
+
 
     def _checking_stock_in_hand(self, stock_code):
         # Need to udpate stock_in_hand Information first
         # This will request to send a code to frontend, and wait for response from confirmation from front end.
-        commu('1')  # update stock in hand information
-        sql_select_stock_infor = ("select stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
-        df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
-        return df_stock_infor
+        receive = commu('1')  # update stock in hand information
+        # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
+        done = False
+        sql_select_stock_infor = (
+        "select stockCodes, stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
+        if receive == '1.1':
+            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+            done = True
+            return done, df_stock_infor
+        else:
+            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+            self._log_mesg = "Could not get current stock in hand information at %s" % self._time_tag()
+            return done, df_stock_infor
 
     def _get_stock_current_price(self, stock_code):
-        pass  ############
+        gd = C_GettingData()
+        done = gd.get_data_qq(stock_code, period='real')
+        sql_select_current_price = (
+            "select stock_code,current_price, buy1_price, buy2_price, sale1_price, sale2_price  from tb_StockRealTimeRecords where stock_code = %s ORDER by time DESC limit 1")
+        if done:
+            df_current_price = pd.read_sql(sql_select_current_price, params=(stock_code[2:],), con=self._engine)
+            return done, df_current_price
+        else:
+            self._log_mesg = "Could not get current price data at %s" % self._time_tag()
+            df_current_price = pd.read_sql(sql_select_current_price, params=(stock_code[2:],), con=self._engine)
+            done = False
+            return done, df_current_price
         ### how to call the function to get current price
+
+    def _send_trading_command(self, df_stock_infor, df_current_price, signal):
+        stock_code = df_stock_infor.stockCodes[0]
+        stock_avaliable = df_stock_infor.stockAvaliable[0]
+        current_value = df_stock_infor.currentValue[0]
+        cmd = ''
+        if signal == 1:
+            cuurent_price = df_current_price.current_price[0]
+            buy1_price = df_current_price.buy1_price[0]
+            buy2_price = df_current_price.buy2_price[0]
+            # cmd = '1 ' + stock_code+''+stock_avaliable+''
+            """
+            Mssing cash avaliable data
+            """
+        elif signal == -1:
+            cuurent_price = df_current_price.current_price[0]
+            sale1_price = df_current_price.sale1_price[0]
+            sale2_price = df_current_price.sale2_price[0]
+            cmd = '-1 ' + stock_code + '' + stock_avaliable + '' + sale1_price
+        else:
+            pass
+
+        print stock_avaliable, current_value
+
 
 
     def _MACD_ending_profits(self, period='m30', stock_code='sz300226'):

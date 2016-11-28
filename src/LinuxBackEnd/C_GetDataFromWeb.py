@@ -193,43 +193,48 @@ class C_GettingData:
         self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
-        if period in self._x_period: # precess day/week data
-            fq = ('qfq' if fq not in (self._fq) else fq)
-            url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
-            html = urllib.urlopen(url)
-            data = html.read()
-            self._process_x_period_data_qq(data, period, fq, stock_code)
-            self._save_data_to_db_qq(period, stock_code)
-        elif period in (self._x_min):
-            if period == 'm1': # process 1 min data
-                url = self._data_source['qq_1_min'] % (stock_code, stock_code)
+        got = True
+        try:
+            if period in self._x_period:  # precess day/week data
+                fq = ('qfq' if fq not in (self._fq) else fq)
+                url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_1_min_data_qq(data, stock_code)
+                self._process_x_period_data_qq(data, period, fq, stock_code)
                 self._save_data_to_db_qq(period, stock_code)
-            else: # process X min data
-                if period == 'm5':
-                    q_count = self._q_count[1]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                elif period == 'm15':
-                    q_count = self._q_count[2]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                elif period == 'm30':
-                    q_count = self._q_count[3]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                else:
-                    q_count = self._q_count[4]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+            elif period in (self._x_min):
+                if period == 'm1':  # process 1 min data
+                    url = self._data_source['qq_1_min'] % (stock_code, stock_code)
+                    html = urllib.urlopen(url)
+                    data = html.read()
+                    self._process_1_min_data_qq(data, stock_code)
+                    self._save_data_to_db_qq(period, stock_code)
+                else:  # process X min data
+                    if period == 'm5':
+                        q_count = self._q_count[1]
+                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    elif period == 'm15':
+                        q_count = self._q_count[2]
+                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    elif period == 'm30':
+                        q_count = self._q_count[3]
+                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    else:
+                        q_count = self._q_count[4]
+                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    html = urllib.urlopen(url)
+                    data = html.read()
+                    self._process_x_min_data_qq(data, period, stock_code)
+                    self._save_data_to_db_qq(period, stock_code)
+            else:  # process real time data
+                url = self._data_source['qq_realtime'] % stock_code
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_x_min_data_qq(data, period, stock_code)
+                self._process_real_time_data_qq(data)
                 self._save_data_to_db_qq(period, stock_code)
-        else: # process real time data
-            url = self._data_source['qq_realtime'] %stock_code
-            html = urllib.urlopen(url)
-            data = html.read()
-            self._process_real_time_data_qq(data)
-            self._save_data_to_db_qq(period, stock_code)
+        except:
+            got = False
+        return got
 
 
     def _process_x_period_data_qq(self, data, period, fq, stock_code):

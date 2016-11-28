@@ -25,8 +25,8 @@ def commu(cmd='1'):
     print l
     # s.connect((host, port))
     # s.send(l)
-    # s.recv(1024)
-
+    # receive = s.recv(1024)
+    # return receive
 
 def main():
     pass
