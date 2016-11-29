@@ -29,6 +29,7 @@ class C_Algorithems_BestPattern(object):
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
+        self._trade_history_column = ['stock_code','trade_type','trade_volumn','trade_price','trade_time', 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result']
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -235,11 +236,21 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     # Get cash avaliable information
                     done, cash_avaliable = self._get_stock_asset()
                     if done:
-                        self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
-                                                   df_signals.Signal[0])
+                        done = self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
+                                                   df_signals.Signal[0], pattern_number, period)
+                        if done:
+                            self._log_mesg = 'Trading command had been executed successfully at %s'%self._time_tag()
+                        else:
+                            self._log_mesg = 'Trading command had failed to be executed successfully at %s' % self._time_tag()
+                    else:
+                        self._log_mesg = "Unable to get cash avalible infomation at %s"%self._time_tag()
+                else:
+                    self._log_mesg = "Unable to get real time price information at %s"%self._time_tag()
+            else:
+                self._log_mesg = "Unable to get stock_avalible information at %s"%self._time_tag()
         else:
             self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
-
+        print self._log_mesg
 
     def _checking_stock_in_hand(self, stock_code):
         # Need to udpate stock_in_hand Information first
@@ -248,7 +259,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         done = False
         sql_select_stock_infor = (
-        "select stockCodes, stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
+        "select stockCode, stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
         if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             done = True
@@ -257,6 +268,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             self._log_mesg = "Could not get current stock in hand information at %s" % self._time_tag()
             return done, df_stock_infor
+
 
     def _get_stock_current_price(self, stock_code):
         gd = C_GettingData()
@@ -275,34 +287,76 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _get_stock_asset(self):
         done = False  # The mark of success or not.
+        cash_avabliable = -1
         cmd_line = '5'
-        receive = commu(cmd_line)
-        print receive
+        receives = commu(cmd_line).split()
+        if receives[0] == '5.1':
+            cash_avabliable = float(receives[1])
+            done = True
+        else:
+            pass
+        return done, cash_avabliable
 
 
 
-    def _send_trading_command(self, df_stock_infor, df_current_price, signal):
-        stock_code = df_stock_infor.stockCodes[0]
+    def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
+        #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
+        # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
+        df_trade_history = pd.DataFrame(columns=self._trade_history_column)
+        stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
         current_value = df_stock_infor.currentValue[0]
-        cmd = ''
-        if signal == 1:
-            cuurent_price = df_current_price.current_price[0]
+        trade_volumn = 0
+        volumn_up_limit = 2000
+        volumn_down_limit = 1000
+        trade_algorithem_name = 'MACD Best Pattern'
+        trade_algorithem_method = pattern_number
+        done = False
+
+
+        if signal == 1: # 1 == buy,
+            # Need to evaluate the cash avalible is enough to buy at least 1000 stocks
+            # And also make sure the buy up limit will not over 2000 stocks
+            current_price = df_current_price.current_price[0]
             buy1_price = df_current_price.buy1_price[0]
             buy2_price = df_current_price.buy2_price[0]
-            # cmd = '1 ' + stock_code+''+stock_avaliable+''
-            """
-            Mssing cash avaliable data
-            """
-        elif signal == -1:
-            cuurent_price = df_current_price.current_price[0]
+            trade_volumn = int(cash_avaliable/current_price/100)*100
+            if trade_volumn >= volumn_up_limit:
+                trade_volumn = str(volumn_up_limit)
+            elif trade_volumn <= volumn_down_limit:
+                trade_volumn = '0'
+            else:
+                trade_volumn = str(trade_volumn)
+            cmd = '2 ' + stock_code+' ' + trade_volumn+' '+ str(current_price)
+            df_trade_history.trade_type.loc[0] = int(signal)
+        else: # -1 == sale
+            # Need to sale all stocks
+            current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
             sale2_price = df_current_price.sale2_price[0]
-            cmd = '-1 ' + stock_code + '' + stock_avaliable + '' + sale1_price
+            cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
+
+        # Send trading command and analysis the result
+        receives = commu(cmd).split()
+        print receives
+        if receives[0] == '2.1' or receives == '3.1':
+            cash_avabliable = float(receives[1])
+            df_trade_history.stock_code.loc[0] = stock_code
+            df_trade_history.trade_volumn.loc[0] = trade_volumn
+            df_trade_history.trade_price.loc[0] = current_price
+            df_trade_history.trade_time.loc[0] = self._time_tag()
+            df_trade_history.trade_algorithem_name.loc[0] = trade_algorithem_name
+            df_trade_history.trade_algorithem_method.loc[0] = trade_algorithem_method
+            df_trade_history.stock_record_period.loc[0] = period
+            df_trade_history.trade_result[0] = 0
+            df_trade_history.to_sql('tb_StockTradeHistory', con=self._engine, index=False, if_exists='Append')
+            print df_trade_history
+            done = True
         else:
             pass
 
-        print stock_avaliable, current_value
+        return done
+
 
 
 
@@ -506,3 +560,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

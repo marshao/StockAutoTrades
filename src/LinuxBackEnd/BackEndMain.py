@@ -25,11 +25,9 @@ def commu(cmd='1'):
     port = 32768
     host = 'ghuan02-d.inovageo.com'
     l = "Buy 300226 1000 at 50.13 "
-    print l
     s.connect((host, port))
     s.send(cmd)
     receive = s.recv(1024)
-    print receive
     return receive
 
 def main():
