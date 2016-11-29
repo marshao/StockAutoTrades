@@ -35,7 +35,7 @@ class C_Algorithems_BestPattern(object):
         time_stamp_local = time.asctime(time.localtime(time.time()))
         time_stamp = datetime.datetime.now()
         only_date = time_stamp.date()
-        return time_stamp_local
+        return time_stamp
 
     def _time_tag_dateonly(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -259,9 +259,10 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         done = False
         sql_select_stock_infor = (
-        "select stockCode, stockAvaliable, currentValue from tb_StockInhand where stockCode = %s")
+        "select stockCode, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
         if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+            print df_stock_infor
             done = True
             return done, df_stock_infor
         else:
@@ -302,6 +303,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
         # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
+        signal = 2
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
@@ -312,6 +314,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
         done = False
+        line = []
+        trade_result = 0
 
 
         if signal == 1: # 1 == buy,
@@ -321,12 +325,15 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             buy1_price = df_current_price.buy1_price[0]
             buy2_price = df_current_price.buy2_price[0]
             trade_volumn = int(cash_avaliable/current_price/100)*100
+            print trade_volumn
             if trade_volumn >= volumn_up_limit:
                 trade_volumn = str(volumn_up_limit)
             elif trade_volumn <= volumn_down_limit:
                 trade_volumn = '0'
             else:
                 trade_volumn = str(trade_volumn)
+                trade_result = 4
+
             cmd = '2 ' + stock_code+' ' + trade_volumn+' '+ str(current_price)
             df_trade_history.trade_type.loc[0] = int(signal)
         else: # -1 == sale
@@ -339,17 +346,19 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # Send trading command and analysis the result
         receives = commu(cmd).split()
         #print receives
-        if receives[0] == '2.1' or receives == '3.1':
-            cash_avabliable = float(receives[1])
-            df_trade_history.stock_code.loc[0] = stock_code
-            df_trade_history.trade_volumn.loc[0] = trade_volumn
-            df_trade_history.trade_price.loc[0] = current_price
-            df_trade_history.trade_time.loc[0] = self._time_tag()
-            df_trade_history.trade_algorithem_name.loc[0] = trade_algorithem_name
-            df_trade_history.trade_algorithem_method.loc[0] = trade_algorithem_method
-            df_trade_history.stock_record_period.loc[0] = period
-            df_trade_history.trade_result[0] = 0
-            df_trade_history.to_sql('tb_StockTradeHistory', con=self._engine, index=False, if_exists='Append')
+        if receives[0] == '2.1' or receives[0] == '3.1':
+            print 'Run into confirmed code'
+            line.append(stock_code)
+            line.append(receives[0])
+            line.append(trade_volumn)
+            line.append(current_price)
+            line.append(self._time_tag())
+            line.append(trade_algorithem_name)
+            line.append(trade_algorithem_method)
+            line.append(period)
+            line.append(trade_result)
+            df_trade_history.loc[len(df_trade_history)] = line
+            df_trade_history.to_sql('tb_StockTradeHistory', con=self._engine, index=False, if_exists='append')
             print df_trade_history
             done = True
         else:

@@ -28,6 +28,7 @@ def commu(cmd='1'):
     s.connect((host, port))
     s.send(cmd)
     receive = s.recv(1024)
+    print receive
     return receive
 
 def main():
