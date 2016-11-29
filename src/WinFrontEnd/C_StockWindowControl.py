@@ -1,6 +1,6 @@
 # coding=GBK
 
-import win32gui, win32com.client, win32api, win32con
+import win32gui, win32com.client, win32api, win32con, win32clipboard
 from win32con import *
 from time import sleep
 import datetime
@@ -18,6 +18,7 @@ class C_StockWindowControl:
 
     _conf = {
         'stockInHandFile': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
+        'stockTradeToday': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockTradeToday.csv',
         'outputDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
         'installDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
         'confFile': '_conf.ini',
@@ -70,7 +71,11 @@ class C_StockWindowControl:
     # tempwindow = win32gui.GetWindow(7607276)
 
     def __init__(self):
+        self._find_main_window()
+        mainWindowHwnd = self._attrs_window['mainWindowHandle']
+        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
 
+    def _get_handles(self):
         self._find_main_window()
         mainWindowHwnd = self._attrs_window['mainWindowHandle']
         print mainWindowHwnd
@@ -83,32 +88,39 @@ class C_StockWindowControl:
         '''
         # try:
 
-        sleep(1)
+        sleep(0.1)
         self._set_fore_ground_window(mainWindowHwnd)
         print  "Set window fore ground"
-        sleep(3)
+        sleep(0.1)
         win32gui.SetActiveWindow(mainWindowHwnd)
         print "set active window"
-        sleep(3)
+        sleep(0.1)
+        # Get Sales Page Handles
         self._sale_page()
         win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Sale')
         print self._attrs_sale_window
+        sleep(0.1)
 
-        sleep(1)
+        # Get Buy Page handles
         # self._set_fore_ground_window(mainWindowHwnd)
         self._buy_page()
+        sleep(1)
         win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Buy')
         print self._attrs_buy_window
         '''
             Initiate Stock Holding and Capital Information
             '''
-
-        sleep(1)
+        sleep(0.1)
         # self._set_fore_ground_window(mainWindowHwnd)
         self._stock_holding_page()
+        sleep(0.1)
         win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Infor')
         print self._attrs_window
 
+        print self._log_mesg
+        self._write_log(self._log_mesg)
+
+    def _get_various_data(self):
         if self._save_stock_infor_to_file() == False:
             self._log_mesg = '\n Sorry, system can not initialize Trading Software at ' + self._time_tag()
         else:
@@ -121,10 +133,6 @@ class C_StockWindowControl:
         print self._stock_trades
         # except:
         #   self._log_mesg = '\n Sorry, system can not initialize Trading Software at ' + self._time_tag()
-
-        print self._log_mesg
-        self._write_log(self._log_mesg)
-        self._time_tag()
 
     def _enum_window_proc(self, hwnd, tradeCode):
         if hwnd == 133240 or hwnd == 133236:
@@ -174,6 +182,7 @@ class C_StockWindowControl:
         if tradeCode == 'Buy':
             if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockCodeWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
+                print 'stock code handle is %s' % hwnd
                 sizeKey = 'stockCodeWindowXY'
                 handleKey = 'buyStockCodeHandle'
                 self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
@@ -287,12 +296,30 @@ class C_StockWindowControl:
 
     def _save_stock_infor_to_file(self):
 
-        filename = self._conf['stockInHandFile']
-        self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
-        self._asset_infor['stockValue'] = win32gui.GetWindowText(self._attrs_window['stockValueHandle'])
-        self._asset_infor['totalAsset'] = win32gui.GetWindowText(self._attrs_window['totalAssetHandle'])
+        # filename = self._conf['stockInHandFile']
+        # self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
+        # self._asset_infor['stockValue'] = win32gui.GetWindowText(self._attrs_window['stockValueHandle'])
+        # self._asset_infor['totalAsset'] = win32gui.GetWindowText(self._attrs_window['totalAssetHandle'])
 
+        # toggle Ctrl + C, copy data into clipboard
+        hwnd = self._find_main_window()
+        sleep(1)
+        self._set_active_window2(hwnd)
+        sleep(0.1)
         self._stock_holding_page()
+
+        win32api.keybd_event(VK_CONTROL, 0, 0, 0)
+        # sleep(1)
+        win32api.keybd_event(67, 0, 0, 0)
+        win32api.keybd_event(67, 0, win32con.KEYEVENTF_KEYUP, 0)
+        # sleep(1)
+        win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(0.1)
+
+        data = self._get_clipboard_text()
+        self._process_clipboard_data(data, 'stock_in_hand')
+        saved = True
+        '''
         win32api.keybd_event(VK_CONTROL, 0, 0, 0)
         # sleep(1)
         win32api.keybd_event(83, 0, 0, 0)
@@ -335,91 +362,110 @@ class C_StockWindowControl:
         saved = True
 
         # print self._log_mesg
+        '''
         return saved
 
-    def _close_stock_window(self):
+    def buy_stock_bak(self, stockTrades):
 
-        win32api.keybd_event(VK_MENU, 0, 0, 0)
-
-        win32api.keybd_event(115, 0, 0, 0)
-        win32api.keybd_event(115, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
-        win32api.keybd_event(VK_MENU, win32con.KEYEVENTF_KEYUP, 0)
-
-    def _buy_page(self):
-        # win32gui.SetForeGroundWindow(mainWindowHwnd)
-        # Active Buy Window
-        win32api.keybd_event(VK_F1, 0, 0, 0)  # 释放按键
-        win32api.keybd_event(VK_F1, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
-
-    def _sale_page(self):
-        # setForeGroundWindow(mainWindowHwnd)
-        # win32gui.SetForegroundWindow(mainWindowHwnd)
-        # Active Buy Window
-        win32api.keybd_event(VK_F2, 0, 0, 0)  # 释放按键
-        win32api.keybd_event(VK_F2, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
-
-    def _stock_holding_page(self):
-        # win32gui.SetForeGroundWindow(mainWindowHwnd)
-        # Active Infor Window
-        win32api.keybd_event(VK_F4, 0, 0, 0)  # 释放按键
-        win32api.keybd_event(VK_F4, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
-
-    def buy_stock(self, stockTrades):
-
-        stockCode = stockTrades['stockCode']
-        tradeAmount = stockTrades['tradeAmount']
-        tradePrice = stockTrades['tradePrice']
-
+        stockCode = stockTrades[0]
+        tradeAmount = stockTrades[1]
+        tradePrice = stockTrades[2]
+        done = False
         # Active Buy Window
         self._buy_page()
 
-        try:
-            # Send stockCode
-            for char in stockCode:
-                win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
-            print "message sent"
+        # Send stockCode
+        for char in stockCode:
+            win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+        print "message sent to %s" % self._attrs_buy_window['buyStockCodeHandle']
 
-            # Send tradeAmount
-            for char in tradeAmount:
-                win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
-            print "Amount sent"
+        # Send tradeAmount
+        for char in tradeAmount:
+            win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Amount sent to %s" % self._attrs_buy_window['buyAmountHandle']
 
-            # Send tradePrice
-            for char in tradePrice:
-                win32api.SendMessage(self._attrs_buy_window['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
-            print "Price sent"
+        # Send tradePrice
+        for char in tradePrice:
+            win32api.SendMessage(self._attrs_buy_window['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Price sent to %s" % self._attrs_buy_window['buyPriceHandle']
 
-            # Send Sale Command
-            sleep(1)
-            win32api.keybd_event(66, 0, 0, 0)
-            win32api.keybd_event(66, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
+        # Send Sale Command
+        sleep(1)
+        win32api.keybd_event(66, 0, 0, 0)
+        win32api.keybd_event(66, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
 
-            # Send Y to Confirm the buy
-            sleep(1)
-            win32api.keybd_event(89, 0, 0, 0)
-            win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
+        # Send Y to Confirm the buy
+        sleep(1)
+        win32api.keybd_event(89, 0, 0, 0)
+        win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
 
-            # Send Enter to confirm any message
-            sleep(1)
-            win32api.keybd_event(VK_RETURN, 0, 0, 0)
-            win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
-            self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
+        # Send Enter to confirm any message
+        sleep(1)
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+        self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
+            stockCode, tradePrice, tradeAmount)
+        done = True
+
+        return done
+
+    def buy_stock(self, stockTrades):
+
+        stockCode = stockTrades[0]
+        tradeAmount = stockTrades[1]
+        tradePrice = stockTrades[2]
+        done = False
+        # Active Buy Window
+        self._buy_page()
+
+        # Send stockCode
+        # cx = 300
+        # cy = 124
+        # sleep(0.1)
+        # win32api.SetCursorPos((cx, cy))
+        # sleep(0.1)
+        # win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, cx, cy, 0, 0)
+        # win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, cx, cy, 0, 0)
+        for char in stockCode:
+            win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+        print "message sent to %s" % self._attrs_buy_window['buyStockCodeHandle']
+
+        # Send tradeAmount
+        for char in tradeAmount:
+            win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Amount sent to %s" % self._attrs_buy_window['buyAmountHandle']
+
+        # Send tradePrice
+        for char in tradePrice:
+            win32api.SendMessage(self._attrs_buy_window['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
+        print "Price sent to %s" % self._attrs_buy_window['buyPriceHandle']
+
+        # Send Sale Command
+        sleep(1)
+        win32api.keybd_event(66, 0, 0, 0)
+        win32api.keybd_event(66, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
+
+        # Send Y to Confirm the buy
+        sleep(1)
+        win32api.keybd_event(89, 0, 0, 0)
+        win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        # Send Enter to confirm any message
+        sleep(1)
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+        self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
                 stockCode, tradePrice, tradeAmount)
-        except:
-            self._log_mesg = '\n Sorry, system cannot issue a BUY command of stock code %s, buy price %s, buy amount %s' % (
-                stockCode, tradePrice, tradeAmount)
-            # write to log file
-            self._write_log(self._log_mesg, self._conf['trLog'])
+        done = True
+
+        return done
 
     def sale_stock(self, stockTrades):
 
-        stockCode = stockTrades['stockCode']
-        tradeAmount = stockTrades['tradeAmount']
-        tradePrice = stockTrades['tradePrice']
-
+        stockCode = stockTrades[0]
+        tradeAmount = stockTrades[1]
+        tradePrice = stockTrades[2]
+        done = False
         # Active Buy Window
         self._sale_page()
 
@@ -456,11 +502,13 @@ class C_StockWindowControl:
 
             self._log_mesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
                 stockCode, tradePrice, tradeAmount)
+            done = True
         except:
             self._log_mesg = '\n Sorry, system cannot issue a SALE command of stock code %s, buy price %s, buy amount %s' % (
                 stockCode, tradePrice, tradeAmount)
             # write to log file
             self._write_log(self._log_mesg, self._conf['trLog'])
+        return done
 
     def set_trade_price(self, price, priceIndex, trade='b'):
 
@@ -559,6 +607,122 @@ class C_StockWindowControl:
         df.to_sql('tb_StockAsset', con=engine, index=False, if_exists='append')
         return self._asset_infor['cashAvaliable']
 
+    def get_trade_result(self):
+        cx = 60
+        cy = 327
+        hwnd = self._find_main_window()
+        sleep(1)
+        self._set_active_window2(hwnd)
+        sleep(0.1)
+        self._stock_holding_page()
+        sleep(0.1)
+        win32api.SetCursorPos((cx, cy))
+        sleep(0.1)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, cx, cy, 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, cx, cy, 0, 0)
+        sleep(0.1)
+        cx = 560
+        cy = 327
+        win32api.SetCursorPos((cx, cy))
+        print "clicked"
+
+        # toggle Ctrl + C, copy data into clipboard
+        self._stock_holding_page()
+        win32api.keybd_event(VK_CONTROL, 0, 0, 0)
+        # sleep(1)
+        win32api.keybd_event(67, 0, 0, 0)
+        win32api.keybd_event(67, 0, win32con.KEYEVENTF_KEYUP, 0)
+        # sleep(1)
+        win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(0.1)
+
+        data = self._get_clipboard_text()
+        self._process_clipboard_data(data, 'traded_today')
+        '''
+        # Toggle Ctrl + S
+        win32api.keybd_event(VK_CONTROL, 0, 0, 0)
+        # sleep(1)
+        win32api.keybd_event(83, 0, 0, 0)
+        win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
+        # sleep(1)
+        win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        sleep(1)
+        hwndPop = self._find_window_by_name('Save As')
+        # hwndPop = self._attrs_window['mainWindowHandle']
+        # print 'Savs as window has handle of %s' % hwndPop
+
+        # self._set_fore_ground_window(hwndPop)
+        # win32gui.SetActiveWindow(hwndPop)
+        # sleep(2)
+        win32gui.EnumChildWindows(hwndPop, self._enum_child_window_proc, 'saveAs')
+
+        dirWindowHandle = self._attrs_window['saveAsEditHandle']
+        # print "dir window has handle of %s"%dirWindowHandle
+
+        filename = self._conf['stockTradeToday']
+        for char in filename:
+            win32api.SendMessage(dirWindowHandle, win32con.WM_CHAR, ord(char), None)
+
+        sleep(1)
+
+        win32api.keybd_event(VK_MENU, 0, 0, 0)
+        sleep(1)
+        win32api.keybd_event(83, 0, 0, 0)
+        win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+        win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        sleep(1)
+        win32api.keybd_event(VK_MENU, 0, 0, 0)
+        win32api.keybd_event(89, 0, 0, 0)
+        win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
+        win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        self._log_mesg = '\n Congratulation, system saved stocks traded message successfully at ' + self._time_tag()
+        saved = True
+
+        # print self._log_mesg
+        return saved
+        '''
+
+    def _close_stock_window(self):
+
+        win32api.keybd_event(VK_MENU, 0, 0, 0)
+
+        win32api.keybd_event(115, 0, 0, 0)
+        win32api.keybd_event(115, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
+        win32api.keybd_event(VK_MENU, win32con.KEYEVENTF_KEYUP, 0)
+
+    def _buy_page(self):
+        # win32gui.SetForeGroundWindow(mainWindowHwnd)
+        # Active Buy Window
+        win32api.keybd_event(VK_F1, 0, 0, 0)  # 释放按键
+        win32api.keybd_event(VK_F1, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+
+    def _sale_page(self):
+        # setForeGroundWindow(mainWindowHwnd)
+        # win32gui.SetForegroundWindow(mainWindowHwnd)
+        # Active Buy Window
+        win32api.keybd_event(VK_F2, 0, 0, 0)  # 释放按键
+        win32api.keybd_event(VK_F2, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+
+    def _stock_holding_page(self):
+        # win32gui.SetForeGroundWindow(mainWindowHwnd)
+        # Active Infor Window
+        win32api.keybd_event(VK_F4, 0, 0, 0)  # 释放按键
+        win32api.keybd_event(VK_F4, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+
+    def _stock_withdraw_page(self):
+        # win32gui.SetForeGroundWindow(mainWindowHwnd)
+        # Active Infor Window
+        win32api.keybd_event(VK_F3, 0, 0, 0)  # 释放按键
+        win32api.keybd_event(VK_F3, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+
     def _get_menu(self, hwnd):
         print win32gui.GetMenu(hwnd)
 
@@ -593,6 +757,7 @@ class C_StockWindowControl:
         hwnd = win32gui.FindWindow(None, windowName)
         win32gui.MoveWindow(hwnd, 0, 0, 800, 600, True)
         self._attrs_window['mainWindowHandle'] = hwnd
+        return  hwnd
 
     def _find_window_by_name(self, windowName):
         shell = win32com.client.Dispatch("WScript.Shell")
@@ -618,53 +783,118 @@ class C_StockWindowControl:
         # return time.asctime(time.localtime(time.time()))
         return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+    def _get_clipboard_text(self):
+        win32clipboard.OpenClipboard()
+        data = win32clipboard.GetClipboardData(win32con.CF_TEXT)
+        win32clipboard.EmptyClipboard()
+        win32clipboard.CloseClipboard()
+        return data
+
+    def _process_clipboard_data(self, data, source='stock_in_hand'):
+        done = True
+        if data != '':
+            if source == 'stock_in_hand':
+                self._read_stock_inhand_to_db(data)
+                done = True
+            elif source == 'traded_today':
+                self._read_traded_today_to_db(data)
+                done = True
+            else:
+                done = False
+        else:
+            done = False
+        return done
+
+    def _read_stock_inhand_to_db(self, data):
+        col_count = 12
+        i = 0
+        lines = data.split()
+        line = []
+        data = []
+        # cursor = self._get_cursor()
+        for word in lines:
+            if i > 11:
+                if (i % col_count) == 0:
+                    line.append(self._convert_encoding(word, 'UTF-8'))
+                    i += 1
+                elif (i % col_count) == 2:
+                    line.append(int(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 3:
+                    line.append(int(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 4:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 5:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 6:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 7:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 8:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    i += 1
+                elif (i % col_count) == 11:
+                    line.append(float(self._convert_encoding(word, 'UTF-8')))
+                    line.append(self._time_tag())
+                    i += 1
+                    data.append(line)
+                    line = []
+                else:
+                    i += 1
+            else:
+                i += 1
+
+        df = pd.DataFrame(data)
+        # print df
+        df.columns = ['stockCode', 'stockRemain', 'stockAvaliable', 'baseCost', 'currentCost', 'currentValue',
+                      'profit', 'profitRate', 'averageBuyPrice', 'Datetime']
+        df.to_sql('tb_StockInhand', self._engine, if_exists='append', index=False)
+        self._log_mesg = 'Stock inhand information saved successfully at ', self._time_tag()
+
+    def _read_traded_today_to_db(self, data):
+        pass
+
+    def _get_buy_window_handle_by_cursor(self):
+        cx = 300
+        cy = 124
+        hwnd = self._find_main_window()
+        sleep(1)
+        self._set_active_window2(hwnd)
+        sleep(0.1)
+        self._buy_page()
+        sleep(0.1)
+        win32api.SetCursorPos((cx, cy))
+        sleep(0.1)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, cx, cy, 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, cx, cy, 0, 0)
+        # p = win32gui.GetCursorPos()
+        sleep(0.1)
+
+    def _convert_encoding(self, lines, new_coding='UTF-8'):
+        try:
+            encoding = 'GB2312'
+            data = lines.decode(encoding)
+            data = data.encode(new_coding)
+        except:
+            data = 'DecodeError'
+        return data
+
+
 def main():
     '''
     Initiate the window handles of Stock Sale Page and Stock Buy Page
     After the initiation, all handles had been retrieved and saved in two Dictionaries
    '''
     swc = C_StockWindowControl()
-
-    # Find the main window handle and reposition the window
-    # swc.findMainWindow()
-    # Initiate window handles
-    # windowsInitiation()
-
-    # findStockWindowByName(2495344, 0, None, windowName)
-
-    # win32gui.EnumChildWindows(_attrs_window['mainWindowHandle'], callbacktest, None)
-    sleep(1)
-    swc._buy_page()
-    # swc.set_stock_code('300218')
-    # swc.set_trade_amount('10000')
-
-    sleep(1)
-    swc._stock_holding_page()
-
-    # print "waiting for prices"
-
-    # swc.update_quote_price()
-    # print 'test of set_stock_code and set_trade_amount', swc._stock_trades
-
-    # sleep(1)
-    # swc.set_trade_price(price=20, priceIndex='c0', trade='b')
-
-    # print 'test of set_trade_price', swc._stock_trades
-
-    '''
-    Buy/Sale Stock
-    buy_stock(_stock_trades)
-    sale_stock(_stock_trades)
-    '''
-    # sleep(1)
-    # buyPage()
-    # sleep(1)
-    # saveStockInfor(None)
-
-    # hwndMainWindowStock = _attrs_window.get('mainWindowHandle',0)
-
-    # print "Stock Holding Information: ", win32gui.GetWindowText(857134)
-
+    # swc.get_trade_result()
+    # swc._save_stock_infor_to_file()
+    # swc._get_buy_window_handle_by_cursor()
+    swc._get_handles()
 
 if __name__ == '__main__':
     main()

@@ -291,7 +291,7 @@ class C_StockFileManagement:
 def main():
     fm = C_StockFileManagement()
     path = fm._input_dir
-    fm.read_stock_records_to_db(path)
+    # fm.read_stock_records_to_db(path)
     #fm.read_stock_inhand_to_db()
     #fm._move_processed_file('new.csv')
 

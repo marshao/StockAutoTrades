@@ -4,17 +4,17 @@
 import socket, time, datetime
 from C_StockWindowControl import *
 
-class C_FrontEndSockets:
 
+class C_FrontEndSockets:
     def __init__(self):
         s = socket.socket()
         host = 'ghuan02-d.inovageo.com'
         port = 32768
         s.bind((host, port))
         self._swc = C_StockWindowControl()
+        self._swc._get_handles()
+        self._swc._get_various_data()
         self._listen(s)
-
-
 
     def _listen(self, s):
         s.listen(5)
@@ -46,10 +46,20 @@ class C_FrontEndSockets:
                 back_mesg = '1.2'
         elif items[0] == '2':
             print "issue a buy command"
-            back_mesg = '2.1'
+            stockTrades = from_mesg.split()
+            done = self._swc.buy_stock(stockTrades)
+            if done:
+                back_mesg = '2.1'
+            else:
+                back_mesg = '2.2'
         elif items[0] == '3':
             print "issue a sales command"
-            back_mesg = '3.1'
+            stockTrades = from_mesg.split()
+            done = self._swc.sale_stock(stockTrades)
+            if done:
+                back_mesg = '3.1'
+            else:
+                back_mesg = '3.2'
         else:
             print "unknow command"
         print back_mesg + " at " + self._time_tag()
@@ -61,12 +71,10 @@ class C_FrontEndSockets:
         only_date = time_stamp.date()
         return time_stamp_local
 
+
 def main():
     soc = C_FrontEndSockets()
 
 
 if __name__ == '__main__':
     main()
-
-
-
