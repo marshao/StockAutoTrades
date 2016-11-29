@@ -338,7 +338,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         # Send trading command and analysis the result
         receives = commu(cmd).split()
-        print receives
+        #print receives
         if receives[0] == '2.1' or receives == '3.1':
             cash_avabliable = float(receives[1])
             df_trade_history.stock_code.loc[0] = stock_code
