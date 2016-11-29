@@ -109,7 +109,7 @@ class C_StockWindowControl:
         win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Infor')
         print self._attrs_window
 
-        if self._save_stock_infor_to_file(mainWindowHwnd) == False:
+        if self._save_stock_infor_to_file() == False:
             self._log_mesg = '\n Sorry, system can not initialize Trading Software at ' + self._time_tag()
         else:
             self._log_mesg = '\n Yes, system initialized Trading Software successfully at ' + self._time_tag()
@@ -285,13 +285,14 @@ class C_StockWindowControl:
         else:
             pass
 
-    def _save_stock_infor_to_file(self, hwnd):
+    def _save_stock_infor_to_file(self):
 
         filename = self._conf['stockInHandFile']
         self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
         self._asset_infor['stockValue'] = win32gui.GetWindowText(self._attrs_window['stockValueHandle'])
         self._asset_infor['totalAsset'] = win32gui.GetWindowText(self._attrs_window['totalAssetHandle'])
 
+        self._stock_holding_page()
         win32api.keybd_event(VK_CONTROL, 0, 0, 0)
         # sleep(1)
         win32api.keybd_event(83, 0, 0, 0)
