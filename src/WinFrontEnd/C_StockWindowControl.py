@@ -1,97 +1,69 @@
-#coding=GBK
+# coding=GBK
 
 import win32gui, win32com.client, win32api, win32con
 from win32con import *
 from time import sleep
-import time
-import io
-import src.DBConnector
-
+import datetime
+import pandas as pd
+from sqlalchemy import create_engine
 
 __metclass__ = type
 
+
 class C_StockWindowControl:
-    """
-    20161102 A WindowControl Class will be build in here, from this class, I should be able to get the attributes of XiaDan window
-    and be able to toggle few actions to the window.
-    Class1: windowClass
-        Attr1: windowName
-        Attr2: windowSize
-        Attr2: windowTitle
-
-        Act1: setWindowActive
-        Act2: setWindowInactive
-        Act3: resizeWindow to normal window
-        Act4: clsoeWindow
-
-    Class2: buttonClass
-        Attr1: buttonTitle
-        Attr2: buttonName
-        Attr3: buttonPosition
-
-        Act1: hitButton
-        Act2: setButtonActive
-
-    Class3: inputBoxClass
-        Attr1: inputBoxTitle
-        Attr2: inputBoxName
-        Attr3: inputBoxPosition
-
-        Act1: setInputBoxActive
-        Act2: inputText
-    """
 
     WM_CHAR = 0x0102
 
-    __logMesg__ = 'Log Start'
+    _log_mesg = 'Log Start'
 
-    __conf__ = {
+    _conf = {
         'stockInHandFile': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
         'outputDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
         'installDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
-        'confFile': '__conf__.ini',
+        'confFile': '_conf.ini',
         'opLog': 'operlog.txt',
-        'trLog': 'tradeLog.txt'}
+        'trLog': 'tradeLog.txt',
+        'assetFile': 'stockAsset.txt'}
 
-    __attrsWindow__ = {'mainWindowHandle': '0',
-                   'stockHoldingHandle': '0',
-                   'cashAvaliableHandle': '0',
-                   'stockValueHandle': '0',
-                   'totalAssetHandle': '0',
-                   'saveAsEditHandle': '0'}
+    _attrs_window = {'mainWindowHandle': '0',
+                     'stockHoldingHandle': '0',
+                     'cashAvaliableHandle': '0',
+                     'stockValueHandle': '0',
+                     'totalAssetHandle': '0',
+                     'saveAsEditHandle': '0'}
 
-    __attrsBuyWindow__ = {'buyStockCodeHandle': '0',
-                      'buyPriceHandle': '0', 'buyAmountHandle': '0',
-                      'buyButtonHandle': '0', 'buyLastPriceHandle': '0',
-                      'buyPrice1Handle': '0', 'buyPrice2Handle': '0'}
+    _attrs_buy_window = {'buyStockCodeHandle': '0',
+                         'buyPriceHandle': '0', 'buyAmountHandle': '0',
+                         'buyButtonHandle': '0', 'buyLastPriceHandle': '0',
+                         'buyPrice1Handle': '0', 'buyPrice2Handle': '0'}
 
-    __attrsSaleWindow__ = {'saleStockCodeHandle': '0', 'salePriceHandle': '0',
-                       'saleAmountHandle': '0', 'saleButtonHandle': '0',
-                       'saleLastPriceHandle': '0', 'salePrice1Handle': '0', 'salePrice2Handle': '0', }
+    _attrs_sale_window = {'saleStockCodeHandle': '0', 'salePriceHandle': '0',
+                          'saleAmountHandle': '0', 'saleButtonHandle': '0',
+                          'saleLastPriceHandle': '0', 'salePrice1Handle': '0', 'salePrice2Handle': '0', }
 
-    __tradeWindowsProperties__ = {'mainWindowName': '广发证券核新网上交易系统7.56',
-                              'stockCodeWindowXY': [291, 114, 1032],
-                              'stockPriceWindowXY': [291, 150, 1033],
-                              'stockAmountWindowXY': [291, 186, 1034],
-                              'buyWindowName': '买入[B]', 'buyWindowClass': 'Button',
-                              'buySaleWindowXY': [315, 210, 1006],
-                              'lastBuyPriceXY': [454, 174, 1024],
-                              'lastSalePriceXY': [562, 174, 1027],
-                                  'buy1PriceXY': [454, 192, 1018],
-                                  'buy2PriceXY': [454, 206, 1025],
-                                  'sale1PriceXY': [454, 156, 1021],
-                                  'sale2PriceXY': [454, 143, 1022],
-                                  'stockHoldingXY': [211, 182, 1047],
-                                  'cashAvaliableXY': [274, 108, 1012],
-                                  'stockValueXY': [516, 126, 1014],
-                                  'totalAssetXY': [517, 144, 1015],
-                                  'saveAsEditXY': [271, 372, 1152]}
+    _trade_windows_properties = {'mainWindowName': '广发证券核新网上交易系统7.56',
+                                 'stockCodeWindowXY': [291, 114, 1032],
+                                 'stockPriceWindowXY': [291, 150, 1033],
+                                 'stockAmountWindowXY': [291, 186, 1034],
+                                 'buyWindowName': '买入[B]', 'buyWindowClass': 'Button',
+                                 'buySaleWindowXY': [315, 210, 1006],
+                                 'lastBuyPriceXY': [454, 174, 1024],
+                                 'lastSalePriceXY': [562, 174, 1027],
+                                 'buy1PriceXY': [454, 192, 1018],
+                                 'buy2PriceXY': [454, 206, 1025],
+                                 'sale1PriceXY': [454, 156, 1021],
+                                 'sale2PriceXY': [454, 143, 1022],
+                                 'stockHoldingXY': [211, 182, 1047],
+                                 'cashAvaliableXY': [274, 108, 1012],
+                                 'stockValueXY': [516, 126, 1014],
+                                 'totalAssetXY': [517, 144, 1015],
+                                 'saveAsEditXY': [271, 372, 1152]}
 
-    __stockTrades__ = {'stockCode': '000003', 'tradeAmount': '1000', 'tradePrice': '1000',
-                   'buyLastPrice': '0', 'buyPrice1': '0', 'buyPrice2': '0',
-                   'saleLastPrice': '0', 'salePrice1': '0', 'salePrice2': '0'}
+    _stock_trades = {'stockCode': '000003', 'tradeAmount': '1000', 'tradePrice': '1000',
+                     'buyLastPrice': '0', 'buyPrice1': '0', 'buyPrice2': '0',
+                     'saleLastPrice': '0', 'salePrice1': '0', 'salePrice2': '0'}
 
-    __assetInfor__ = {'cashAvaliable': 0, 'stockValue': 0, 'totalAsset': 0}
+    _asset_infor = {'cashAvaliable': 0, 'stockValue': 0, 'totalAsset': 0}
 
     # tempwindow = win32gui.GetActiveWindow()
 
@@ -99,50 +71,62 @@ class C_StockWindowControl:
 
     def __init__(self):
 
-        self.__findMainWindow__()
-        # win32gui.EnumWindows(EnumWindowProc, None)
-        # print "Parrent Window Hwnd is %d" %__attrsWindow__['mainWindowHandle']
-        mainWindowHwnd = self.__attrsWindow__['mainWindowHandle']
-        # secondWindowHwnd = getHandleByControlID(mainWindowHwnd, controlID)
-        self.__setForeGroundWindow__(mainWindowHwnd)
+        self._find_main_window()
+        mainWindowHwnd = self._attrs_window['mainWindowHandle']
+        print mainWindowHwnd
+        # self._set_fore_ground_window(mainWindowHwnd)
+        # win32gui.SetActiveWindow(mainWindowHwnd)
+        # sleep(1)
 
         '''
         Initiate Buy/Sale window handles
         '''
-        try:
+        # try:
 
-            self.__buyPage__()
-            win32gui.EnumChildWindows(mainWindowHwnd, self.__EnumChildWindowProc__, 'Buy')
-            print self.__attrsBuyWindow__
+        sleep(1)
+        self._set_fore_ground_window(mainWindowHwnd)
+        print  "Set window fore ground"
+        sleep(3)
+        win32gui.SetActiveWindow(mainWindowHwnd)
+        print "set active window"
+        sleep(3)
+        self._sale_page()
+        win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Sale')
+        print self._attrs_sale_window
 
-            self.__salePage__()
-            win32gui.EnumChildWindows(mainWindowHwnd, self.__EnumChildWindowProc__, 'Sale')
-            print self.__attrsSaleWindow__
-
-            '''
+        sleep(1)
+        # self._set_fore_ground_window(mainWindowHwnd)
+        self._buy_page()
+        win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Buy')
+        print self._attrs_buy_window
+        '''
             Initiate Stock Holding and Capital Information
             '''
-            self.__stockHoldingPage__()
-            win32gui.EnumChildWindows(mainWindowHwnd, self.__EnumChildWindowProc__, 'Infor')
-            print self.__attrsWindow__
 
-            if self.__saveStockInforToFile__(mainWindowHwnd) == False:
-                self.__logMesg__ = '\n Sorry, system can not initialize Trading Software at ' + self.__timeTag__()
-            else:
-                self.__logMesg__ = '\n Yes, system initialized Trading Software successfully at ' + self.__timeTag__()
+        sleep(1)
+        # self._set_fore_ground_window(mainWindowHwnd)
+        self._stock_holding_page()
+        win32gui.EnumChildWindows(mainWindowHwnd, self._enum_child_window_proc, 'Infor')
+        print self._attrs_window
 
-            self.updateAsset()
-            print self.__assetInfor__
+        if self._save_stock_infor_to_file(mainWindowHwnd) == False:
+            self._log_mesg = '\n Sorry, system can not initialize Trading Software at ' + self._time_tag()
+        else:
+            self._log_mesg = '\n Yes, system initialized Trading Software successfully at ' + self._time_tag()
 
-            self.updateQuotePrice()
-            print self.__stockTrades__
-        except:
-            self.__logMesg__ = '\n Sorry, system can not initialize Trading Software at ' + self.__timeTag__()
+        self.update_asset()
+        print self._asset_infor
 
-        print self.__logMesg__
-        self.__writelog__(self.__logMesg__)
+        self.update_quote_price()
+        print self._stock_trades
+        # except:
+        #   self._log_mesg = '\n Sorry, system can not initialize Trading Software at ' + self._time_tag()
 
-    def __EnumWindowProc__(self, hwnd, tradeCode):
+        print self._log_mesg
+        self._write_log(self._log_mesg)
+        self._time_tag()
+
+    def _enum_window_proc(self, hwnd, tradeCode):
         if hwnd == 133240 or hwnd == 133236:
             rect = win32gui.GetWindowRect(hwnd)
             x = rect[0]
@@ -173,134 +157,186 @@ class C_StockWindowControl:
 
         hwndStock = 0
         if win32gui.GetWindowText(hwnd) == tradeWindows.get('mainWindowName')[0]:
-            self.__attrsWindow__['mainWindowHanle'] = hwnd
+            self._attrs_window['mainWindowHanle'] = hwnd
         '''
 
-    def __getHandleByXY__(self, hwnd, x, y, attrs, sizeKey, handleKey):
-        if (x == self.__tradeWindowsProperties__[sizeKey][0]) and (
-                y == self.__tradeWindowsProperties__[sizeKey][1] and attrs[handleKey] == '0'):
+    def _get_handle_by_XY(self, hwnd, x, y, attrs, sizeKey, handleKey):
+        if (x == self._trade_windows_properties[sizeKey][0]) and (
+                        y == self._trade_windows_properties[sizeKey][1] and attrs[handleKey] == '0'):
             attrs[handleKey] = hwnd
+            # print win32gui.GetWindowText(hwnd)
             # print attrs
         else:
             pass
 
-    def __EnumChildWindowProc__(self, hwnd, tradeCode):
+    def _enum_child_window_proc(self, hwnd, tradeCode):
 
         if tradeCode == 'Buy':
-            if win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockCodeWindowXY'][2]:
+            if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockCodeWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockCodeWindowXY'
                 handleKey = 'buyStockCodeHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockPriceWindowXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockPriceWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockPriceWindowXY'
                 handleKey = 'buyPriceHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockAmountWindowXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockAmountWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockAmountWindowXY'
                 handleKey = 'buyAmountHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['buySaleWindowXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buySaleWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buySaleWindowXY'
                 handleKey = 'buyButtonHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['lastBuyPriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['lastBuyPriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'lastBuyPriceXY'
                 handleKey = 'buyLastPriceHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['buy1PriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buy1PriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buy1PriceXY'
                 handleKey = 'buyPrice1Handle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['buy2PriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buy2PriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buy2PriceXY'
                 handleKey = 'buyPrice2Handle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsBuyWindow__, sizeKey, handleKey)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
             else:
                 pass
         elif tradeCode == 'Sale':
-            if win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockCodeWindowXY'][2]:
+            if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockCodeWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockCodeWindowXY'
                 handleKey = 'saleStockCodeHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockPriceWindowXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockPriceWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockPriceWindowXY'
                 handleKey = 'salePriceHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
 
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockAmountWindowXY'][2]:
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockAmountWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockAmountWindowXY'
                 handleKey = 'saleAmountHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
 
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['buySaleWindowXY'][2]:
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buySaleWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buySaleWindowXY'
                 handleKey = 'saleButtonHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['lastSalePriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['lastSalePriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'lastSalePriceXY'
                 handleKey = 'saleLastPriceHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['sale1PriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['sale1PriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'sale1PriceXY'
                 handleKey = 'salePrice1Handle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['sale2PriceXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['sale2PriceXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'sale2PriceXY'
                 handleKey = 'salePrice2Handle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsSaleWindow__, sizeKey, handleKey)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
             else:
                 pass
         elif tradeCode == 'Infor':
-            if win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockHoldingXY'][2]:
+            if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockHoldingXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockHoldingXY'
                 handleKey = 'stockHoldingHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['cashAvaliableXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['cashAvaliableXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'cashAvaliableXY'
                 handleKey = 'cashAvaliableHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['stockValueXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockValueXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockValueXY'
                 handleKey = 'stockValueHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsWindow__, sizeKey, handleKey)
-            elif win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['totalAssetXY'][2]:
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_window, sizeKey, handleKey)
+            elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['totalAssetXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'totalAssetXY'
                 handleKey = 'totalAssetHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsWindow__, sizeKey, handleKey)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_window, sizeKey, handleKey)
             else:
                 pass
         elif tradeCode == 'saveAs':
-            if win32gui.GetDlgCtrlID(hwnd) == self.__tradeWindowsProperties__['saveAsEditXY'][2]:
+            if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['saveAsEditXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'saveAsEditXY'
                 handleKey = 'saveAsEditHandle'
-                self.__getHandleByXY__(hwnd, winRec[0], winRec[1], self.__attrsWindow__, sizeKey, handleKey)
+                print win32gui.GetWindowText(hwnd)
+                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_window, sizeKey, handleKey)
             else:
                 pass
+
         else:
             pass
 
+    def _save_stock_infor_to_file(self, hwnd):
 
+        filename = self._conf['stockInHandFile']
+        self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
+        self._asset_infor['stockValue'] = win32gui.GetWindowText(self._attrs_window['stockValueHandle'])
+        self._asset_infor['totalAsset'] = win32gui.GetWindowText(self._attrs_window['totalAssetHandle'])
 
-    def __closeStockWindow__(self):
+        win32api.keybd_event(VK_CONTROL, 0, 0, 0)
+        # sleep(1)
+        win32api.keybd_event(83, 0, 0, 0)
+        win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
+        # sleep(1)
+        win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        sleep(1)
+        hwndPop = self._find_window_by_name('Save As')
+        # hwndPop = self._attrs_window['mainWindowHandle']
+        # print 'Savs as window has handle of %s' % hwndPop
+
+        # self._set_fore_ground_window(hwndPop)
+        # win32gui.SetActiveWindow(hwndPop)
+        # sleep(2)
+        win32gui.EnumChildWindows(hwndPop, self._enum_child_window_proc, 'saveAs')
+
+        dirWindowHandle = self._attrs_window['saveAsEditHandle']
+        # print "dir window has handle of %s"%dirWindowHandle
+
+        for char in filename:
+            win32api.SendMessage(dirWindowHandle, win32con.WM_CHAR, ord(char), None)
+
+        sleep(1)
+
+        win32api.keybd_event(VK_MENU, 0, 0, 0)
+        sleep(1)
+        win32api.keybd_event(83, 0, 0, 0)
+        win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+        win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        sleep(1)
+        win32api.keybd_event(VK_MENU, 0, 0, 0)
+        win32api.keybd_event(89, 0, 0, 0)
+        win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
+        win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        self._log_mesg = '\n Congratulation, system saved stocks in hand message successfully at ' + self._time_tag()
+        saved = True
+
+        # print self._log_mesg
+        return saved
+
+    def _close_stock_window(self):
 
         win32api.keybd_event(VK_MENU, 0, 0, 0)
 
@@ -308,14 +344,14 @@ class C_StockWindowControl:
         win32api.keybd_event(115, 0, win32con.KEYEVENTF_KEYUP, 0)  # 閲婃斁鎸夐敭
         win32api.keybd_event(VK_MENU, win32con.KEYEVENTF_KEYUP, 0)
 
-    def __buyPage__(self):
+    def _buy_page(self):
         # win32gui.SetForeGroundWindow(mainWindowHwnd)
         # Active Buy Window
         win32api.keybd_event(VK_F1, 0, 0, 0)  # 閲婃斁鎸夐敭
         win32api.keybd_event(VK_F1, 0, win32con.KEYEVENTF_KEYUP, 0)
         sleep(1)
 
-    def __salePage__(self):
+    def _sale_page(self):
         # setForeGroundWindow(mainWindowHwnd)
         # win32gui.SetForegroundWindow(mainWindowHwnd)
         # Active Buy Window
@@ -323,36 +359,36 @@ class C_StockWindowControl:
         win32api.keybd_event(VK_F2, 0, win32con.KEYEVENTF_KEYUP, 0)
         sleep(1)
 
-    def __stockHoldingPage__(self):
+    def _stock_holding_page(self):
         # win32gui.SetForeGroundWindow(mainWindowHwnd)
         # Active Infor Window
         win32api.keybd_event(VK_F4, 0, 0, 0)  # 閲婃斁鎸夐敭
         win32api.keybd_event(VK_F4, 0, win32con.KEYEVENTF_KEYUP, 0)
         sleep(1)
 
-    def buyStock(self, stockTrades):
+    def buy_stock(self, stockTrades):
 
         stockCode = stockTrades['stockCode']
         tradeAmount = stockTrades['tradeAmount']
         tradePrice = stockTrades['tradePrice']
 
         # Active Buy Window
-        self.__buyPage__()
+        self._buy_page()
 
         try:
             # Send stockCode
             for char in stockCode:
-                win32api.SendMessage(self.__attrsBuyWindow__['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
             print "message sent"
 
             # Send tradeAmount
             for char in tradeAmount:
-                win32api.SendMessage(self.__attrsBuyWindow__['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
             print "Amount sent"
 
             # Send tradePrice
             for char in tradePrice:
-                win32api.SendMessage(self.__attrsBuyWindow__['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_buy_window['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
             print "Price sent"
 
             # Send Sale Command
@@ -369,37 +405,37 @@ class C_StockWindowControl:
             sleep(1)
             win32api.keybd_event(VK_RETURN, 0, 0, 0)
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
-            self.__logMesg__ = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
-            stockCode, tradePrice, tradeAmount)
+            self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
+                stockCode, tradePrice, tradeAmount)
         except:
-            self.__logMesg__ = '\n Sorry, system cannot issue a BUY command of stock code %s, buy price %s, buy amount %s' % (
-            stockCode, tradePrice, tradeAmount)
-        # write to log file
-            self.__writelog__(self.__logMesg__, self.__conf__['trLog'])
+            self._log_mesg = '\n Sorry, system cannot issue a BUY command of stock code %s, buy price %s, buy amount %s' % (
+                stockCode, tradePrice, tradeAmount)
+            # write to log file
+            self._write_log(self._log_mesg, self._conf['trLog'])
 
-    def saleStock(self, stockTrades):
+    def sale_stock(self, stockTrades):
 
         stockCode = stockTrades['stockCode']
         tradeAmount = stockTrades['tradeAmount']
         tradePrice = stockTrades['tradePrice']
 
         # Active Buy Window
-        self.__salePage__()
+        self._sale_page()
 
         try:
             # Send stockCode
             for char in stockCode:
-                win32api.SendMessage(self.__attrsSaleWindow__['saleStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_sale_window['saleStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
             print "message sent"
 
             # Send tradeAmount
             for char in tradeAmount:
-                win32api.SendMessage(self.__attrsSaleWindow__['saleAmountHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_sale_window['saleAmountHandle'], win32con.WM_CHAR, ord(char), None)
             print "Amount sent"
 
             # Send tradePrice
             for char in tradePrice:
-                win32api.SendMessage(self.__attrsSaleWindow__['salePriceHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_sale_window['salePriceHandle'], win32con.WM_CHAR, ord(char), None)
             print "Price sent"
 
             # Send Buy Command
@@ -417,207 +453,169 @@ class C_StockWindowControl:
             win32api.keybd_event(VK_RETURN, 0, 0, 0)
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
 
-            self.__logMesg__ = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
-            stockCode, tradePrice, tradeAmount)
+            self._log_mesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
+                stockCode, tradePrice, tradeAmount)
         except:
-            self.__logMesg__ = '\n Sorry, system cannot issue a SALE command of stock code %s, buy price %s, buy amount %s' % (
-            stockCode, tradePrice, tradeAmount)
-        # write to log file
-            self.__writelog__(self.__logMesg__, self.__conf__['trLog'])
+            self._log_mesg = '\n Sorry, system cannot issue a SALE command of stock code %s, buy price %s, buy amount %s' % (
+                stockCode, tradePrice, tradeAmount)
+            # write to log file
+            self._write_log(self._log_mesg, self._conf['trLog'])
 
-    def setTradePrice(self, price, priceIndex, trade='b'):
+    def set_trade_price(self, price, priceIndex, trade='b'):
 
         price = str(price)
         if trade == 's':
-            self.__salePage__()
+            self._sale_page()
         else:
-            self.__buyPage__()
+            self._buy_page()
 
         if priceIndex == 'b1':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['buyPrice1']
+            self._stock_trades['tradePrice'] = self._stock_trades['buyPrice1']
         elif priceIndex == 'b2':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['buyPrice2']
+            self._stock_trades['tradePrice'] = self._stock_trades['buyPrice2']
         elif priceIndex == 'b0':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['buyLastPrice']
+            self._stock_trades['tradePrice'] = self._stock_trades['buyLastPrice']
         elif priceIndex == 's1':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['salePrice2']
+            self._stock_trades['tradePrice'] = self._stock_trades['salePrice2']
         elif priceIndex == 's2':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['salePrice2']
+            self._stock_trades['tradePrice'] = self._stock_trades['salePrice2']
         elif priceIndex == 's0':
-            self.__stockTrades__['tradePrice'] = self.__stockTrades__['saleLastPrice']
+            self._stock_trades['tradePrice'] = self._stock_trades['saleLastPrice']
         elif priceIndex == 'c0':
-            self.__stockTrades__['tradePrice'] = price
+            self._stock_trades['tradePrice'] = price
         else:
             pass
 
-    def setStockCode(self, stockCode='000003', trade='b'):
+    def set_stock_code(self, stockCode='000003', trade='b'):
 
         if trade == 's':
-            self.__salePage__()
+            self._sale_page()
         else:
-            self.__buyPage__()
+            self._buy_page()
 
         if len(stockCode) == 6:
-            self.__stockTrades__['stockCode'] = stockCode
-            self.__logMesg__ = '\n Set stock code to %s ' % stockCode, " at ",self.__timeTag__()
+            self._stock_trades['stockCode'] = stockCode
+            self._log_mesg = '\n Set stock code to %s ' % stockCode, " at ", self._time_tag()
             for char in stockCode:
-                win32api.SendMessage(self.__attrsBuyWindow__['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
         else:
-            self.__logMesg__ = '\n ERROR: Set a wrong stock code %s ' % stockCode," at ", self.__timeTag__()
+            self._log_mesg = '\n ERROR: Set a wrong stock code %s ' % stockCode, " at ", self._time_tag()
 
-            self.__writelog__(self.__logMesg__)
+            self._write_log(self._log_mesg)
 
-    def setTradeAmount(self, tradeAmount='1000', trade='b'):
+    def set_trade_amount(self, tradeAmount='1000', trade='b'):
         if trade == 's':
-            self.__salePage__()
+            self._sale_page()
         else:
-            self.__buyPage__()
+            self._buy_page()
 
         if int(tradeAmount) <= 0:
-            self.__logMesg__ = '\n ERROR: System cannot take a nagtive trade amount'
+            self._log_mesg = '\n ERROR: System cannot take a nagtive trade amount'
         else:
-            self.__stockTrades__['tradeAmount'] = tradeAmount
-            self.__logMesg__ = '\n System set tradeAmount to %s' % tradeAmount
+            self._stock_trades['tradeAmount'] = tradeAmount
+            self._log_mesg = '\n System set tradeAmount to %s' % tradeAmount
             # Send tradeAmount
             for char in tradeAmount:
-                win32api.SendMessage(self.__attrsBuyWindow__['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
+                win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
 
-                self.__writelog__(self.__logMesg__)
+                self._write_log(self._log_mesg)
 
-    def updateQuotePrice(self):
-        self.__buyPage__()
+    def update_quote_price(self):
+        self._buy_page()
 
-        self.__stockTrades__['buyLastPrice'] = win32gui.GetWindowText(self.__attrsBuyWindow__['buyLastPriceHandle'])
-        self.__stockTrades__['buyPrice1'] = win32gui.GetWindowText(self.__attrsBuyWindow__['buyPrice1Handle'])
-        self.__stockTrades__['buyPrice2'] = win32gui.GetWindowText(self.__attrsBuyWindow__['buyPrice2Handle'])
+        self._stock_trades['buyLastPrice'] = win32gui.GetWindowText(self._attrs_buy_window['buyLastPriceHandle'])
+        self._stock_trades['buyPrice1'] = win32gui.GetWindowText(self._attrs_buy_window['buyPrice1Handle'])
+        self._stock_trades['buyPrice2'] = win32gui.GetWindowText(self._attrs_buy_window['buyPrice2Handle'])
 
-        self.__stockTrades__['saleLastPrice'] = win32gui.GetWindowText(self.__attrsSaleWindow__['saleLastPriceHandle'])
-        self.__stockTrades__['salePrice1'] = win32gui.GetWindowText(self.__attrsSaleWindow__['salePrice1Handle'])
-        self.__stockTrades__['salePrice2'] = win32gui.GetWindowText(self.__attrsSaleWindow__['salePrice2Handle'])
+        self._stock_trades['saleLastPrice'] = win32gui.GetWindowText(self._attrs_sale_window['saleLastPriceHandle'])
+        self._stock_trades['salePrice1'] = win32gui.GetWindowText(self._attrs_sale_window['salePrice1Handle'])
+        self._stock_trades['salePrice2'] = win32gui.GetWindowText(self._attrs_sale_window['salePrice2Handle'])
 
-    def updateAsset(self):
+    def update_asset(self):
         '''
         Read Asset information from the external file
         '''
-        self.__stockHoldingPage__()
-        self.__assetInfor__['cashAvaliable'] = win32gui.GetWindowText(self.__attrsWindow__['cashAvaliableHandle'])
-        self.__assetInfor__['stockValue'] = win32gui.GetWindowText(self.__attrsWindow__['stockValueHandle'])
-        self.__assetInfor__['totalAsset'] = win32gui.GetWindowText(self.__attrsWindow__['totalAssetHandle'])
+        fullPath = self._conf['outputDir'] + self._conf['assetFile']
+        total_asset = []
+        # set stock_holding page be active
+        self._stock_holding_page()
+        sleep(1)
 
-    def __getMenu__(self, hwnd):
+        # Getting value from application
+        self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
+        total_asset.append(self._asset_infor['cashAvaliable'])
+        self._asset_infor['stockValue'] = win32gui.GetWindowText(self._attrs_window['stockValueHandle'])
+        total_asset.append(self._asset_infor['stockValue'])
+        self._asset_infor['totalAsset'] = win32gui.GetWindowText(self._attrs_window['totalAssetHandle'])
+        total_asset.append(self._asset_infor['totalAsset'])
+        date_time = self._time_tag()
+        total_asset.append(date_time)
+
+        # write stock asset information into DB.
+        df = pd.DataFrame(columns=['cash_avaliable', 'stock_value', 'total_asset', 'date_time'])
+        df.loc[len(df)] = total_asset
+        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        df.to_sql('tb_StockAsset', con=engine, index=False, if_exists='append')
+        return self._asset_infor['cashAvaliable']
+
+    def _get_menu(self, hwnd):
         print win32gui.GetMenu(hwnd)
 
-    def __setForeGroundWindow__(self, hwnd):
+    def _set_fore_ground_window(self, hwnd):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys('%')
         win32gui.SetForegroundWindow(hwnd)
+        win32gui.SetActiveWindow(hwnd)
 
-    def __setActiveWindow2__(self, hwnd):
+    def _set_active_window2(self, hwnd):
         # win32gui.MoveWindow(hwnd, 0,0,800,600, True)
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys('%')
         win32gui.SetForegroundWindow(hwnd)
 
-    def __setWindowTop__(self, hwnd):
+    def _set_window_top(self, hwnd):
 
         print hwnd, " Move Window"
         win32gui.MoveWindow(hwnd, 0, 0, 800, 600, True)
         # win32gui.BringWindowToTop(hwnd)
 
-    def __findWindowByNameEx__(self, parentHWND, childAfter, windowClass, windowName):
+    def _find_window_by_nameEx(self, parentHWND, childAfter, windowClass, windowName):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys('%')
         hwnd = win32gui.FindWindowEx(parentHWND, childAfter, windowClass, windowName)
 
         print "find Window Finished", windowName, " ", hwnd
 
-    def __findMainWindow__(self, windowName=__tradeWindowsProperties__['mainWindowName']):
+    def _find_main_window(self, windowName=_trade_windows_properties['mainWindowName']):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys('%')
         hwnd = win32gui.FindWindow(None, windowName)
         win32gui.MoveWindow(hwnd, 0, 0, 800, 600, True)
-        self.__attrsWindow__['mainWindowHandle'] = hwnd
+        self._attrs_window['mainWindowHandle'] = hwnd
 
-    def __findWindowByName__(self, windowName):
+    def _find_window_by_name(self, windowName):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys('%')
         hwnd = win32gui.FindWindow(None, windowName)
         return hwnd
 
-    def __getActiveWindow__(self):
+    def _get_active_window(self):
         hwnd = win32gui.GetForegroundWindow()
         print hwnd
         return hwnd
 
-    def __getHandleByControlID__(self, parentHwnd, controlID):
+    def _get_handle_by_control_ID(self, parentHwnd, controlID):
         # print win32gui.GetDlgCtrlID(controlID)
         print win32gui.GetDlgItem(parentHwnd, controlID)
 
-    def __writelog__(self, logMesg = __logMesg__, logPath=__conf__['opLog']):
-        fullPath = self.__conf__['outputDir'] + logPath
+    def _write_log(self, logMesg=_log_mesg, logPath=_conf['opLog']):
+        fullPath = self._conf['outputDir'] + logPath
         with open(fullPath, 'a') as log:
             log.writelines(logMesg)
 
-    def __saveStockInforToFile__(self, hwnd):
-
-        filename = self.__conf__['stockInHandFile']
-        # windowName = 'Save As'
-        # dirWindowClass = 'Edit'
-
-        self.__assetInfor__['cashAvaliable'] = win32gui.GetWindowText(self.__attrsWindow__['cashAvaliableHandle'])
-        self.__assetInfor__['stockValue'] = win32gui.GetWindowText(self.__attrsWindow__['stockValueHandle'])
-        self.__assetInfor__['totalAsset'] = win32gui.GetWindowText(self.__attrsWindow__['totalAssetHandle'])
-        print self.__assetInfor__
-        # stockHoldingPage()
-        try:
-            win32api.keybd_event(VK_CONTROL, 0, 0, 0)
-            sleep(1)
-            win32api.keybd_event(83, 0, 0, 0)
-            win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
-            sleep(1)
-            win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
-
-            sleep(1)
-            hwndPop = self.__findWindowByName__('Save As')
-            # print hwndPop
-
-            win32gui.EnumChildWindows(self, hwndPop, self.__EnumChildWindowProc__, 'saveAs')
-            # dirWindowHandle = findWindowByNameEx(hwndPop, None, None, dirWindowName)
-            # dirWindowHandle = findWindowByName(dirWindowName)
-            dirWindowHandle = self.__attrsWindow__['saveAsEditHandle']
-            # print dirWindowHandle
-
-            for char in filename:
-                win32api.SendMessage(dirWindowHandle, win32con.WM_CHAR, ord(char), None)
-
-            sleep(1)
-
-            win32api.keybd_event(VK_MENU, 0, 0, 0)
-            sleep(1)
-            win32api.keybd_event(83, 0, 0, 0)
-            win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)
-            sleep(1)
-            win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
-
-            sleep(1)
-            win32api.keybd_event(VK_MENU, 0, 0, 0)
-            win32api.keybd_event(89, 0, 0, 0)
-            win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
-            win32api.keybd_event(VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
-
-            self.__logMesg__ = '\n Congratulation, system saved stocks in hand message successfully at ' + self.__timeTag__()
-            saved = True
-        except:
-            self.__logMesg__ = '\n Sorry, system cannot save stocks in hand message at \n' + self.__timeTag__()
-            saved = False
-
-            self.__writelog__(self.__logMesg__)
-        print self.__logMesg__
-        return saved
-
-    def __timeTag__(self):
-        return time.asctime(time.localtime(time.time()))
-
+    def _time_tag(self):
+        # return time.asctime(time.localtime(time.time()))
+        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 def main():
     '''
@@ -627,40 +625,42 @@ def main():
     swc = C_StockWindowControl()
 
     # Find the main window handle and reposition the window
-    #swc.findMainWindow()
+    # swc.findMainWindow()
     # Initiate window handles
-    #windowsInitiation()
+    # windowsInitiation()
 
     # findStockWindowByName(2495344, 0, None, windowName)
 
-    # win32gui.EnumChildWindows(__attrsWindow__['mainWindowHandle'], callbacktest, None)
+    # win32gui.EnumChildWindows(_attrs_window['mainWindowHandle'], callbacktest, None)
     sleep(1)
-
-    swc.setStockCode('300218')
-    swc.setTradeAmount('10000')
-    sleep(3)
-
-    print "waiting for prices"
-
-    swc.updateQuotePrice()
-    print 'test of setStockCode and setTradeAmount', swc.__stockTrades__
+    swc._buy_page()
+    # swc.set_stock_code('300218')
+    # swc.set_trade_amount('10000')
 
     sleep(1)
-    swc.setTradePrice(price=20, priceIndex='c0', trade='b')
+    swc._stock_holding_page()
 
-    print 'test of setTradePrice', swc.__stockTrades__
+    # print "waiting for prices"
+
+    # swc.update_quote_price()
+    # print 'test of set_stock_code and set_trade_amount', swc._stock_trades
+
+    # sleep(1)
+    # swc.set_trade_price(price=20, priceIndex='c0', trade='b')
+
+    # print 'test of set_trade_price', swc._stock_trades
 
     '''
     Buy/Sale Stock
-    buyStock(__stockTrades__)
-    saleStock(__stockTrades__)
+    buy_stock(_stock_trades)
+    sale_stock(_stock_trades)
     '''
     # sleep(1)
     # buyPage()
     # sleep(1)
     # saveStockInfor(None)
 
-    # hwndMainWindowStock = __attrsWindow__.get('mainWindowHandle',0)
+    # hwndMainWindowStock = _attrs_window.get('mainWindowHandle',0)
 
     # print "Stock Holding Information: ", win32gui.GetWindowText(857134)
 

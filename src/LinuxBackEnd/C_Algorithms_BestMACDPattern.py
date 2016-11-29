@@ -232,7 +232,11 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 # Get real time price information
                 done, df_current_price = self._get_stock_current_price(stock_code)
                 if done:
-                    self._send_trading_command(df_stock_infor, df_current_price, df_signals.Signal[0])
+                    # Get cash avaliable information
+                    done, cash_avaliable = self._get_stock_asset()
+                    if done:
+                        self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
+                                                   df_signals.Signal[0])
         else:
             self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
 
@@ -268,6 +272,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             done = False
             return done, df_current_price
         ### how to call the function to get current price
+
+    def _get_stock_asset(self):
+        done = False  # The mark of success or not.
+        cmd_line = '5'
+        receive = commu(cmd_line)
+        print receive
+
+
 
     def _send_trading_command(self, df_stock_infor, df_current_price, signal):
         stock_code = df_stock_infor.stockCodes[0]

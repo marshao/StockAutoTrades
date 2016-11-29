@@ -48,7 +48,7 @@ logMesg = 'Log Start'
 conf = {'stockInHandFile':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
         'outputDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
         'installDir':'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
-        'confFile':'__conf__.ini',
+        'confFile': '_conf.ini',
         'opLog':'operlog.txt',
         'trLog':'tradeLog.txt'}
 
@@ -128,7 +128,7 @@ def EnumWindowProc(hwnd, tradeCode):
     
     hwndStock = 0    
     if win32gui.GetWindowText(hwnd) == tradeWindows.get('mainWindowName')[0]:
-        __attrsWindow__['mainWindowHanle'] = hwnd
+        _attrs_window['mainWindowHanle'] = hwnd
     '''
 def getHandleByXY(hwnd, x, y, attrs, sizeKey, handleKey):
     if (x == tradeWindowsProperties[sizeKey][0]) and (y == tradeWindowsProperties[sizeKey][1] and attrs[handleKey]=='0'):
@@ -255,7 +255,7 @@ def windowsInitiation():
     
     
     #win32gui.EnumWindows(EnumWindowProc, None)
-    #print "Parrent Window Hwnd is %d" %__attrsWindow__['mainWindowHandle']
+    # print "Parrent Window Hwnd is %d" %_attrs_window['mainWindowHandle']
     mainWindowHwnd = attrsWindow['mainWindowHandle']
     #secondWindowHwnd = getHandleByControlID(mainWindowHwnd, controlID)
     setForeGroundWindow(mainWindowHwnd)
@@ -629,8 +629,8 @@ def main():
     
     windowName = '参考总资产（含港股通）'
     #findStockWindowByName(2495344, 0, None, windowName)
-    
-    #win32gui.EnumChildWindows(__attrsWindow__['mainWindowHandle'], callbacktest, None)
+
+    #win32gui.EnumChildWindows(_attrs_window['mainWindowHandle'], callbacktest, None)
     sleep(1)
     
     setStockCode('300218')
@@ -640,24 +640,24 @@ def main():
     print "waiting for prices"
     
     updateQuotePrice()
-    print 'test of setStockCode and setTradeAmount', stockTrades
+    print 'test of set_stock_code and set_trade_amount', stockTrades
     
     sleep(1)
     setTradePrice(price = 20, priceIndex='c0', trade= 'b')
-    
-    print 'test of setTradePrice', stockTrades   
+
+    print 'test of set_trade_price', stockTrades
        
     '''
     Buy/Sale Stock
-    buyStock(__stockTrades__)
-    saleStock(__stockTrades__)
+    buy_stock(_stock_trades)
+    sale_stock(_stock_trades)
     '''
     #sleep(1)
     #buyPage()
     #sleep(1)
     #saveStockInfor(None)
-    
-    #hwndMainWindowStock = __attrsWindow__.get('mainWindowHandle',0)
+
+    #hwndMainWindowStock = _attrs_window.get('mainWindowHandle',0)
       
     #print "Stock Holding Information: ", win32gui.GetWindowText(857134)
         

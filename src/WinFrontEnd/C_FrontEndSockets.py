@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import socket, time, datetime
+from C_StockWindowControl import *
 
 class C_FrontEndSockets:
 
@@ -18,14 +19,22 @@ class C_FrontEndSockets:
         while True:
             c, addr = s.accept()
             print 'Got connection from', addr
-            c.send('Thank you for connecting')
             mesg = c.recv(1024)
-            self._prcess_message(mesg)
+            back_mesg = self._prcess_message(mesg)
+            c.send(back_mesg)
             c.close()
 
-    def _prcess_message(self, mesg):
-        print mesg + " at " + self._time_tag()
-        return mesg
+    def _prcess_message(self, from_mesg):
+        back_mesg = ''
+        items = from_mesg.split()
+        if items[0] == '5':
+            print "go to get cash avalible information"
+            swc = C_StockWindowControl()
+            back_mesg = '5.1 ' + swc.update_asset()
+        else:
+            back_mesg = '5.2'
+        print back_mesg + " at " + self._time_tag()
+        return back_mesg
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -35,6 +44,7 @@ class C_FrontEndSockets:
 
 def main():
     soc = C_FrontEndSockets()
+
 
 if __name__ == '__main__':
     main()
