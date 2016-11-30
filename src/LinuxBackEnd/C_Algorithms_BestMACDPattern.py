@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 from multiprocessing import Pool
 import multiprocessing as mp
-from BackEndMain import commu
+from CommuSocket import commu
 from C_GetDataFromWeb import *
 
 
