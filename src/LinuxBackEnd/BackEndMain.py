@@ -6,12 +6,6 @@ from C_GetDataFromWeb import *
 from C_Algorithms_BestMACDPattern import *
 
 
-class C_BackEndMain():
-    def __init__(self):
-        pass
-
-
-
 def commu(cmd='1'):
     '''
                 :param cmd: '1': update stock in hand information
@@ -49,8 +43,6 @@ def best_pattern_daily_calculate():
 def main():
     gd = C_GettingData()
     gd.service_getting_data()
-
-
 
 
 if __name__ == '__main__':
