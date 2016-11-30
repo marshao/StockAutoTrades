@@ -29,7 +29,7 @@ class C_GettingData:
         self._x_period = ['day', 'week']
         self._q_count = ['320','50','16','8','4']
         self._fq = ['qfq', 'hfq','bfq']
-        self._stock_code = ['sz300226', 'sh600887', '300146', '600221']
+        self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         # self._stock_code = ['sz300226']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
@@ -486,12 +486,12 @@ def main():
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
     #pp.service_getting_data()
-    #pp.get_data_qq(period = 'm5')
-    #pp.get_data_qq(period='m1')
+    # pp.get_data_qq(stock_code='sz300146', period = 'm5')
+    # pp.get_data_qq(stock_code='sz300146',period='m1')
     #pp.get_data_qq(period='real')
-    #pp.get_data_qq(period='m30')
-    #pp.get_data_qq(period='day')
-    #pp.get_data_qq(period='week')
+    # pp.get_data_qq(stock_code='sz300146', period='m30')
+    # pp.get_data_qq(stock_code='sh600221', period='day')
+    #pp.get_data_qq(stock_code='sh600221',period='week')
 
 if __name__ == '__main__':
     main()
