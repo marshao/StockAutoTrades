@@ -8,6 +8,7 @@ import os, time, pandas, urllib, re
 import datetime
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
+from BackEndMain import apply_pattern, best_pattern_daily_calculate
 
 
 class C_GettingData:
@@ -28,7 +29,8 @@ class C_GettingData:
         self._x_period = ['day', 'week']
         self._q_count = ['320','50','16','8','4']
         self._fq = ['qfq', 'hfq','bfq']
-        self._stock_code = ['sz300226', 'sh600887']
+        self._stock_code = ['sz300226', 'sh600887', '300146', '600221']
+        # self._stock_code = ['sz300226']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -53,7 +55,7 @@ class C_GettingData:
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
         self._start_morning = datetime.time(9,31,0)
         self._end_morning = datetime.time(11,31,0)
-        self._start_afternoon = datetime.time(13,31,0)
+        self._start_afternoon = datetime.time(13, 0, 0)
         self._end_afternoon = datetime.time(18,30,0)
 
 
@@ -165,7 +167,8 @@ class C_GettingData:
             current = time.time()
             current_time = datetime.datetime.now().time()
             lag = current - last_run
-            print "first try at last_run %s and current %s  and current - last_run %s" %(last_run, current, str(lag))
+            print "Tring to save data at last_run %s and current %s  and current - last_run %s" % (
+            last_run, current, str(lag))
             time.sleep(15)
             if (current_time > self._start_morning and current_time < self._end_morning) or (current_time > self._start_afternoon and current_time < self._end_afternoon):
                 # Need a while true loop in here to keep hearing the real time data
@@ -185,8 +188,14 @@ class C_GettingData:
                     last_run = time.time()
                     self._log_mesg = 'Write data to DB at ', self._time_tag()
                     print self._log_mesg
+                    print "Saving data process took %s seconds" % (last_run - current)
+                    apply_pattern(17, 'm30', 'sz300226')
             else:
                 print "Not in transaction time, wait 10 min to try again."
+                st_time = datetime.time(21, 0, 0)
+                ed_time = datetime.time(21, 15, 0)
+                if (current_time > st_time) and (current_time < ed_time):
+                    best_pattern_daily_calculate()
                 time.sleep(600)
 
     def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
@@ -471,11 +480,12 @@ class C_GettingData:
         return data
 
 def main():
-    pp = C_GettingData()
+    pass
+    #pp = C_GettingData()
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
-    pp.service_getting_data()
+    #pp.service_getting_data()
     #pp.get_data_qq(period = 'm5')
     #pp.get_data_qq(period='m1')
     #pp.get_data_qq(period='real')

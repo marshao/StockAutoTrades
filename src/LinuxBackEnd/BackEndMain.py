@@ -2,11 +2,14 @@
 # coding: utf-8
 
 import socket
+from C_GetDataFromWeb import *
+from C_Algorithms_BestMACDPattern import *
 
 
 class C_BackEndMain():
     def __init__(self):
         pass
+
 
 
 def commu(cmd='1'):
@@ -31,8 +34,23 @@ def commu(cmd='1'):
     print receive
     return receive
 
+
+def apply_pattern(pattern_number=17, period='m30', stock_code='sz300226'):
+    bMACD = C_BestMACDPattern()
+    # for each_stock_code in stock_codes:
+    bMACD.apply_best_MACD_pattern_to_data(pattern_number=pattern_number, period=period, stock_code=stock_code)
+
+
+def best_pattern_daily_calculate():
+    bMACD = C_BestMACDPattern()
+    bMACD.best_pattern_daily_calculate()
+
+
 def main():
-    pass
+    gd = C_GettingData()
+    gd.service_getting_data()
+
+
 
 
 if __name__ == '__main__':

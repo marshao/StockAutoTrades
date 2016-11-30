@@ -18,7 +18,8 @@ class C_Algorithems_BestPattern(object):
         self._input_dir = '/home/marshao/DataMiningProjects/Input/'
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._stock_name_file = self._output_dir + 'StockNames.csv'
-        self._stock_codes = ['sz300226', 'sh600887']
+        # self._stock_codes = ['sz300226', 'sh600887','300146','600221']
+        self._stock_codes = ['sz300226']
         self._stock_market = ""
         self._window = '10'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -68,6 +69,11 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
             self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
 
+    def best_pattern_daily_calculate(self):
+        self._MACD_trading_signals()
+        self._MACD_ending_profits()
+        #self._MACD_best_pattern()
+
     def _MACD_trading_signals(self, period='m30', stock_code='sz300226'):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
@@ -81,10 +87,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._multi_processors_cal_MACD_signals(df_MACD_index, df_stock_records)
         # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
 
-    def _clean_table(self, table_name):
-        conn = self._engine.connect()
-        conn.execute("truncate %s" %table_name)
-        print "Table is cleaned"
+
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, df_stock_records):
         print "Jumped into Multiprocessing "
@@ -270,7 +273,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._log_mesg = "Could not get current stock in hand information at %s" % self._time_tag()
             return done, df_stock_infor
 
-
     def _get_stock_current_price(self, stock_code):
         gd = C_GettingData()
         done = gd.get_data_qq(stock_code, period='real')
@@ -297,8 +299,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         else:
             pass
         return done, cash_avabliable
-
-
 
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
@@ -366,9 +366,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             pass
 
         return done
-
-
-
 
     def _MACD_ending_profits(self, period='m30', stock_code='sz300226'):
         # Fetch out Signal, EMA_short_window, EMA_long_window, DIF_window, quote_time, MACD_pattern_number from tb_StockIndex_MACD_New into a Pandas DF
@@ -510,6 +507,11 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     pass
             if MACD_trades.size != 0:
                 MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
+
+    def _clean_table(self, table_name):
+        conn = self._engine.connect()
+        conn.execute("truncate %s" % table_name)
+        print "Table is cleaned"
 
     def _MACD_best_pattern(self):
         sql_select_ending_profits = ('select MACD_pattern_number, profit_rate, quote_time from tb_MACD_Trades_HalfHour')

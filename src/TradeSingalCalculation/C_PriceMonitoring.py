@@ -9,7 +9,7 @@ import datetime
 from sqlalchemy import create_engine
 
 
-class C_GetRealTradingPrice:
+class C_PriceMonitoring:
     '''
     This is the class to monitor the stock real time price from various resources: (Sina, SnowBall, etc)
     '''
@@ -75,7 +75,7 @@ class C_GetRealTradingPrice:
     def _timer(self, func):
         # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
 
-        #定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
+        # 定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
         def wrapper():
             start = time.clock()
             while (time.clock() - start) < 60:
