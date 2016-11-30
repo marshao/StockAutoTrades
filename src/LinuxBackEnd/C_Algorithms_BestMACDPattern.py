@@ -303,7 +303,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
         # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
-        signal = 2
+        signal = 3
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
@@ -317,8 +317,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         line = []
         trade_result = 0
 
-
-        if signal == 1: # 1 == buy,
+        if signal == 2:  # 1 == buy,
             # Need to evaluate the cash avalible is enough to buy at least 1000 stocks
             # And also make sure the buy up limit will not over 2000 stocks
             current_price = df_current_price.current_price[0]
@@ -336,12 +335,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
             cmd = '2 ' + stock_code+' ' + trade_volumn+' '+ str(current_price)
             df_trade_history.trade_type.loc[0] = int(signal)
-        else: # -1 == sale
+        elif signal == 3:  # 3 == sale
             # Need to sale all stocks
             current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
             sale2_price = df_current_price.sale2_price[0]
             cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
+        else:
+            print "Unknown trading Signal"
 
         # Send trading command and analysis the result
         receives = commu(cmd).split()
