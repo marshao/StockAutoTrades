@@ -33,13 +33,13 @@ class C_StockWindowControl:
                      'totalAssetHandle': '0',
                      'saveAsEditHandle': '0'}
 
-    _attrs_buy_window = {'buyStockCodeHandle': '0',
-                         'buyPriceHandle': '0', 'buyAmountHandle': '0',
+    _attrs_buy_window = {'buyStockCodeHandle': [],
+                         'buyPriceHandle': [], 'buyAmountHandle': [],
                          'buyButtonHandle': '0', 'buyLastPriceHandle': '0',
                          'buyPrice1Handle': '0', 'buyPrice2Handle': '0'}
 
-    _attrs_sale_window = {'saleStockCodeHandle': '0', 'salePriceHandle': '0',
-                          'saleAmountHandle': '0', 'saleButtonHandle': '0',
+    _attrs_sale_window = {'saleStockCodeHandle': [], 'salePriceHandle': [],
+                          'saleAmountHandle': [], 'saleButtonHandle': '0',
                           'saleLastPriceHandle': '0', 'salePrice1Handle': '0', 'salePrice2Handle': '0', }
 
     _trade_windows_properties = {'mainWindowName': '广发证券核新网上交易系统7.56',
@@ -182,20 +182,29 @@ class C_StockWindowControl:
         if tradeCode == 'Buy':
             if win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockCodeWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
-                print 'stock code handle is %s' % hwnd
                 sizeKey = 'stockCodeWindowXY'
                 handleKey = 'buyStockCodeHandle'
-                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+                # self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                    winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    #    #self._attrs_buy_window['buyStockCodeHandle'][len(self._attrs_buy_window['buyStockCodeHandle'])] = hwnd
+                    self._attrs_buy_window.setdefault('buyStockCodeHandle', []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockPriceWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockPriceWindowXY'
                 handleKey = 'buyPriceHandle'
                 self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                            winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    self._attrs_buy_window.setdefault(handleKey, []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockAmountWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockAmountWindowXY'
                 handleKey = 'buyAmountHandle'
                 self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_buy_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                            winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    self._attrs_buy_window.setdefault(handleKey, []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buySaleWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buySaleWindowXY'
@@ -223,19 +232,26 @@ class C_StockWindowControl:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockCodeWindowXY'
                 handleKey = 'saleStockCodeHandle'
-                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+                # self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                    winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    self._attrs_sale_window.setdefault(handleKey, []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockPriceWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockPriceWindowXY'
                 handleKey = 'salePriceHandle'
-                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
-
+                # self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                    winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    self._attrs_sale_window.setdefault(handleKey, []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['stockAmountWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'stockAmountWindowXY'
                 handleKey = 'saleAmountHandle'
-                self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
-
+                # self._get_handle_by_XY(hwnd, winRec[0], winRec[1], self._attrs_sale_window, sizeKey, handleKey)
+                if (winRec[0] == self._trade_windows_properties[sizeKey][0]) and (
+                    winRec[1] == self._trade_windows_properties[sizeKey][1]):
+                    self._attrs_sale_window.setdefault(handleKey, []).append(hwnd)
             elif win32gui.GetDlgCtrlID(hwnd) == self._trade_windows_properties['buySaleWindowXY'][2]:
                 winRec = win32gui.GetWindowRect(hwnd)
                 sizeKey = 'buySaleWindowXY'
@@ -314,7 +330,7 @@ class C_StockWindowControl:
         win32api.keybd_event(67, 0, win32con.KEYEVENTF_KEYUP, 0)
         # sleep(1)
         win32api.keybd_event(VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(0.1)
+        sleep(0.5)
 
         data = self._get_clipboard_text()
         self._process_clipboard_data(data, 'stock_in_hand')
@@ -411,60 +427,73 @@ class C_StockWindowControl:
 
     def buy_stock(self, stockTrades):
 
-        stockCode = stockTrades[0]
-        tradeAmount = stockTrades[1]
-        tradePrice = stockTrades[2]
+        stockCode = stockTrades[1]
+        tradeAmount = stockTrades[2]
+        tradeAmount = '1000'
+        tradePrice = stockTrades[3]
         done = False
         # Active Buy Window
         self._buy_page()
 
-        # Send stockCode
-        # cx = 300
-        # cy = 124
-        # sleep(0.1)
-        # win32api.SetCursorPos((cx, cy))
-        # sleep(0.1)
-        # win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, cx, cy, 0, 0)
-        # win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, cx, cy, 0, 0)
-        for char in stockCode:
-            win32api.SendMessage(self._attrs_buy_window['buyStockCodeHandle'], win32con.WM_CHAR, ord(char), None)
-        print "message sent to %s" % self._attrs_buy_window['buyStockCodeHandle']
-
-        # Send tradeAmount
-        for char in tradeAmount:
-            win32api.SendMessage(self._attrs_buy_window['buyAmountHandle'], win32con.WM_CHAR, ord(char), None)
-        print "Amount sent to %s" % self._attrs_buy_window['buyAmountHandle']
+        # Send Stock Code
+        for hwnd in self._attrs_buy_window['buyStockCodeHandle']:
+            for char in stockCode:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+                sleep(0.1)
+            # Jump to the trade price blanket
+            win32api.keybd_event(VK_RETURN, 0, 0, 0)
+            win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.2)
+            # Clean the trade price blanket
+            win32api.keybd_event(VK_BACK, 0, 0, 0)
+            win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.2)
 
         # Send tradePrice
-        for char in tradePrice:
-            win32api.SendMessage(self._attrs_buy_window['buyPriceHandle'], win32con.WM_CHAR, ord(char), None)
-        print "Price sent to %s" % self._attrs_buy_window['buyPriceHandle']
+        for hwnd in self._attrs_buy_window['buyPriceHandle']:
+            for char in tradePrice:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+            # Jump to the trade volumn blanket
+            win32api.keybd_event(VK_RETURN, 0, 0, 0)
+            win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.2)
+            # Clean the trade volumn blanket
+            win32api.keybd_event(VK_BACK, 0, 0, 0)
+            win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.2)
 
-        # Send Sale Command
-        sleep(1)
+        # Send tradeAmount
+        for hwnd in self._attrs_buy_window['buyAmountHandle']:
+            for char in tradeAmount:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+                sleep(0.1)
+
+        '''
+        # Send buy Command: B
+        sleep(0.2)
         win32api.keybd_event(66, 0, 0, 0)
         win32api.keybd_event(66, 0, win32con.KEYEVENTF_KEYUP, 0)  # 閲婃斁鎸夐敭
 
         # Send Y to Confirm the buy
-        sleep(1)
+        sleep(0.2)
         win32api.keybd_event(89, 0, 0, 0)
         win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
 
         # Send Enter to confirm any message
-        sleep(1)
+        sleep(0.2)
         win32api.keybd_event(VK_RETURN, 0, 0, 0)
         win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
         self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
                 stockCode, tradePrice, tradeAmount)
         done = True
-
+        '''
         return done
 
-    def sale_stock(self, stockTrades):
+    def sale_stock_bak(self, stockTrades):
 
-        stockCode = stockTrades[0]
-        tradeAmount = stockTrades[1]
-        tradePrice = stockTrades[2]
+        stockCode = stockTrades[1]
+        tradeAmount = stockTrades[2]
+        tradePrice = stockTrades[3]
         done = False
         # Active Buy Window
         self._sale_page()
@@ -508,6 +537,70 @@ class C_StockWindowControl:
                 stockCode, tradePrice, tradeAmount)
             # write to log file
             self._write_log(self._log_mesg, self._conf['trLog'])
+        return done
+
+    def sale_stock(self, stockTrades):
+
+        stockCode = stockTrades[1]
+        tradeAmount = stockTrades[2]
+        tradePrice = stockTrades[3]
+        done = False
+        # Active Buy Window
+        self._sale_page()
+
+        # Send stockCode
+        print "sale amount handle is %s" % self._attrs_sale_window['saleStockCodeHandle']
+        for hwnd in self._attrs_sale_window['saleStockCodeHandle']:
+            for char in stockCode:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+        # Jump to the trade price blanket
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+        # Clean the trade price blanket
+        win32api.keybd_event(VK_BACK, 0, 0, 0)
+        win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+        print "stock code send to %s" % self._attrs_sale_window['saleStockCodeHandle']
+
+        # Send tradePrice
+        for hwnd in self._attrs_sale_window['salePriceHandle']:
+            for char in tradePrice:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+                # Jump to the trade volumn blanket
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+        # Clean the trade volumn blanket
+        win32api.keybd_event(VK_BACK, 0, 0, 0)
+        win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+        sleep(1)
+
+        # Send tradeAmount
+        for hwnd in self._attrs_sale_window['saleAmountHandle']:
+            for char in tradeAmount:
+                win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
+
+        '''
+        # Send Buy Command
+        sleep(0.2)
+        win32api.keybd_event(83, 0, 0, 0)
+        win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)  # 閲婃斁鎸夐敭
+
+        # Send Y to Confirm the Sale
+        sleep(0.2)
+        win32api.keybd_event(89, 0, 0, 0)
+        win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        # Send Enter to confirm any message
+        sleep(0.2)
+        win32api.keybd_event(VK_RETURN, 0, 0, 0)
+        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
+
+        self._log_mesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
+            stockCode, tradePrice, tradeAmount)
+        done = True
+        '''
         return done
 
     def set_trade_price(self, price, priceIndex, trade='b'):
@@ -874,6 +967,8 @@ class C_StockWindowControl:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, cx, cy, 0, 0)
         # p = win32gui.GetCursorPos()
         sleep(0.1)
+        h = win32gui.GetActiveWindow()
+        print h
 
     def _convert_encoding(self, lines, new_coding='UTF-8'):
         try:
@@ -893,7 +988,7 @@ def main():
     swc = C_StockWindowControl()
     # swc.get_trade_result()
     # swc._save_stock_infor_to_file()
-    # swc._get_buy_window_handle_by_cursor()
+    #swc._get_buy_window_handle_by_cursor()
     swc._get_handles()
 
 if __name__ == '__main__':

@@ -47,6 +47,7 @@ class C_FrontEndSockets:
         elif items[0] == '2':
             print "issue a buy command"
             stockTrades = from_mesg.split()
+            print "stockTrades is %s" % stockTrades
             done = self._swc.buy_stock(stockTrades)
             if done:
                 back_mesg = '2.1'
