@@ -16,16 +16,19 @@ def commu(cmd='1'):
                                 x.2 : command was not executed successfully
                 :return:
                 '''
-    s = socket.socket()
-    host = socket.gethostname()
-    port = 32768
-    host = 'ghuan02-d.inovageo.com'
-    l = "Buy 300226 1000 at 50.13 "
-    s.connect((host, port))
-    s.send(cmd)
-    receive = s.recv(1024)
-    print receive
-    return receive
+    try:
+        s = socket.socket()
+        host = socket.gethostname()
+        port = 32768
+        host = 'ghuan02-d.inovageo.com'
+        l = "Buy 300226 1000 at 50.13 "
+        s.connect((host, port))
+        s.send(cmd)
+        receive = s.recv(1024)
+        print receive
+        return receive
+    except:
+        print "The front end server error"
 
 
 def apply_pattern(pattern_number=17, period='m30', stock_code='sz300226'):
