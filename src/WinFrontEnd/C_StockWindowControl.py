@@ -437,6 +437,11 @@ class C_StockWindowControl:
 
         # Send Stock Code
         for hwnd in self._attrs_buy_window['buyStockCodeHandle']:
+            for i in range(6):
+                # Clean the trade price blanket
+                win32api.keybd_event(VK_BACK, 0, 0, 0)
+                win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+                sleep(0.1)
             for char in stockCode:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
                 sleep(0.1)
@@ -444,29 +449,27 @@ class C_StockWindowControl:
             win32api.keybd_event(VK_RETURN, 0, 0, 0)
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
             sleep(0.2)
+
+
+        # Send tradePrice
+        for i in range(6):
             # Clean the trade price blanket
             win32api.keybd_event(VK_BACK, 0, 0, 0)
             win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
-            sleep(0.2)
+            sleep(0.1)
 
-        # Send tradePrice
         for hwnd in self._attrs_buy_window['buyPriceHandle']:
+            print tradePrice
             for char in tradePrice:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
-            # Jump to the trade volumn blanket
-            win32api.keybd_event(VK_RETURN, 0, 0, 0)
-            win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
-            sleep(0.2)
-            # Clean the trade volumn blanket
-            win32api.keybd_event(VK_BACK, 0, 0, 0)
-            win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
-            sleep(0.2)
+            sleep(0.5)
 
         # Send tradeAmount
         for hwnd in self._attrs_buy_window['buyAmountHandle']:
             for char in tradeAmount:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
                 sleep(0.1)
+        sleep(0.3)
 
         '''
         # Send buy Command: B
@@ -550,6 +553,11 @@ class C_StockWindowControl:
 
         # Send stockCode
         print "sale amount handle is %s" % self._attrs_sale_window['saleStockCodeHandle']
+        for i in range(6):
+            # Clean the trade price blanket
+            win32api.keybd_event(VK_BACK, 0, 0, 0)
+            win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.1)
         for hwnd in self._attrs_sale_window['saleStockCodeHandle']:
             for char in stockCode:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
@@ -557,24 +565,20 @@ class C_StockWindowControl:
         win32api.keybd_event(VK_RETURN, 0, 0, 0)
         win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
         sleep(1)
-        # Clean the trade price blanket
-        win32api.keybd_event(VK_BACK, 0, 0, 0)
-        win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
+
         print "stock code send to %s" % self._attrs_sale_window['saleStockCodeHandle']
 
         # Send tradePrice
+        for i in range(6):
+            # Clean the trade price blanket
+            win32api.keybd_event(VK_BACK, 0, 0, 0)
+            win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
+            sleep(0.1)
+
         for hwnd in self._attrs_sale_window['salePriceHandle']:
             for char in tradePrice:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
                 # Jump to the trade volumn blanket
-        win32api.keybd_event(VK_RETURN, 0, 0, 0)
-        win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
-        # Clean the trade volumn blanket
-        win32api.keybd_event(VK_BACK, 0, 0, 0)
-        win32api.keybd_event(VK_BACK, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
 
         # Send tradeAmount
         for hwnd in self._attrs_sale_window['saleAmountHandle']:

@@ -50,7 +50,7 @@ class C_FrontEndSockets:
             print "issue a buy command"
             stockTrades = from_mesg.split()
             print "stockTrades is %s" % stockTrades
-            # done = self._swc.buy_stock(stockTrades)
+            done = self._swc.buy_stock(stockTrades)
             done = True
             if done:
                 back_mesg = '2.1'
@@ -59,7 +59,7 @@ class C_FrontEndSockets:
         elif items[0] == '3':
             print "issue a sales command"
             stockTrades = from_mesg.split()
-            # done = self._swc.sale_stock(stockTrades)
+            done = self._swc.sale_stock(stockTrades)
             done = True
             if done:
                 back_mesg = '3.1'
