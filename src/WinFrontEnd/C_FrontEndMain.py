@@ -3,7 +3,7 @@
 
 import socket, time, datetime
 from C_StockWindowControl import *
-from multiprocessing import Process
+from threading import Thread, Timer
 
 
 class C_FrontEndSockets:
@@ -19,6 +19,7 @@ class C_FrontEndSockets:
         port = 32768
         s.bind((host, port))
         s.listen(5)
+        print "Port Listening is started"
         while True:
             c, addr = s.accept()
             print 'Got connection from', addr
@@ -70,14 +71,16 @@ class C_FrontEndSockets:
         return back_mesg
 
     def _refresh_window_control(self):
+        print "refresh started"
         last = time.time()
         while True:
             current = time.time()
-            if current - last > 20:
+            if current - last > 30:
                 self._swc._buy_page()
-                sleep(1)
+                sleep(0.3)
                 self._swc._stock_withdraw_page()
                 last = current
+                print "Trading software is refreshed and actived."
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -88,12 +91,13 @@ class C_FrontEndSockets:
 
 def main():
     soc = C_FrontEndSockets()
-    p1 = Process(target=soc._listen(), args=())
-    p2 = Process(target = soc._refresh_window_control(), args=())
-    p1.start()
-    p2.start()
-    p1.join()
-    p2.join()
+    soc._listen()
+    #refresh_window = Timer(20, soc._refresh_window_control())
+    #port_listen = Thread(target=soc._listen())
+    #refresh_window.start()
+    #port_listen.start()
+    #refresh_window.join()
+    #port_listen.join()
 
 if __name__ == '__main__':
     main()
