@@ -17,10 +17,10 @@ class C_StockWindowControl:
     _log_mesg = 'Log Start'
 
     _conf = {
-        'stockInHandFile': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockInHand.csv',
-        'stockTradeToday': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\stockTradeToday.csv',
-        'outputDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
-        'installDir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\',
+        'stockInHandFile': 'C:\DataMining\\03.StockAutoTrades\output\\stockInHand.csv',
+        'stockTradeToday': 'C:\DataMining\\03.StockAutoTrades\output\\stockTradeToday.csv',
+        'outputDir': 'C:\DataMining\\03.StockAutoTrades\output\\',
+        'installDir': 'C:\DataMining\\03.StockAutoTrades\\',
         'confFile': '_conf.ini',
         'opLog': 'operlog.txt',
         'trLog': 'tradeLog.txt',
@@ -42,7 +42,7 @@ class C_StockWindowControl:
                           'saleAmountHandle': [], 'saleButtonHandle': '0',
                           'saleLastPriceHandle': '0', 'salePrice1Handle': '0', 'salePrice2Handle': '0', }
 
-    _trade_windows_properties = {'mainWindowName': '广发证券核新网上交易系统7.56',
+    _trade_windows_properties = {'mainWindowName': '广发证券核新网上交易系统7.60',
                                  'stockCodeWindowXY': [291, 114, 1032],
                                  'stockPriceWindowXY': [291, 150, 1033],
                                  'stockAmountWindowXY': [291, 186, 1034],
@@ -582,7 +582,7 @@ class C_StockWindowControl:
                 win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
 
         '''
-        # Send Buy Command
+        # Send Sale Command S:
         sleep(0.2)
         win32api.keybd_event(83, 0, 0, 0)
         win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)  # 閲婃斁鎸夐敭

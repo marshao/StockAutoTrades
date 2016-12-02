@@ -8,7 +8,7 @@ from C_StockWindowControl import *
 class C_FrontEndSockets:
     def __init__(self):
         s = socket.socket()
-        host = 'ghuan02-d.inovageo.com'
+        host = 'Bei1Python'
         port = 32768
         s.bind((host, port))
         self._swc = C_StockWindowControl()
