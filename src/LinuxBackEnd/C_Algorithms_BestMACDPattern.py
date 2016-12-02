@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 # from multiprocessing import Pool
 import multiprocessing as mp
-from CommuSocket import *
+from CommuSocket import commu, apply_pattern, best_pattern_daily_calculate, get_data_qq
 
 
 #from C_GetDataFromWeb import *
@@ -280,8 +280,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             return done, df_stock_infor
 
     def _get_stock_current_price(self, stock_code):
-        gd = C_GettingData()
-        done = gd.get_data_qq(stock_code, period='real')
+        # gd = C_GettingData()
+        done = get_data_qq(stock_code, period='real')
         sql_select_current_price = (
             "select stock_code,current_price, buy1_price, buy2_price, sale1_price, sale2_price  from tb_StockRealTimeRecords where stock_code = %s ORDER by time DESC limit 1")
         if done:

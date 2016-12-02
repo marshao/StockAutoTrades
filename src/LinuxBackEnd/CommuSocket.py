@@ -3,6 +3,7 @@
 
 import socket
 from C_Algorithms_BestMACDPattern import *
+from C_GetDataFromWeb import *
 
 
 def commu(cmd='1'):
@@ -20,7 +21,7 @@ def commu(cmd='1'):
         s = socket.socket()
         host = socket.gethostname()
         port = 32768
-        host = 'ghuan02-d.inovageo.com'
+        host = '10.175.10.99'
         l = "Buy 300226 1000 at 50.13 "
         s.connect((host, port))
         s.send(cmd)
@@ -40,3 +41,10 @@ def apply_pattern(pattern_number=17, period='m30', stock_code='sz300226'):
 def best_pattern_daily_calculate():
     bMACD = C_BestMACDPattern()
     bMACD.best_pattern_daily_calculate()
+
+
+def get_data_qq(stock_code, period):
+    gd = C_GettingData()
+    gd.get_data_qq(stock_code, period)
+    done = True
+    return done
