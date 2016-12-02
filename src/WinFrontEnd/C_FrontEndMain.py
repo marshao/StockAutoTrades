@@ -3,20 +3,21 @@
 
 import socket, time, datetime
 from C_StockWindowControl import *
+from multiprocessing import Process
 
 
 class C_FrontEndSockets:
     def __init__(self):
+        self._swc = C_StockWindowControl()
+        self._swc._get_handles()
+        self._swc._get_various_data()
+
+
+    def _listen(self):
         s = socket.socket()
         host = 'Bei1Python'
         port = 32768
         s.bind((host, port))
-        self._swc = C_StockWindowControl()
-        self._swc._get_handles()
-        self._swc._get_various_data()
-        self._listen(s)
-
-    def _listen(self, s):
         s.listen(5)
         while True:
             c, addr = s.accept()
@@ -68,6 +69,16 @@ class C_FrontEndSockets:
         print back_mesg + " at " + self._time_tag()
         return back_mesg
 
+    def _refresh_window_control(self):
+        last = time.time()
+        while True:
+            current = time.time()
+            if current - last > 20:
+                self._swc._buy_page()
+                sleep(1)
+                self._swc._stock_withdraw_page()
+                last = current
+
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
         time_stamp = datetime.datetime.now()
@@ -77,7 +88,12 @@ class C_FrontEndSockets:
 
 def main():
     soc = C_FrontEndSockets()
-
+    p1 = Process(target=soc._listen(), args=())
+    p2 = Process(target = soc._refresh_window_control(), args=())
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
 
 if __name__ == '__main__':
     main()
