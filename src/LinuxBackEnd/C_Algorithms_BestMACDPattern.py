@@ -310,7 +310,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
         # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
-        signal = 3
+        # signal = 3
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
