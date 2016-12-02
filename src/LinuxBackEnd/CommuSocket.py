@@ -2,8 +2,6 @@
 # coding: utf-8
 
 import socket
-from C_Algorithms_BestMACDPattern import *
-from C_GetDataFromWeb import *
 
 
 def commu(cmd='1'):
@@ -30,21 +28,3 @@ def commu(cmd='1'):
         return receive
     except:
         print "The front end server error"
-
-
-def apply_pattern(pattern_number=17, period='m30', stock_code='sz300226'):
-    bMACD = C_BestMACDPattern()
-    # for each_stock_code in stock_codes:
-    bMACD.apply_best_MACD_pattern_to_data(pattern_number=pattern_number, period=period, stock_code=stock_code)
-
-
-def best_pattern_daily_calculate():
-    bMACD = C_BestMACDPattern()
-    bMACD.best_pattern_daily_calculate()
-
-
-def get_data_qq(stock_code, period):
-    gd = C_GettingData()
-    gd.get_data_qq(stock_code, period)
-    done = True
-    return done

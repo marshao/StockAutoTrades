@@ -8,7 +8,7 @@ import os, time, pandas, urllib, re
 import datetime
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
-from CommuSocket import apply_pattern, best_pattern_daily_calculate
+from PatternApply import apply_pattern, best_pattern_daily_calculate
 
 
 class C_GettingData:

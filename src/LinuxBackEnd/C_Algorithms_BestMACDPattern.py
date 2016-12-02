@@ -9,10 +9,11 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 # from multiprocessing import Pool
 import multiprocessing as mp
-from CommuSocket import commu, apply_pattern, best_pattern_daily_calculate, get_data_qq
+from CommuSocket import commu
+from GetRealData import get_data_qq
 
 
-#from C_GetDataFromWeb import *
+# from C_GetDataFromWeb  *
 
 
 class C_Algorithems_BestPattern(object):
