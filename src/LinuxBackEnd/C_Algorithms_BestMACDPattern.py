@@ -282,7 +282,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _get_stock_current_price(self, stock_code):
         # gd = C_GettingData()
-        done = get_data_qq(stock_code, period='real')
+        done = get_data_qq(stock_code)
         sql_select_current_price = (
             "select stock_code,current_price, buy1_price, buy2_price, sale1_price, sale2_price  from tb_StockRealTimeRecords where stock_code = %s ORDER by time DESC limit 1")
         if done:
@@ -310,7 +310,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         #'stock_code','trade_type','trade_volumn','trade_price','trade_time',
         # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
-        # signal = 3
+        signal = 3
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
@@ -561,9 +561,9 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 def main():
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._get_best_pattern('sz300226')
+    # MACDPattern._get_best_pattern('sz300226')
 
-    #MACDPattern.apply_best_MACD_pattern_to_data()
+    MACDPattern.apply_best_MACD_pattern_to_data()
     #MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 if __name__ == '__main__':
