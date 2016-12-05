@@ -11,6 +11,8 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
+import matplotlib.pyplot as plt
+
 
 
 # from C_GetDataFromWeb  *
@@ -556,14 +558,102 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
 
 class C_BestSARPattern(C_Algorithems_BestPattern):
-    pass
+    def __init__(self):
+        C_Algorithems_BestPattern.__init__(self)
+        self._ep = 0
+        self._previous_SAR = 0
+        self._price_high = 0
+        self._price_low = 0
+        self._AF = 0.02
+        self._AF_limit = 0.20
+        self._SAR_window = 5
+        # matplotlib.style.use('ggplot')
+
+    def _getting_stock_records(self, stock_code='sz300226', period='m30'):
+        sql_read_records = (
+        "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXMinRecords where stock_code = %s and period = %s")
+        df_records = pd.read_sql(sql_read_records, con=self._engine, params=(stock_code, period))
+        return df_records
+
+    def SAR_calculation(self, stock_code='sz300226', period='m30', records_window=5, af=0.02, af_limit=0.20):
+        df_records = self._getting_stock_records(stock_code, period)
+        trend, sar, ep = self._begining_trend(df_records, records_window)
+        af_window = af
+        df_records['SAR'] = sar
+        df_records['EP'] = ep
+        df_records['AF_value'] = af
+        df_records['AF_limit'] = af_limit
+        df_records['AF_window'] = af
+        df_records['EPSAR'] = ep - sar
+        df_records['Signal'] = 0
+        records_count = len(df_records)
+        i = records_window
+        while i < records_count:
+            prior_sar = df_records.SAR[i - 1]
+            prior_af = df_records.AF_value[i - 1]
+            prior_ep = df_records.EP[i - 1]
+            if trend == 1:
+                sar = float("%0.4f" % (prior_sar + prior_af * (prior_ep - prior_sar)))
+                if af < af_limit:
+                    af = af + af_window
+                ep = df_records.high_price[i - records_window:i].max()
+                df_records.SAR[i] = sar
+                df_records.EP[i] = ep
+                df_records.AF_value[i] = af
+                df_records.EPSAR[i] = ep - sar
+                if df_records.close_price[i] < sar:
+                    trend = -1
+                    df_records.Signal[i] = -1
+                i += 1
+            else:
+                sar = float("%0.4f" % (prior_sar - prior_af * (prior_sar - prior_ep)))
+                if af < af_limit:
+                    af = af + af_window
+                ep = df_records.low_price[i - records_window:i].min()
+                df_records.SAR[i] = sar
+                df_records.EP[i] = ep
+                df_records.AF_value[i] = af
+                df_records.EPSAR[i] = ep - sar
+                if df_records.close_price[i] > sar:
+                    trend = 1
+                    df_records.Signal[i] = 1
+                i += 1
+        df_records.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
+
+    def _begining_trend(self, df_records, window):
+        trend = 1
+        sar = 0
+        ep = 0
+        sar = df_records.close_price[0:window].mean()
+        day_window_close = df_records.close_price[window - 1]
+        if day_window_close > sar:
+            ep = df_records.high_price[0:window].max()
+            return trend, sar, ep
+        elif day_window_close <= sar:
+            ep = df_records.low_price[0:window].min()
+            trend = -1
+            return trend, sar, ep
+
+    def plot_df(self):
+        sql_select = ("select quote_time, close_price, SAR from tb_StockIndex_SAR")
+        df = pd.read_sql(sql_select, con=self._engine, index_col='quote_time')
+        print df
+        plt.figure()
+        df.plot()
+
+    def _sending_signal(self):
+        pass
+
+
+
+
 
 
 def main():
-    MACDPattern = C_BestMACDPattern()
+    SARPattern = C_BestSARPattern()
     # MACDPattern._get_best_pattern('sz300226')
 
-    MACDPattern.apply_best_MACD_pattern_to_data()
+    SARPattern.plot_df()
     #MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 if __name__ == '__main__':
