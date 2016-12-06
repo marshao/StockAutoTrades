@@ -9,6 +9,10 @@ import datetime
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.executors.pool import ProcessPoolExecutor
 
 
 class C_GettingData:
@@ -53,10 +57,10 @@ class C_GettingData:
         self._x_min_data_DF = pandas.DataFrame(columns = self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
-        self._start_morning = datetime.time(9,31,0)
-        self._end_morning = datetime.time(11,31,0)
+        self._start_morning = datetime.time(9, 30, 0)
+        self._end_morning = datetime.time(11, 42, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
-        self._end_afternoon = datetime.time(18,30,0)
+        self._end_afternoon = datetime.time(15, 12, 0)
 
 
     def __get_real_time_data_sina(self, data_source, stock_code):
@@ -384,8 +388,10 @@ class C_GettingData:
             data = self._remove_duplicate_rows(period, stock_code)
             if period != 'm1':
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
+                print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
             else:
                 data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
+                print "saved m1 data of stock code %s" % stock_code
         elif period in self._x_period:
             # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
             data = self._remove_duplicate_rows(period, stock_code)
@@ -479,9 +485,39 @@ class C_GettingData:
             data = 'DecodeError'
         return data
 
+    def job_schedule(self):
+        started = False
+        job_stores = {'default': MemoryJobStore()}
+        executor = {'processpool': ProcessPoolExecutor(4)}
+        job_default = {'coalesce': False, 'max_instances': 4}
+        scheduler = BlockingScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
+        for stock in self._stock_code:
+            scheduler.add_job(self.get_data_qq, 'interval', seconds=180, args=[stock, 'm1', 'qfq'])
+            scheduler.add_job(self.get_data_qq, 'interval', seconds=300, args=[stock, 'm5', 'qfq'])
+            scheduler.add_job(self.get_data_qq, 'interval', seconds=1800, args=[stock, 'm30', 'qfq'])
+
+        while True:
+            # current = time.time()
+            current_time = datetime.datetime.now().time()
+            if (current_time > self._start_morning and current_time < self._end_morning) or (
+                            current_time > self._start_afternoon and current_time < self._end_afternoon):
+                if started == False:
+                    scheduler.start()
+                    started = True
+            else:
+                st_time = datetime.time(21, 0, 0)
+                ed_time = datetime.time(21, 15, 0)
+                if (current_time > st_time) and (current_time < ed_time):
+                    best_pattern_daily_calculate()
+                if started == True:
+                    scheduler.pause()
+                    started = False
+                time.sleep(600)
+
+
 def main():
-    pass
-    #pp = C_GettingData()
+    pp = C_GettingData()
+    pp.job_schedule()
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()

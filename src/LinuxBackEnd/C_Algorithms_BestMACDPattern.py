@@ -11,7 +11,9 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
-import matplotlib.pyplot as plt
+
+
+# import matplotlib.pyplot as plt
 
 
 
@@ -638,8 +640,8 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         sql_select = ("select quote_time, close_price, SAR from tb_StockIndex_SAR")
         df = pd.read_sql(sql_select, con=self._engine, index_col='quote_time')
         print df
-        plt.figure()
-        df.plot()
+        # plt.figure()
+        #df.plot()
 
     def _sending_signal(self):
         pass
