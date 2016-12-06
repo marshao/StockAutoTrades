@@ -12,8 +12,9 @@ from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.pool import ProcessPoolExecutor
-
+from apscheduler.executors.pool import ThreadPoolExecutor
+import multiprocessing as mp
+import logging
 
 class C_GettingData:
     '''
@@ -61,6 +62,7 @@ class C_GettingData:
         self._end_morning = datetime.time(11, 42, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
         self._end_afternoon = datetime.time(15, 12, 0)
+
 
 
     def __get_real_time_data_sina(self, data_source, stock_code):
@@ -203,6 +205,7 @@ class C_GettingData:
                 time.sleep(600)
 
     def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
+        logging.debug('Starting')
         self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
@@ -247,6 +250,7 @@ class C_GettingData:
                 self._save_data_to_db_qq(period, stock_code)
         except:
             got = False
+        logging.debug('Finished')
         return got
 
 
@@ -353,7 +357,7 @@ class C_GettingData:
             tmp_l.append(stock_code)
             self._1_min_data_DF.loc[len(self._1_min_data_DF)] = tmp_l
         self._1_min_data_DF.set_index('quote_time', inplace=True)
-        print "processed 1 min data"
+        print "processed 1 min data of %s" % stock_code
         return self._1_min_data_DF
 
     def _process_x_min_data_qq(self, data, x_min, stock_code):
@@ -375,7 +379,7 @@ class C_GettingData:
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        print "processed %s data" %x_min
+        print "processed %s data of stock %s" % (x_min, stock_code)
         return self._x_min_data_DF
 
     def _save_data_to_db_qq(self, period, stock_code):
@@ -409,7 +413,7 @@ class C_GettingData:
         :param df:
         :return:
         '''
-        print "Jump into remove duplication"
+        # print "Jump into remove duplication"
         conn = self._engine.connect()
         if period in self._x_min: # process X min data
             if period != 'm1':
@@ -437,9 +441,9 @@ class C_GettingData:
 
         result = conn.execute(s).fetchall()
         if len(result) != 0:
-            print result
+            #print result
             last_record_time = result[0][0]
-            print last_record_time
+            #print last_record_time
             #data = data.loc[lambda df: df.index > last_record_time, :]
             data = data[data.index > last_record_time]
             return data
@@ -485,34 +489,49 @@ class C_GettingData:
             data = 'DecodeError'
         return data
 
-    def job_schedule(self):
-        started = False
-        job_stores = {'default': MemoryJobStore()}
-        executor = {'processpool': ProcessPoolExecutor(4)}
-        job_default = {'coalesce': False, 'max_instances': 4}
-        scheduler = BlockingScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
-        for stock in self._stock_code:
-            scheduler.add_job(self.get_data_qq, 'interval', seconds=180, args=[stock, 'm1', 'qfq'])
-            scheduler.add_job(self.get_data_qq, 'interval', seconds=300, args=[stock, 'm5', 'qfq'])
-            scheduler.add_job(self.get_data_qq, 'interval', seconds=1800, args=[stock, 'm30', 'qfq'])
 
-        while True:
-            # current = time.time()
-            current_time = datetime.datetime.now().time()
-            if (current_time > self._start_morning and current_time < self._end_morning) or (
-                            current_time > self._start_afternoon and current_time < self._end_afternoon):
-                if started == False:
-                    scheduler.start()
-                    started = True
-            else:
-                st_time = datetime.time(21, 0, 0)
-                ed_time = datetime.time(21, 15, 0)
-                if (current_time > st_time) and (current_time < ed_time):
-                    best_pattern_daily_calculate()
-                if started == True:
-                    scheduler.pause()
-                    started = False
-                time.sleep(600)
+    def job_schedule(self):
+        # job_stores = {'default': MemoryJobStore()}
+        # executor = {'processpool': ThreadPoolExecutor(8)}
+        # job_default = {'coalesce': False, 'max_instances': 12}
+        # scheduler_1 = BlockingScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
+        scheduler_1 = BackgroundScheduler()
+        scheduler_2 = BlockingScheduler()
+        scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
+        scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
+        scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
+        scheduler_1.start()
+
+        # The switch of scheduler_1
+        scheduler_2.add_job(self._scheduler_switch, 'interval', seconds=600, args=[scheduler_1])
+        scheduler_2.start()
+
+    def _scheduler_switch(self, scheduler):
+        print "I am here"
+        current_time = datetime.datetime.now().time()
+
+        if (current_time > self._start_morning and current_time < self._end_morning) or (
+                        current_time > self._start_afternoon and current_time < self._end_afternoon):
+            scheduler.start()
+        else:
+            print "out of the time of getting data"
+            st_time = datetime.time(21, 0, 0)
+            ed_time = datetime.time(21, 15, 0)
+            if (current_time > st_time) and (current_time < ed_time):
+                best_pattern_daily_calculate()
+            scheduler.pause()
+
+    def _data_service(self, period):
+        processes = []
+        for stock in self._stock_code:
+            p = mp.Process(target=self.get_data_qq, args=(stock, period, 'qfq',))
+            processes.append(p)
+
+        for p in processes:
+            p.start()
+
+        for p in processes:
+            p.join()
 
 
 def main():
