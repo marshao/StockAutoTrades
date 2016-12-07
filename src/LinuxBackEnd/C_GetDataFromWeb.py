@@ -507,12 +507,17 @@ class C_GettingData:
         # scheduler_1.add_job(self._fun, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
+        scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=['m30'])
         scheduler_1.start()
 
         # The switch of scheduler_1
         while True:
             self._scheduler_switch(scheduler_1)
+
+    def _half_hour_tasks(self, period):
+        self._data_service(period='m30')
+        apply_pattern(17, 'm30', 'sz300226')
+
 
     def _scheduler_switch(self, scheduler):
         current_time = datetime.datetime.now().time()
