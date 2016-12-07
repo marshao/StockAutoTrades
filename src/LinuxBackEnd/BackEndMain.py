@@ -6,7 +6,7 @@ from C_GetDataFromWeb import *
 
 def main():
     gd = C_GettingData()
-    gd.service_getting_data()
+    gd.job_schedule()
 
 
 if __name__ == '__main__':

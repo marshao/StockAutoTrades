@@ -62,6 +62,7 @@ class C_GettingData:
         self._end_morning = datetime.time(11, 42, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
         self._end_afternoon = datetime.time(15, 12, 0)
+        self._fun = self._empty_fun
 
 
 
@@ -395,11 +396,12 @@ class C_GettingData:
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
             else:
                 data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
-                print "saved m1 data of stock code %s" % stock_code
+                print "saved m1 data of stock code %s at %s" % (stock_code, self._time_tag())
         elif period in self._x_period:
             # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
             data = self._remove_duplicate_rows(period, stock_code)
             data.to_sql('tb_StockXPeriodRecords', self._engine, if_exists='append', index=True)
+            print "saved %s period data of stock code %s at %s" % (period, stock_code, self._time_tag())
         else:
             # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
             data = self._real_time_data_DF
@@ -489,37 +491,46 @@ class C_GettingData:
             data = 'DecodeError'
         return data
 
+    def _empty_fun(self, period):
+        pass
 
     def job_schedule(self):
         # job_stores = {'default': MemoryJobStore()}
         # executor = {'processpool': ThreadPoolExecutor(8)}
         # job_default = {'coalesce': False, 'max_instances': 12}
-        # scheduler_1 = BlockingScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
+        # scheduler_1 = BackgroundScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
+
         scheduler_1 = BackgroundScheduler()
-        scheduler_2 = BlockingScheduler()
+        # scheduler_2 = BlockingScheduler()
+        # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
+        # scheduler_1.add_job(self._fun, 'interval', seconds=300, args=['m5'])
+        # scheduler_1.add_job(self._fun, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
         scheduler_1.start()
 
         # The switch of scheduler_1
-        scheduler_2.add_job(self._scheduler_switch, 'interval', seconds=600, args=[scheduler_1])
-        scheduler_2.start()
+        while True:
+            self._scheduler_switch(scheduler_1)
 
     def _scheduler_switch(self, scheduler):
-        print "I am here"
         current_time = datetime.datetime.now().time()
 
         if (current_time > self._start_morning and current_time < self._end_morning) or (
                         current_time > self._start_afternoon and current_time < self._end_afternoon):
-            scheduler.start()
+            scheduler.resume()
+            print "scheduler back to work"
+            #time.sleep(600)
         else:
             print "out of the time of getting data"
+            scheduler.pause()
             st_time = datetime.time(21, 0, 0)
             ed_time = datetime.time(21, 15, 0)
             if (current_time > st_time) and (current_time < ed_time):
                 best_pattern_daily_calculate()
-            scheduler.pause()
+        time.sleep(600)
+
 
     def _data_service(self, period):
         processes = []
