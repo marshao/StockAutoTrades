@@ -666,16 +666,68 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
             return trend, sar, ep
 
     def SAR_ending_profits(self, stock_code):
+
+        stockVolume_Begin = 10000
+        cash_Begin = 200000.00
+        tradeVolume = 10000
+        cash_Current = cash_Begin
+        stockVolume_Current = stockVolume_Begin
+        # totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
+        # totalValue_Current = totalValue_Begin
+        df = self._signal_filter(stock_code)
+
+    def _signal_filter(self, stock_code):
+
+        # Trading Rules:
+        # 1: No two buys connect togehter
+        # 2: No two sales in connect together
+        # 3: Base on T+1 policy, buy + sale in one day is not allowed, sale + buy is valid.
+
         sql_select_SAR_trading_signals = ("select stock_code, close_price, trading_signal, pattern_number, quote_time "
                                           "from tb_StockIndex_SAR where stock_code = %s and trading_signal <> 0")
         df_ending_profit = pd.read_sql(sql_select_SAR_trading_signals, con=self._engine, params=(stock_code,))
 
+        i = 0
+        # df_patterns = df_ending_profit.drop_duplicates(subset='pattern_number', keep='last')
+        # df_patterns.drop(df_patterns.columns[[0,1,2,4]], axis=1, inplace = True)
+        df_ending_profit['remove'] = False
+        df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
         df_grouped = df_ending_profit.groupby(by='pattern_number')
+        df_indexed = df_ending_profit.reset_index()
+        #df_patterns = df_grouped.pattern_number.unique()
 
-        print df_grouped.get_group(1)
+        # print df_patterns
+        for pattern in df_patterns:
+            if i == 1:
+                break
+            i += 1
+            # df_grouped.get_group(pattern)
+            # df.ending_profit.pattern_number[pattern]= df_grouped.get_group(pattern)
+            j = 1
+            while j < 40:
+                last_day = df_ending_profit.pattern_number[pattern].quote_time[j - 1].date()
+                this_day = df_ending_profit.pattern_number[pattern].quote_time[j].date()
+                last_signal = df_ending_profit.pattern_number[pattern].trading_signal[j - 1]
+                this_signal = df_ending_profit.pattern_number[pattern].trading_signal[j]
+                if last_signal == 1 and this_signal == -1:
+                    if this_day == last_day:
+                        df_ending_profit.pattern_number[pattern].remove[i] = True
+                        print "set True"
+                j += 1
+        print df_grouped.get_group(2)
 
-
-
+    def _trade_policy_T1(self, df_singal):
+        i = 1
+        while i < len(df_singal.index):
+            last_day = df_singal.quote_time[i - 1].date()
+            this_day = df_singal.quote_time[i].date()
+            last_signal = df_singal.trading_signal[i - 1]
+            this_signal = df_singal.trading_signal[i]
+            if last_signal == 1 and this_signal == -1:
+                if this_day == last_day:
+                    df_singal.remove[i] = True
+                    print "set True"
+            i+=1
 
     def _sending_signal(self):
         pass
@@ -725,7 +777,7 @@ def main():
     SARPattern = C_BestSARPattern()
     # MACDPattern._get_best_pattern('sz300226')
 
-    SARPattern.SAR_ending_profits('sz300226')
+    SARPattern._signal_filter('sz300226')
     # MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 
