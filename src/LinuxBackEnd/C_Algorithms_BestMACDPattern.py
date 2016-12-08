@@ -760,6 +760,13 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         # print "     After no conjunction policy length of row is %s" % (len(df.index))
         print df
 
+    '''
+    Stopped at here, the problematic trading signals have been eliminated.
+    Next Task:
+    1. Calculate ending profits
+    2. save ending profits either DB or a DF for furthur analysis
+    '''
+
     def _sending_signal(self):
         pass
 
