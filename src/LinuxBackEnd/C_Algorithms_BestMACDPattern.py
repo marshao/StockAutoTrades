@@ -692,42 +692,73 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         # df_patterns.drop(df_patterns.columns[[0,1,2,4]], axis=1, inplace = True)
         df_ending_profit['remove'] = False
         df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
+        df_ending_profit.set_index('quote_time', inplace=True)
         df_grouped = df_ending_profit.groupby(by='pattern_number')
         df_indexed = df_ending_profit.reset_index()
         #df_patterns = df_grouped.pattern_number.unique()
 
         # print df_patterns
-        for pattern in df_patterns:
+        '''
+        for name, group in df_grouped:
             if i == 1:
                 break
             i += 1
+            group.apply(self._trade_policy_T1)
             # df_grouped.get_group(pattern)
             # df.ending_profit.pattern_number[pattern]= df_grouped.get_group(pattern)
-            j = 1
-            while j < 40:
-                last_day = df_ending_profit.pattern_number[pattern].quote_time[j - 1].date()
-                this_day = df_ending_profit.pattern_number[pattern].quote_time[j].date()
-                last_signal = df_ending_profit.pattern_number[pattern].trading_signal[j - 1]
-                this_signal = df_ending_profit.pattern_number[pattern].trading_signal[j]
+            #print name
+            #print group
+
+            while j < len(group.index):
+                last_day = group.quote_time.iloc[j-1].date()
+                this_day = group.quote_time.iloc[j].date()
+                last_signal = group.trading_signal.iloc[j - 1]
+                this_signal = group.trading_signal.iloc[j]
                 if last_signal == 1 and this_signal == -1:
                     if this_day == last_day:
-                        df_ending_profit.pattern_number[pattern].remove[i] = True
-                        print "set True"
+                        group.remove.iloc[j] = True
+                        print "set True at %s"%group.quote_time.iloc[j]
                 j += 1
-        print df_grouped.get_group(2)
+            print group
+            j = 1
+            '''
+        df_grouped.apply(self._trade_policy_T1)
 
-    def _trade_policy_T1(self, df_singal):
-        i = 1
-        while i < len(df_singal.index):
-            last_day = df_singal.quote_time[i - 1].date()
-            this_day = df_singal.quote_time[i].date()
-            last_signal = df_singal.trading_signal[i - 1]
-            this_signal = df_singal.trading_signal[i]
+        # print df_grouped.get_group(1)
+
+    def _trade_policy_T1(self, df):
+        # df.set_index('quote_time', inplace = True)
+        # print df
+        # print "length of index is %s"%len(df.index)
+        j = 1
+        while j < len(df.index):
+            last_day = df.index[j - 1].date()
+            this_day = df.index[j].date()
+            last_signal = df.trading_signal.iloc[j - 1]
+            this_signal = df.trading_signal.iloc[j]
             if last_signal == 1 and this_signal == -1:
                 if this_day == last_day:
-                    df_singal.remove[i] = True
-                    print "set True"
-            i+=1
+                    index = df.index[j]
+                    df.remove[index] = True
+                    # print "set True at %s" % df.index[j]
+            j += 1
+        self._trade_ploicy_no_conjuncated_same_operation(df)
+        # print "Before T1 policy length of row is %s"%(len(df.index))
+
+    def _trade_ploicy_no_conjuncated_same_operation(self, df):
+        j = 1
+        df = df[df.remove != True]
+        # print " After T1 policy length of row is %s"%(len(df.index))
+        while j < len(df.index):
+            last_signal = df.trading_signal.iloc[j - 1]
+            this_signal = df.trading_signal.iloc[j]
+            if last_signal == this_signal:
+                index = df.index[j]
+                df.remove[index] = True
+            j += 1
+        df = df[df.remove != True]
+        # print "     After no conjunction policy length of row is %s" % (len(df.index))
+        print df
 
     def _sending_signal(self):
         pass
