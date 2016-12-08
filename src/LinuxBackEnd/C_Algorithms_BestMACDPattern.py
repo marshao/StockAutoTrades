@@ -7,18 +7,24 @@ import datetime, time, progressbar, math
 import pandas as pd
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
-# from multiprocessing import Pool
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
 
 
-# import matplotlib.pyplot as plt
+# import logging
+# logging.basicConfig()
+
 
 
 
 # from C_GetDataFromWeb  *
 
+
+def call_it(instance, name, args=(), kwargs=None):
+    if kwargs == None:
+        kwargs = {}
+    return getattr(instance, name)(*args, **kwargs)
 
 class C_Algorithems_BestPattern(object):
     def __init__(self):
@@ -574,29 +580,27 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         self._records_window = [5, 10]
         # matplotlib.style.use('ggplot')
 
-    def SAR_patterns(self):
+    def SAR_patterns_exams(self):
         stock_code = 'sz300226'
         period = 'm30'
         processes = []
+        args = []
         self._clean_table('tb_StockIndex_SAR')
-        progressbar = self._progress_monitor()
         i = 1
-        for af in progressbar(self._AF):
+        df_records = self._getting_stock_records(stock_code, period)
+        for af in self._AF:
             for af_limit in self._AF_limit:
                 for window in self._records_window:
-                    p = mp.Process(target=self.SAR_calculation, args=(stock_code, period, window, af, af_limit,))
+                    df = pd.DataFrame(df_records.values.copy(), df_records.index.copy(), df_records.columns.copy())
+                    p = mp.Process(target=self.SAR_calculation, args=(df, i, stock_code, period, window, af, af_limit,))
                     processes.append(p)
+                    i += 1
+        # Send task to a self made process pool.
+        self._processes_pool(processes, 5)
 
-        for p in processes:
-            p.start()
-            print "progress %s started" % i
-            i += 1
+    def SAR_calculation(self, df_records, pattern_number, stock_code='sz300226', period='m30', records_window=5,
+                        af=0.02, af_limit=0.20):
 
-        for p in processes:
-            p.join()
-
-    def SAR_calculation(self, stock_code='sz300226', period='m30', records_window=5, af=0.02, af_limit=0.20):
-        df_records = self._getting_stock_records(stock_code, period)
         trend, sar, ep = self._begining_trend(df_records, records_window)
         af_window = af
         df_records['SAR'] = sar
@@ -605,7 +609,8 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         df_records['AF_limit'] = af_limit
         df_records['AF_window'] = af
         df_records['EPSAR'] = ep - sar
-        df_records['Signal'] = 0
+        df_records['trading_signal'] = 0
+        df_records['pattern_number'] = pattern_number
         records_count = len(df_records)
         i = records_window
         while i < records_count:
@@ -660,22 +665,67 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
             trend = -1
             return trend, sar, ep
 
-    def plot_df(self):
-        sql_select = ("select quote_time, close_price, SAR from tb_StockIndex_SAR")
-        df = pd.read_sql(sql_select, con=self._engine, index_col='quote_time')
-        print df
-        # plt.figure()
-        # df.plot()
+    def SAR_ending_profits(self, stock_code):
+        sql_select_SAR_trading_signals = ("select stock_code, close_price, trading_signal, pattern_number, quote_time "
+                                          "from tb_StockIndex_SAR where stock_code = %s and trading_signal <> 0")
+        df_ending_profit = pd.read_sql(sql_select_SAR_trading_signals, con=self._engine, params=(stock_code,))
+
+        df_grouped = df_ending_profit.groupby(by='pattern_number')
+
+        print df_grouped.get_group(1)
+
+
+
 
     def _sending_signal(self):
         pass
 
+    def _processes_pool(self, tasks, processors):
+        # This is a self made Multiprocess pool
+        task_total = len(tasks)
+        loop_total = task_total / processors
+        print "task total is %s, loop_total is %s" % (task_total, loop_total)
+        alive = True
+        task_finished = 0
+        task_alive = 0
+        task_remain = task_total - task_finished
+        count = 0
+        i = 0
+        while i <= loop_total:
+            print "This is the %s round" % i
+            for j in range(processors):
+                k = j + processors * i
+                print "executing task %s" % k
+                if k == task_total:
+                    break
+                tasks[k].start()
+                j += 1
+
+            for j in range(processors):
+                k = j + processors * i
+                if k == task_total:
+                    break
+                tasks[k].join()
+                j += 1
+
+            while alive == True:
+                n = 0
+                alive = False
+                for j in range(processors):
+                    k = j + processors * i
+                    if k == task_total:
+                        # print "This is the %s round of loop"%i
+                        break
+                    if tasks[k].is_alive():
+                        alive = True
+                    time.sleep(3)
+            i += 1
 
 def main():
     SARPattern = C_BestSARPattern()
     # MACDPattern._get_best_pattern('sz300226')
 
-    SARPattern.SAR_patterns()
+    SARPattern.SAR_ending_profits('sz300226')
     # MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 
