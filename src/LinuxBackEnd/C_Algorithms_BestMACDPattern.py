@@ -611,6 +611,8 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         df_records['EPSAR'] = ep - sar
         df_records['trading_signal'] = 0
         df_records['pattern_number'] = pattern_number
+        df_records['ending_profit'] = 0
+        df_records['status'] = 1
         records_count = len(df_records)
         i = records_window
         while i < records_count:
@@ -628,7 +630,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 df_records.EPSAR[i] = ep - sar
                 if df_records.close_price[i] < sar:
                     trend = -1
-                    df_records.Signal[i] = -1
+                    df_records.trading_signal[i] = -1
                 i += 1
             else:
                 sar = float("%0.4f" % (prior_sar - prior_af * (prior_sar - prior_ep)))
@@ -641,7 +643,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 df_records.EPSAR[i] = ep - sar
                 if df_records.close_price[i] > sar:
                     trend = 1
-                    df_records.Signal[i] = 1
+                    df_records.trading_signal[i] = 1
                 i += 1
         df_records.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
 
@@ -665,71 +667,35 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
             trend = -1
             return trend, sar, ep
 
-    def SAR_ending_profits(self, stock_code):
+    def SAR_ending_profits_all_stocks(self):
+        pass
 
-        stockVolume_Begin = 10000
-        cash_Begin = 200000.00
-        tradeVolume = 10000
-        cash_Current = cash_Begin
-        stockVolume_Current = stockVolume_Begin
-        # totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
-        # totalValue_Current = totalValue_Begin
-        df = self._signal_filter(stock_code)
-
-    def _signal_filter(self, stock_code):
+    def SAR_ending_profit_all_patterns(self, stock_code):
 
         # Trading Rules:
         # 1: No two buys connect togehter
         # 2: No two sales in connect together
         # 3: Base on T+1 policy, buy + sale in one day is not allowed, sale + buy is valid.
 
-        sql_select_SAR_trading_signals = ("select stock_code, close_price, trading_signal, pattern_number, quote_time "
-                                          "from tb_StockIndex_SAR where stock_code = %s and trading_signal <> 0")
+        sql_select_SAR_trading_signals = (
+        "select * from tb_StockIndex_SAR where stock_code = %s and trading_signal <> 0")
         df_ending_profit = pd.read_sql(sql_select_SAR_trading_signals, con=self._engine, params=(stock_code,))
 
-        i = 0
-        # df_patterns = df_ending_profit.drop_duplicates(subset='pattern_number', keep='last')
-        # df_patterns.drop(df_patterns.columns[[0,1,2,4]], axis=1, inplace = True)
         df_ending_profit['remove'] = False
-        df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
+        df_ending_profit['status'] = 2  # Status 2 means all signals have been examed and filtered
+        # df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
         df_ending_profit.set_index('quote_time', inplace=True)
         df_grouped = df_ending_profit.groupby(by='pattern_number')
-        df_indexed = df_ending_profit.reset_index()
-        #df_patterns = df_grouped.pattern_number.unique()
-
-        # print df_patterns
-        '''
-        for name, group in df_grouped:
-            if i == 1:
-                break
-            i += 1
-            group.apply(self._trade_policy_T1)
-            # df_grouped.get_group(pattern)
-            # df.ending_profit.pattern_number[pattern]= df_grouped.get_group(pattern)
-            #print name
-            #print group
-
-            while j < len(group.index):
-                last_day = group.quote_time.iloc[j-1].date()
-                this_day = group.quote_time.iloc[j].date()
-                last_signal = group.trading_signal.iloc[j - 1]
-                this_signal = group.trading_signal.iloc[j]
-                if last_signal == 1 and this_signal == -1:
-                    if this_day == last_day:
-                        group.remove.iloc[j] = True
-                        print "set True at %s"%group.quote_time.iloc[j]
-                j += 1
-            print group
-            j = 1
-            '''
+        #df_indexed = df_ending_profit.reset_index()
         df_grouped.apply(self._trade_policy_T1)
-
         # print df_grouped.get_group(1)
+
 
     def _trade_policy_T1(self, df):
         # df.set_index('quote_time', inplace = True)
         # print df
-        # print "length of index is %s"%len(df.index)
+        print "length of index is %s" % len(df.index)
+        s_price = df.close_price.iloc[0]
         j = 1
         while j < len(df.index):
             last_day = df.index[j - 1].date()
@@ -742,12 +708,17 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     df.remove[index] = True
                     # print "set True at %s" % df.index[j]
             j += 1
-        self._trade_ploicy_no_conjuncated_same_operation(df)
-        # print "Before T1 policy length of row is %s"%(len(df.index))
+        df = df[df.remove != True]
+        print "  Before T1 policy length of row is %s" % (len(df.index))
+        df = self._trade_ploicy_no_conjuncated_same_operation(df)
+        print "     After no conjunction policy length of row is %s" % (len(df.index))
+        print "Start to calculate ending profits"
+        self._ending_profit_for_singal_pattern(df, s_price)
+        print "ending profit calculation finsihed."
 
     def _trade_ploicy_no_conjuncated_same_operation(self, df):
         j = 1
-        df = df[df.remove != True]
+
         # print " After T1 policy length of row is %s"%(len(df.index))
         while j < len(df.index):
             last_signal = df.trading_signal.iloc[j - 1]
@@ -757,8 +728,10 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 df.remove[index] = True
             j += 1
         df = df[df.remove != True]
-        # print "     After no conjunction policy length of row is %s" % (len(df.index))
-        print df
+        df.drop(['remove', 'id_tb_StockIndex_SAR'], axis=1, inplace=True)
+        df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=True)
+        return df
+        #print df
 
     '''
     Stopped at here, the problematic trading signals have been eliminated.
@@ -766,6 +739,47 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
     1. Calculate ending profits
     2. save ending profits either DB or a DF for furthur analysis
     '''
+
+    def _ending_profit_for_singal_pattern(self, df, s_price):
+        stock_volume_begin = 3000
+        cash_begin = 200000.00
+        trade_volume = 3000
+        cash_inhand = cash_begin
+        stock_volume_inhand = stock_volume_begin
+        start_total_value = stock_volume_inhand * s_price + cash_inhand
+        total_value = 0
+        current_price = 0
+        for i in range(len(df.index)):
+            current_price = df.close_price.iloc[i]
+            if df.trading_signal.iloc[i] == 1:
+                # buying stock
+                trade_cost = trade_volume * current_price
+                if cash_inhand >= trade_cost:
+                    cash_inhand = cash_inhand - trade_cost
+                    stock_volume_inhand = stock_volume_inhand + trade_volume
+                    current_total_value = stock_volume_inhand * current_price + cash_inhand
+                    df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
+                    df.status.iloc[i] = 3
+                    print "trade cost is %s, cash_inhand is %s, buy stocks" % (trade_cost, cash_inhand)
+                else:
+                    df.status.iloc[i] = 3
+                    print "No Money::   trade cost is %s, cash_inhand is %s," % (trade_cost, cash_inhand)
+            else:
+                trade_cost = stock_volume_inhand * current_price
+                if stock_volume_inhand != 0:
+                    cash_inhand = cash_inhand + trade_cost
+                    stock_volume_inhand = 0
+                    current_total_value = stock_volume_inhand * current_price + cash_inhand
+                    df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
+                    df.status.iloc[i] = 3
+                    print "stock in hand is %s, trade cost is %s :: sales stock" % (stock_volume_inhand, trade_cost)
+                else:
+                    df.status.iloc[i] = 3
+                    print "No Stock::  stock in hand is %s, trade cost is %s " % (stock_volume_inhand, trade_cost)
+        # print df
+        df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=True)
+
+
 
     def _sending_signal(self):
         pass
@@ -811,11 +825,13 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     time.sleep(3)
             i += 1
 
+
+
 def main():
     SARPattern = C_BestSARPattern()
     # MACDPattern._get_best_pattern('sz300226')
-
-    SARPattern._signal_filter('sz300226')
+    # SARPattern.SAR_patterns_exams()
+    SARPattern.SAR_ending_profit_all_patterns('sz300226')
     # MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
 
