@@ -32,6 +32,7 @@ class C_Algorithems_BestPattern(object):
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._stock_name_file = self._output_dir + 'StockNames.csv'
         # self._stock_codes = ['sz300226', 'sh600887','300146','600221']
+        self._SAR_log = self._output_dir + 'SARLog'
         self._stock_codes = ['sz300226']
         self._stock_market = ""
         self._window = '10'
@@ -613,6 +614,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         df_records['pattern_number'] = pattern_number
         df_records['ending_profit'] = 0
         df_records['status'] = 1
+        df_records['record_window'] = 5
         records_count = len(df_records)
         i = records_window
         while i < records_count:
@@ -686,15 +688,18 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         # df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
         df_ending_profit.set_index('quote_time', inplace=True)
         df_grouped = df_ending_profit.groupby(by='pattern_number')
-        #df_indexed = df_ending_profit.reset_index()
         df_grouped.apply(self._trade_policy_T1)
-        # print df_grouped.get_group(1)
+        # print "singal pattern testing"
+        # df = df_ending_profit[df_ending_profit.pattern_number == 5]
+        # self._trade_policy_T1(df)
 
 
     def _trade_policy_T1(self, df):
         # df.set_index('quote_time', inplace = True)
-        # print df
-        print "length of index is %s" % len(df.index)
+        print "Df Before T1 policy"
+        file = self._SAR_log + '1.csv'
+        df.to_csv(path_or_buf=file)
+        #print "length of index is %s" % len(df.index)
         s_price = df.close_price.iloc[0]
         j = 1
         while j < len(df.index):
@@ -709,12 +714,18 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     # print "set True at %s" % df.index[j]
             j += 1
         df = df[df.remove != True]
-        print "  Before T1 policy length of row is %s" % (len(df.index))
+        print "DF After T1 Policy"
+        file = self._SAR_log + '2.csv'
+        df.to_csv(path_or_buf=file)
+        #print "  Before T1 policy length of row is %s" % (len(df.index))
         df = self._trade_ploicy_no_conjuncated_same_operation(df)
-        print "     After no conjunction policy length of row is %s" % (len(df.index))
-        print "Start to calculate ending profits"
+        # print "     After no conjunction policy length of row is %s" % (len(df.index))
+        # print "Start to calculate ending profits"
+        print "DF After conjunction Policy"
+        file = self._SAR_log + '3.csv'
+        df.to_csv(path_or_buf=file)
         self._ending_profit_for_singal_pattern(df, s_price)
-        print "ending profit calculation finsihed."
+        #print "ending profit calculation finsihed."
 
     def _trade_ploicy_no_conjuncated_same_operation(self, df):
         j = 1
@@ -760,10 +771,10 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     current_total_value = stock_volume_inhand * current_price + cash_inhand
                     df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
                     df.status.iloc[i] = 3
-                    print "trade cost is %s, cash_inhand is %s, buy stocks" % (trade_cost, cash_inhand)
+                    #print "trade cost is %s, cash_inhand is %s, buy stocks" % (trade_cost, cash_inhand)
                 else:
                     df.status.iloc[i] = 3
-                    print "No Money::   trade cost is %s, cash_inhand is %s," % (trade_cost, cash_inhand)
+                    #print "No Money::   trade cost is %s, cash_inhand is %s," % (trade_cost, cash_inhand)
             else:
                 trade_cost = stock_volume_inhand * current_price
                 if stock_volume_inhand != 0:
@@ -772,12 +783,16 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     current_total_value = stock_volume_inhand * current_price + cash_inhand
                     df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
                     df.status.iloc[i] = 3
-                    print "stock in hand is %s, trade cost is %s :: sales stock" % (stock_volume_inhand, trade_cost)
+                    #print "stock in hand is %s, trade cost is %s :: sales stock" % (stock_volume_inhand, trade_cost)
                 else:
                     df.status.iloc[i] = 3
-                    print "No Stock::  stock in hand is %s, trade cost is %s " % (stock_volume_inhand, trade_cost)
+                    #print "No Stock::  stock in hand is %s, trade cost is %s " % (stock_volume_inhand, trade_cost)
         # print df
+        print "Final Trades"
+        file = self._SAR_log + '4.csv'
+        df.to_csv(path_or_buf=file)
         df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=True)
+
 
 
 
@@ -830,7 +845,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 def main():
     SARPattern = C_BestSARPattern()
     # MACDPattern._get_best_pattern('sz300226')
-    # SARPattern.SAR_patterns_exams()
+    SARPattern.SAR_patterns_exams()
     SARPattern.SAR_ending_profit_all_patterns('sz300226')
     # MACDPattern._clean_table('tb_StockIndex_MACD_New')
 
