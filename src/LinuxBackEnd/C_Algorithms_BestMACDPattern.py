@@ -581,9 +581,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         self._records_window = [5, 10]
         # matplotlib.style.use('ggplot')
 
-    def SAR_patterns_exams(self):
-        stock_code = 'sz300226'
-        period = 'm30'
+    def SAR_patterns_exams(self, stock_code='sz300226', period='m30'):
         processes = []
         args = []
         self._clean_table('tb_StockIndex_SAR')
@@ -675,32 +673,37 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
     def SAR_ending_profit_all_patterns(self, stock_code):
 
         # Trading Rules:
-        # 1: No two buys connect togehter
-        # 2: No two sales in connect together
+        # 1: Buy or sales must have enough cash or stock
         # 3: Base on T+1 policy, buy + sale in one day is not allowed, sale + buy is valid.
 
         sql_select_SAR_trading_signals = (
-        "select * from tb_StockIndex_SAR where stock_code = %s and trading_signal <> 0")
+            "select * from tb_StockIndex_SAR where stock_code = %s")
         df_ending_profit = pd.read_sql(sql_select_SAR_trading_signals, con=self._engine, params=(stock_code,))
 
         df_ending_profit['remove'] = False
         df_ending_profit['status'] = 2  # Status 2 means all signals have been examed and filtered
-        # df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
+        df_patterns = df_ending_profit['pattern_number'].drop_duplicates()
         df_ending_profit.set_index('quote_time', inplace=True)
         df_grouped = df_ending_profit.groupby(by='pattern_number')
-        df_grouped.apply(self._trade_policy_T1)
+        # df_grouped.apply(self._trade_policy_T1)
         # print "singal pattern testing"
-        # df = df_ending_profit[df_ending_profit.pattern_number == 5]
-        # self._trade_policy_T1(df)
+        i = 1
+        while i <= len(df_patterns.index):
+            df = df_ending_profit[df_ending_profit.pattern_number == i]
+            self._trade_policy_T1(df)
+            i += 1
 
 
     def _trade_policy_T1(self, df):
         # df.set_index('quote_time', inplace = True)
-        print "Df Before T1 policy"
-        file = self._SAR_log + '1.csv'
-        df.to_csv(path_or_buf=file)
+        # print "Df Before T1 policy"
+        # file = self._SAR_log + '1.csv'
+        #df.to_csv(path_or_buf=file)
         #print "length of index is %s" % len(df.index)
-        s_price = df.close_price.iloc[0]
+        e_price = df.close_price.iloc[-1]  # The last price of the selected period
+        e_quote_time = df.index[-1]  # Get the last quote_time, the DF use the quote_time as index automatically
+        df = df[df.trading_signal != 0]
+        s_price = df.close_price.iloc[0]  # The start price of the selected period
         j = 1
         while j < len(df.index):
             last_day = df.index[j - 1].date()
@@ -714,52 +717,23 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     # print "set True at %s" % df.index[j]
             j += 1
         df = df[df.remove != True]
-        print "DF After T1 Policy"
-        file = self._SAR_log + '2.csv'
-        df.to_csv(path_or_buf=file)
-        #print "  Before T1 policy length of row is %s" % (len(df.index))
-        df = self._trade_ploicy_no_conjuncated_same_operation(df)
-        # print "     After no conjunction policy length of row is %s" % (len(df.index))
-        # print "Start to calculate ending profits"
-        print "DF After conjunction Policy"
-        file = self._SAR_log + '3.csv'
-        df.to_csv(path_or_buf=file)
-        self._ending_profit_for_singal_pattern(df, s_price)
+        # print "DF After T1 Policy"
+        # file = self._SAR_log + '2.csv'
+        # df.to_csv(path_or_buf=file)"
+        self._ending_profit_for_singal_pattern(df, s_price, e_price, e_quote_time)
         #print "ending profit calculation finsihed."
 
-    def _trade_ploicy_no_conjuncated_same_operation(self, df):
-        j = 1
-
-        # print " After T1 policy length of row is %s"%(len(df.index))
-        while j < len(df.index):
-            last_signal = df.trading_signal.iloc[j - 1]
-            this_signal = df.trading_signal.iloc[j]
-            if last_signal == this_signal:
-                index = df.index[j]
-                df.remove[index] = True
-            j += 1
-        df = df[df.remove != True]
-        df.drop(['remove', 'id_tb_StockIndex_SAR'], axis=1, inplace=True)
-        df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=True)
-        return df
-        #print df
-
-    '''
-    Stopped at here, the problematic trading signals have been eliminated.
-    Next Task:
-    1. Calculate ending profits
-    2. save ending profits either DB or a DF for furthur analysis
-    '''
-
-    def _ending_profit_for_singal_pattern(self, df, s_price):
+    def _ending_profit_for_singal_pattern(self, df, s_price, e_price, e_quote_time):
         stock_volume_begin = 3000
         cash_begin = 200000.00
         trade_volume = 3000
         cash_inhand = cash_begin
         stock_volume_inhand = stock_volume_begin
         start_total_value = stock_volume_inhand * s_price + cash_inhand
-        total_value = 0
-        current_price = 0
+        df['current_total_value'] = 0
+        df['trade_cost'] = 0
+        df['stock_volume_inhand'] = 0
+        df['cash_inhand'] = 0
         for i in range(len(df.index)):
             current_price = df.close_price.iloc[i]
             if df.trading_signal.iloc[i] == 1:
@@ -770,10 +744,15 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     stock_volume_inhand = stock_volume_inhand + trade_volume
                     current_total_value = stock_volume_inhand * current_price + cash_inhand
                     df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
+                    df.trade_cost.iloc[i] = trade_cost
+                    df.cash_inhand.iloc[i] = cash_inhand
+                    df.stock_volume_inhand.iloc[i] = stock_volume_inhand
+                    df.current_total_value.iloc[i] = current_total_value
                     df.status.iloc[i] = 3
                     #print "trade cost is %s, cash_inhand is %s, buy stocks" % (trade_cost, cash_inhand)
                 else:
                     df.status.iloc[i] = 3
+                    df.remove.iloc[i] = True
                     #print "No Money::   trade cost is %s, cash_inhand is %s," % (trade_cost, cash_inhand)
             else:
                 trade_cost = stock_volume_inhand * current_price
@@ -783,15 +762,32 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     current_total_value = stock_volume_inhand * current_price + cash_inhand
                     df.ending_profit.iloc[i] = math.log(current_total_value / start_total_value)
                     df.status.iloc[i] = 3
-                    #print "stock in hand is %s, trade cost is %s :: sales stock" % (stock_volume_inhand, trade_cost)
+                    df.trade_cost.iloc[i] = trade_cost
+                    df.cash_inhand.iloc[i] = cash_inhand
+                    df.stock_volume_inhand.iloc[i] = stock_volume_inhand
+                    df.current_total_value.iloc[i] = current_total_value
                 else:
                     df.status.iloc[i] = 3
-                    #print "No Stock::  stock in hand is %s, trade cost is %s " % (stock_volume_inhand, trade_cost)
+                    df.remove.iloc[i] = True
+
         # print df
-        print "Final Trades"
-        file = self._SAR_log + '4.csv'
-        df.to_csv(path_or_buf=file)
-        df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=True)
+        # file = self._SAR_log + '4.csv'
+        df = df[df.remove != True]
+        # df.to_csv(path_or_buf=file)
+        df.drop(['remove', 'id_tb_StockIndex_SAR', 'trade_cost', 'cash_inhand', 'stock_volume_inhand',
+                 'current_total_value'], axis=1, inplace=True)
+
+        # Calculate current profit rate base on each pattern, and save it into DB with status = 4
+        current_total_value = stock_volume_inhand * e_price + cash_inhand
+        ending_profit = math.log(current_total_value / start_total_value)
+        # print "Pattern %s current total value is %s"%(df.pattern_number.iloc[0], current_total_value)
+
+        df.reset_index(level=0, inplace=True)
+        ls = [e_quote_time, df.stock_code.iloc[-1], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, df.pattern_number.iloc[-1], 4,
+              ending_profit, 0]
+        df.loc[len(df)] = ls
+        df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
+        print "Saved pattern %s" % df.pattern_number.iloc[-1]
 
 
 
