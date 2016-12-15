@@ -473,16 +473,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # p8.join()
 
     def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices):
+        # Fetch the lastest close_price and quote_time
+        # print df_stock_close_prices
+        e_price = df_stock_close_prices.close_price[-1]
+        e_quote_time = df_stock_close_prices.index[-1]
+        e_stock_code = df_stock_close_prices.stock_code[-1]
         # df_StockIndex_MACD, df_stock_close_prices, MACD_TradeArray, MACD_Tradetype, EMA_short_windows, EMA_long_windows, DIF_windows, eachPattern
         # Create an DF for storing transaction data
-        stockVolume_Begin = 10000
-        cash_Begin = 200000.00
-        tradeVolume = 10000
-        cash_Current = cash_Begin
-        stockVolume_Current = stockVolume_Begin
-        totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
-        totalValue_Current = totalValue_Begin
-        profit_Rate = 0
         MACD_trade_column_names = ['stock_code', 'quote_time', 'tradeVolume', 'tradeCost',
                                    'stockVolume_Current', 'cash_Current', 'totalValue_Current', 'profit_Rate',
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
@@ -495,6 +492,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         progress = progressbar.ProgressBar(widgets=widgets)
 
         for eachPattern in progress(pattern_slices):
+            stockVolume_Begin = 3000
+            cash_Begin = 200000.00
+            tradeVolume = 3000
+            cash_Current = cash_Begin
+            stockVolume_Current = stockVolume_Begin
+            totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
+            totalValue_Current = totalValue_Begin
+            profit_Rate = 0
             sql_fetch_signals = ('select * from tb_StockIndex_MACD_New where MACD_pattern_number = %s')
             pattern = eachPattern[0]
             df_MACD_signals = pd.read_sql(sql_fetch_signals, params=(pattern,), con=engine)
@@ -534,8 +539,11 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     else:
                         pass
                 elif df_MACD_signals.Signal[i] == (-1):  # NEgative Signal, sell stocks
-                    if stockVolume_Current >= tradeVolume:  # Have enough stocks in hand
-                        stockVolume_Current = stockVolume_Current - tradeVolume
+                    # if stockVolume_Current >= tradeVolume:  # Have enough stocks in hand
+                    if stockVolume_Current != 0:  # Sale all stocks out
+                        trade_cost = stockVolume_Current * close_price
+                        # stockVolume_Current = stockVolume_Current - tradeVolume
+                        stockVolume_Current = 0
                         cash_Current = cash_Current + trade_cost
                         totalValue_Current = stockVolume_Current * close_price + cash_Current
                         profit_Rate = math.log(totalValue_Current / totalValue_Begin)
@@ -552,13 +560,20 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 else:
                     pass
             if MACD_trades.size != 0:
+                # Calculate lastest profit rate with lastest close_price: e_price for each pattern
+                totalValue_Current = stockVolume_Current * e_price + cash_Current
+                profit_Rate = math.log(totalValue_Current / totalValue_Begin)
+                transaction = [e_stock_code, e_quote_time, 0, 0, 0, 0, totalValue_Current, profit_Rate, 0, 0, 0,
+                               pattern]
+                MACD_trades.loc[len(MACD_trades)] = transaction
+
                 MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
 
 
     def _MACD_best_pattern(self):
         # For now, the best pattern is the pattern witch can make the highest ending profit.
         sql_select_ending_profits = (
-            'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades_HalfHour order by profit_rate DESC limit 1')
+            'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades_HalfHour where DIF_window = 0 order by profit_rate DESC limit 1')
         df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
         df_MACD_ending_profits['algorithem_name'] = 'MACD'
         df_MACD_ending_profits['pattern_date'] = self._time_tag()
@@ -648,8 +663,16 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         df_records.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
 
     def _getting_stock_records(self, stock_code='sz300226', period='m30'):
-        sql_read_records = (
-            "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXMinRecords where stock_code = %s and period = %s")
+        if period == 'm30':
+            sql_read_records = (
+                "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXMinRecords where stock_code = %s and period = %s")
+        elif period == 'day':
+            sql_read_records = (
+                "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXPeriodRecords where stock_code = %s and period = %s")
+        else:
+            sql_read_records = (
+                "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXMinRecords where stock_code = %s and period = %s")
+
         df_records = pd.read_sql(sql_read_records, con=self._engine, params=(stock_code, period))
         return df_records
 
@@ -690,7 +713,9 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         i = 1
         while i <= len(df_patterns.index):
             df = df_ending_profit[df_ending_profit.pattern_number == i]
-            self._trade_policy_T1(df)
+            print "pattern %s has %s records" % (i, len(df.index))
+            if len(df.index) != 0:
+                self._trade_policy_T1(df)
             i += 1
 
 
@@ -700,6 +725,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         # file = self._SAR_log + '1.csv'
         #df.to_csv(path_or_buf=file)
         #print "length of index is %s" % len(df.index)
+        #print df
         e_price = df.close_price.iloc[-1]  # The last price of the selected period
         e_quote_time = df.index[-1]  # Get the last quote_time, the DF use the quote_time as index automatically
         df = df[df.trading_signal != 0]
@@ -771,9 +797,9 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     df.remove.iloc[i] = True
 
         # print df
-        # file = self._SAR_log + '4.csv'
+        file = self._SAR_log + '4.csv'
         df = df[df.remove != True]
-        # df.to_csv(path_or_buf=file)
+        df.to_csv(path_or_buf=file)
         df.drop(['remove', 'id_tb_StockIndex_SAR', 'trade_cost', 'cash_inhand', 'stock_volume_inhand',
                  'current_total_value'], axis=1, inplace=True)
 
@@ -839,12 +865,14 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 
 def main():
-    SARPattern = C_BestSARPattern()
-    # MACDPattern._get_best_pattern('sz300226')
-    SARPattern.SAR_patterns_exams()
-    SARPattern.SAR_ending_profit_all_patterns('sz300226')
-    # MACDPattern._clean_table('tb_StockIndex_MACD_New')
+    # SARPattern = C_BestSARPattern()
+    # SARPattern.SAR_patterns_exams(period='day')
+    #SARPattern.SAR_ending_profit_all_patterns('sz300226')
 
+
+    MACDPattern = C_BestMACDPattern()
+    MACDPattern._MACD_ending_profits()
+    #MACDPattern.best_pattern_daily_calculate()
 
 if __name__ == '__main__':
     main()
