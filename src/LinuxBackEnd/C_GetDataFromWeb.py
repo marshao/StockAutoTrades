@@ -190,6 +190,9 @@ class C_GettingData:
                         self.get_data_qq(stock, period='m30')
                         print 'saved m30 data'
                         time.sleep(5)
+                        self.get_data_qq(stock, period='m60')
+                        print 'saved m1 data'
+                        time.sleep(5)
                         self.get_data_qq(stock, period = 'real')
                         print 'saved real time data'
                     last_run = time.time()
@@ -234,6 +237,9 @@ class C_GettingData:
                         q_count = self._q_count[2]
                         url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
                     elif period == 'm30':
+                        q_count = self._q_count[3]
+                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    elif period == 'm60':
                         q_count = self._q_count[3]
                         url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
                     else:
@@ -507,6 +513,7 @@ class C_GettingData:
         # scheduler_1.add_job(self._fun, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
+        scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
         scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=['m30'])
         scheduler_1.start()
 
@@ -515,8 +522,8 @@ class C_GettingData:
             self._scheduler_switch(scheduler_1)
 
     def _half_hour_tasks(self, period):
-        self._data_service(period='m30')
-        apply_pattern(17, 'm30', 'sz300226')
+        self._data_service(period)
+        apply_pattern('m30', 'sz300226')
 
 
     def _scheduler_switch(self, scheduler):
@@ -552,12 +559,12 @@ class C_GettingData:
 
 def main():
     pp = C_GettingData()
-    pp.job_schedule()
+    # pp.job_schedule()
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
     #pp.service_getting_data()
-    # pp.get_data_qq(stock_code='sz300146', period = 'm5')
+    pp.get_data_qq(stock_code='sz300226', period='m60')
     # pp.get_data_qq(stock_code='sz300146',period='m1')
     #pp.get_data_qq(period='real')
     # pp.get_data_qq(stock_code='sz300146', period='m30')

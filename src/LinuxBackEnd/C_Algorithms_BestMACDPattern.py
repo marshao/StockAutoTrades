@@ -250,7 +250,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
         return df
 
-    def apply_best_MACD_pattern_to_data(self, pattern_number=756, period='m30', stock_code='sz300226'):
+    def apply_best_MACD_pattern_to_data(self, period='m30', stock_code='sz300226'):
         done = False
         # Get Best Pattern Number from DB
         pattern_number = self._get_best_pattern(stock_code)
@@ -616,6 +616,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                         af=0.02, af_limit=0.20):
 
         trend, sar, ep = self._begining_trend(df_records, records_window)
+        af_begin = af
         af_window = af
         df_records['SAR'] = sar
         df_records['EP'] = ep
@@ -627,7 +628,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         df_records['pattern_number'] = pattern_number
         df_records['ending_profit'] = 0
         df_records['status'] = 1
-        df_records['record_window'] = 5
+        df_records['record_window'] = records_window
         records_count = len(df_records)
         i = records_window
         while i < records_count:
@@ -646,6 +647,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 if df_records.close_price[i] < sar:
                     trend = -1
                     df_records.trading_signal[i] = -1
+                    af = 0
                 i += 1
             else:
                 sar = float("%0.4f" % (prior_sar - prior_af * (prior_sar - prior_ep)))
@@ -659,6 +661,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 if df_records.close_price[i] > sar:
                     trend = 1
                     df_records.trading_signal[i] = 1
+                    af = 0
                 i += 1
         df_records.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
 
@@ -674,6 +677,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                 "select stock_code, quote_time, high_price, low_price, close_price from tb_StockXMinRecords where stock_code = %s and period = %s")
 
         df_records = pd.read_sql(sql_read_records, con=self._engine, params=(stock_code, period))
+        # print df_records
         return df_records
 
     def _begining_trend(self, df_records, window):
@@ -714,18 +718,14 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         while i <= len(df_patterns.index):
             df = df_ending_profit[df_ending_profit.pattern_number == i]
             print "pattern %s has %s records" % (i, len(df.index))
-            if len(df.index) != 0:
+            df2 = df[df.trading_signal != 0]
+            print "pattern %s has %s trades" % (i, len(df2.index))
+            if len(df.index) != 0 and len(df2.index):
                 self._trade_policy_T1(df)
             i += 1
 
 
     def _trade_policy_T1(self, df):
-        # df.set_index('quote_time', inplace = True)
-        # print "Df Before T1 policy"
-        # file = self._SAR_log + '1.csv'
-        #df.to_csv(path_or_buf=file)
-        #print "length of index is %s" % len(df.index)
-        #print df
         e_price = df.close_price.iloc[-1]  # The last price of the selected period
         e_quote_time = df.index[-1]  # Get the last quote_time, the DF use the quote_time as index automatically
         df = df[df.trading_signal != 0]
@@ -809,8 +809,9 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         # print "Pattern %s current total value is %s"%(df.pattern_number.iloc[0], current_total_value)
 
         df.reset_index(level=0, inplace=True)
-        ls = [e_quote_time, df.stock_code.iloc[-1], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, df.pattern_number.iloc[-1], 4,
-              ending_profit, 0]
+        ls = [e_quote_time, df.stock_code.iloc[-1], 0, 0, 0, 0, 0, 0, df.AF_value.iloc[-1], df.AF_limit.iloc[-1],
+              df.AF_window.iloc[-1], 0, df.pattern_number.iloc[-1], 4,
+              ending_profit, df.record_window.iloc[-1]]
         df.loc[len(df)] = ls
         df.to_sql('tb_StockIndex_SAR', con=self._engine, if_exists='append', index=False)
         print "Saved pattern %s" % df.pattern_number.iloc[-1]
@@ -865,13 +866,14 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 
 def main():
-    # SARPattern = C_BestSARPattern()
-    # SARPattern.SAR_patterns_exams(period='day')
-    #SARPattern.SAR_ending_profit_all_patterns('sz300226')
+    SARPattern = C_BestSARPattern()
+    SARPattern.SAR_patterns_exams(period='m30')
+    SARPattern.SAR_ending_profit_all_patterns('sz300226')
 
 
-    MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_ending_profits()
+    # MACDPattern = C_BestMACDPattern()
+    # MACDPattern._MACD_trading_signals(period='m60', stock_code='sz300226')
+    #MACDPattern._MACD_ending_profits()
     #MACDPattern.best_pattern_daily_calculate()
 
 if __name__ == '__main__':
