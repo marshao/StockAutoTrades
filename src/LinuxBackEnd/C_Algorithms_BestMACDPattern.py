@@ -126,7 +126,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         sql_fetch_min_records = (
             "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
         sql_fetch_period_records = (
-            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
             sql_fetch_records = sql_fetch_period_records
         else:
@@ -267,9 +267,16 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
                                     index_col='id_tb_MACDIndex')
         # Fetch corresponsding stock records
-        sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        sql_fetch_min_records = (
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        sql_fetch_period_records = (
+            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
+        if period == 'day' or period == 'week':
+            sql_fetch_records = sql_fetch_period_records
+        else:
+            sql_fetch_records = sql_fetch_min_records
 
-        df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
+        df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
         df_signals = self._MACD_signal_calculation(df_MACD_index, df_stock_records, to_DB=False)[-1:]
@@ -432,7 +439,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         sql_fetch_min_records = (
             "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s")
         sql_fetch_period_records = (
-            "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s")
+            "select stock_code, close_price, quote_time from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
             sql_fetch_records = sql_fetch_period_records
         else:
