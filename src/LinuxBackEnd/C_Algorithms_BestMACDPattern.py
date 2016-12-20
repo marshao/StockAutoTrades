@@ -110,30 +110,38 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _MACD_trading_signals(self, period='m30', stock_code='sz300226'):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
-        sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        # sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
 
-        df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
-                                       index_col='quote_time')
+        # df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
+        #                               index_col='quote_time')
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
         # self._MACD_signal_calculation(df_MACD_index, df_stock_records)
         self._clean_table('tb_StockIndex_MACD_New')
-        self._multi_processors_cal_MACD_signals(df_MACD_index, df_stock_records)
+        self._multi_processors_cal_MACD_signals(df_MACD_index, stock_code, period)
         # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
 
-    def _multi_processors_cal_MACD_signals(self, df_MACD_index, df_stock_records):
+    def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
         print "Jumped into Multiprocessing "
 
-        sql_fetch_halfHour_records = (
-            "select * from tb_StockXMinRecords where period = 'm30' and stock_code = 'sz300226'")
+        sql_fetch_min_records = (
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        sql_fetch_period_records = (
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        if period == 'day' or period == 'week':
+            sql_fetch_records = sql_fetch_period_records
+        else:
+            sql_fetch_records = sql_fetch_min_records
+
         tasks = df_MACD_index.index.size / 7
         task_args = []
         processor = 1
         index_begin = 0
         index_end = tasks
         while processor <= 8:
-            df = df_MACD_index[index_begin:index_end]
-            df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, index_col='quote_time')
-            task_args.append((df, df_stock_records), )
+            df_index = df_MACD_index[index_begin:index_end]
+            df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
+                                           params=(period, stock_code))
+            task_args.append((df_index, df_stock_records), )
 
             processor += 1
             index_begin = index_end
@@ -421,9 +429,16 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         MACD_patterns = conn.execute(s).fetchall()
 
         # Fetch out closing data from DB
-        sql_fetch_halfHour_records = (
+        sql_fetch_min_records = (
             "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s")
-        df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
+        sql_fetch_period_records = (
+            "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s")
+        if period == 'day' or period == 'week':
+            sql_fetch_records = sql_fetch_period_records
+        else:
+            sql_fetch_records = sql_fetch_min_records
+
+        df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         self._clean_table('tb_MACD_Trades_HalfHour')
         self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_stock_records)
@@ -591,8 +606,8 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         self._previous_SAR = 0
         self._price_high = 0
         self._price_low = 0
-        self._AF = [0.01, 0.015, 0.02]
-        self._AF_limit = [0.10, 0.15, 0.20]
+        self._AF = [0.01, 0.015, 0.02, 0.025, 0.03]
+        self._AF_limit = [0.10, 0.15, 0.20, 0.25, 0.30]
         self._records_window = [5, 10]
         # matplotlib.style.use('ggplot')
 
@@ -866,14 +881,14 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
 
 
 def main():
-    SARPattern = C_BestSARPattern()
-    SARPattern.SAR_patterns_exams(period='m30')
-    SARPattern.SAR_ending_profit_all_patterns('sz300226')
+    # SARPattern = C_BestSARPattern()
+    # SARPattern.SAR_patterns_exams(period='day')
+    #SARPattern.SAR_ending_profit_all_patterns('sz300226')
 
 
-    # MACDPattern = C_BestMACDPattern()
-    # MACDPattern._MACD_trading_signals(period='m60', stock_code='sz300226')
-    #MACDPattern._MACD_ending_profits()
+    MACDPattern = C_BestMACDPattern()
+    MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
+    MACDPattern._MACD_ending_profits()
     #MACDPattern.best_pattern_daily_calculate()
 
 if __name__ == '__main__':
