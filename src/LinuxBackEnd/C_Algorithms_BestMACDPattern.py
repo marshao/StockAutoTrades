@@ -81,6 +81,48 @@ class C_Algorithems_BestPattern(object):
         progress = progressbar.ProgressBar(widgets=widgets)
         return progress
 
+    def _processes_pool(self, tasks, processors):
+        # This is a self made Multiprocess pool
+        task_total = len(tasks)
+        loop_total = task_total / processors
+        print "task total is %s, loop_total is %s" % (task_total, loop_total)
+        alive = True
+        task_finished = 0
+        task_alive = 0
+        task_remain = task_total - task_finished
+        count = 0
+        i = 0
+        while i <= loop_total:
+            print "This is the %s round" % i
+            for j in range(processors):
+                k = j + processors * i
+                print "executing task %s" % k
+                if k == task_total:
+                    break
+                tasks[k].start()
+                j += 1
+
+            for j in range(processors):
+                k = j + processors * i
+                if k == task_total:
+                    break
+                tasks[k].join()
+                j += 1
+
+            while alive == True:
+                n = 0
+                alive = False
+                for j in range(processors):
+                    k = j + processors * i
+                    if k == task_total:
+                        # print "This is the %s round of loop"%i
+                        break
+                    if tasks[k].is_alive():
+                        alive = True
+                    time.sleep(1)
+            i += 1
+
+
 class C_BestMACDPattern(C_Algorithems_BestPattern):
     '''
     Step1: decide what analysis period will be used (5min, 30min, daily)
@@ -107,7 +149,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._MACD_ending_profits()
             self._MACD_best_pattern()
 
-    def _MACD_trading_signals(self, period='m30', stock_code='sz300226'):
+    def _MACD_trading_signals(self, period, stock_code='sz300226', ):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
         # sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
@@ -122,7 +164,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
         print "Jumped into Multiprocessing "
-
+        print period
         sql_fetch_min_records = (
             "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
         sql_fetch_period_records = (
@@ -139,6 +181,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         index_end = tasks
         while processor <= 8:
             df_index = df_MACD_index[index_begin:index_end]
+            print df_index
             df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
                                            params=(period, stock_code))
             task_args.append((df_index, df_stock_records), )
@@ -160,6 +203,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         pool.join()
 
         '''
+        processes = []
+        for i in range(7):
+            p = mp.Process(target=self._MACD_signal_calculation, args=(task_args[i][0], task_args[i][1],))
+            processes.append(p)
+
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+
+        """
         p1 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[0][0], task_args[0][1],))
         p2 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[1][0], task_args[1][1],))
         p3 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[2][0], task_args[2][1],))
@@ -183,6 +234,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         p5.join()
         p6.join()
         p7.join()
+        """
 
     def _MACD_signal_calculation(self, df_MACD_index, df_stock_records, to_DB=True):
         print "Processing MACD Index"
@@ -195,6 +247,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # loop breaker
         loop_breaker = 0
         df = df_stock_records
+        # print df
         #  The first loop, go through every MACD Pattern in df_MACD_index
         for j in progress(range(df_MACD_index.index.size)):
             # if loop_breaker > 1:
@@ -211,7 +264,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
             df['DIF'] = df.EMA_short - df.EMA_long
             df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            df['MACD'] = 2.0 * (abs(df.DIF) - abs(df.DEA))
             df['Signal'] = 0
             df['EMA_short_window'] = short_window
             df['EMA_long_window'] = long_window
@@ -469,30 +522,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 #    pattern_slices.append(MACD_patterns[index_beg:])
                 # i += 1
 
-        p1 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[0],))
-        p2 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[1],))
-        p3 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[2],))
-        p4 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[3],))
-        p5 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[4],))
-        p6 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[5],))
-        p7 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[6],))
-        # p8 = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[7],))
-        p1.start()
-        p2.start()
-        p3.start()
-        p4.start()
-        p5.start()
-        p6.start()
-        p7.start()
-        # p8.start()
-        p1.join()
-        p2.join()
-        p3.join()
-        p4.join()
-        p5.join()
-        p6.join()
-        p7.join()
-        # p8.join()
+        processes = []
+        for i in range(7):
+            p = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[i],))
+            processes.append(p)
+
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+
+
 
     def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices):
         # Fetch the lastest close_price and quote_time
@@ -502,7 +539,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         e_stock_code = df_stock_close_prices.stock_code[-1]
         # df_StockIndex_MACD, df_stock_close_prices, MACD_TradeArray, MACD_Tradetype, EMA_short_windows, EMA_long_windows, DIF_windows, eachPattern
         # Create an DF for storing transaction data
-        MACD_trade_column_names = ['stock_code', 'quote_time', 'tradeVolume', 'tradeCost',
+        MACD_trade_column_names = ['stock_code', 'quote_time', 'close_price', 'tradeVolume', 'tradeCost',
                                    'stockVolume_Current', 'cash_Current', 'totalValue_Current', 'profit_Rate',
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
         engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -538,8 +575,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 Need to find out the close_price which record_time == StockIndex_MACD.record_time
                 '''
                 close_price = \
-                    df_stock_close_prices[
-                        df_stock_close_prices.index == df_MACD_signals.quote_time[i]].close_price.iloc[0]
+                df_stock_close_prices[df_stock_close_prices.index == df_MACD_signals.quote_time[i]].close_price.iloc[0]
                 trade_cost = close_price * tradeVolume
 
                 # Evaluate the trading signals and calculate the profits
@@ -552,7 +588,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                         profit_Rate = math.log(totalValue_Current / totalValue_Begin)
 
                         # Append HalfHour Profit Results into Array
-                        transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i],
+                        transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i], close_price,
                                        tradeVolume, trade_cost, stockVolume_Current,
                                        cash_Current, totalValue_Current,
                                        profit_Rate, EMA_short_windows,
@@ -571,7 +607,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                         profit_Rate = math.log(totalValue_Current / totalValue_Begin)
 
                         # Append HalfHour Profit Results into Array
-                        transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i],
+                        transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i], close_price,
                                        tradeVolume, trade_cost, stockVolume_Current,
                                        cash_Current, totalValue_Current,
                                        profit_Rate, EMA_short_windows,
@@ -585,7 +621,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 # Calculate lastest profit rate with lastest close_price: e_price for each pattern
                 totalValue_Current = stockVolume_Current * e_price + cash_Current
                 profit_Rate = math.log(totalValue_Current / totalValue_Begin)
-                transaction = [e_stock_code, e_quote_time, 0, 0, 0, 0, totalValue_Current, profit_Rate, 0, 0, 0,
+                transaction = [e_stock_code, e_quote_time, 0, 0, 0, 0, 0, totalValue_Current, profit_Rate, 0, 0, 0,
                                pattern]
                 MACD_trades.loc[len(MACD_trades)] = transaction
 
@@ -632,7 +668,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
                     processes.append(p)
                     i += 1
         # Send task to a self made process pool.
-        self._processes_pool(processes, 5)
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=5)
 
     def SAR_calculation(self, df_records, pattern_number, stock_code='sz300226', period='m30', records_window=5,
                         af=0.02, af_limit=0.20):
@@ -894,8 +930,8 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
-    MACDPattern._MACD_ending_profits()
+    # MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
+    MACDPattern._MACD_ending_profits(period='day', stock_code='sz300226')
     #MACDPattern.best_pattern_daily_calculate()
 
 if __name__ == '__main__':
