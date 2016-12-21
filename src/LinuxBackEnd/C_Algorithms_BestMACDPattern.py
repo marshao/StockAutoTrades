@@ -164,7 +164,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
         print "Jumped into Multiprocessing "
-        print period
+        # print period
         sql_fetch_min_records = (
             "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
         sql_fetch_period_records = (
@@ -181,7 +181,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         index_end = tasks
         while processor <= 8:
             df_index = df_MACD_index[index_begin:index_end]
-            print df_index
+            #print df_index
             df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
                                            params=(period, stock_code))
             task_args.append((df_index, df_stock_records), )
@@ -210,31 +210,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
 
-        """
-        p1 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[0][0], task_args[0][1],))
-        p2 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[1][0], task_args[1][1],))
-        p3 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[2][0], task_args[2][1],))
-        p4 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[3][0], task_args[3][1],))
-        p5 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[4][0], task_args[4][1],))
-        p6 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[5][0], task_args[5][1],))
-        p7 = mp.Process(target=self._MACD_signal_calculation, args=(task_args[6][0], task_args[6][1],))
-
-        p1.start()
-        p2.start()
-        p3.start()
-        p4.start()
-        p5.start()
-        p6.start()
-        p7.start()
-
-        p1.join()
-        p2.join()
-        p3.join()
-        p4.join()
-        p5.join()
-        p6.join()
-        p7.join()
-        """
 
     def _MACD_signal_calculation(self, df_MACD_index, df_stock_records, to_DB=True):
         print "Processing MACD Index"
@@ -930,8 +905,8 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
-    # MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
-    MACDPattern._MACD_ending_profits(period='day', stock_code='sz300226')
+    MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
+    #MACDPattern._MACD_ending_profits(period='day', stock_code='sz300226')
     #MACDPattern.best_pattern_daily_calculate()
 
 if __name__ == '__main__':
