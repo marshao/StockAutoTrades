@@ -145,17 +145,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def best_pattern_daily_calculate(self):
         for stock_code in self._stock_codes:
-            self._MACD_trading_signals()
-            self._MACD_ending_profits()
+            self._MACD_trading_signals(period='day')
+            self._MACD_ending_profits(period='day')
             self._MACD_best_pattern()
 
-    def _MACD_trading_signals(self, period, stock_code='sz300226', ):
+    def _MACD_trading_signals(self, period='m30', stock_code='sz300226', ):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
-        # sql_fetch_halfHour_records = ("select * from tb_StockXMinRecords where period = %s and stock_code = %s")
-
-        # df_stock_records = pd.read_sql(sql_fetch_halfHour_records, con=self._engine, params=(period, stock_code),
-        #                               index_col='quote_time')
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
         # self._MACD_signal_calculation(df_MACD_index, df_stock_records)
         self._clean_table('tb_StockIndex_MACD_New')
@@ -239,7 +235,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
             df['DIF'] = df.EMA_short - df.EMA_long
             df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            df['MACD'] = 2.0 * (abs(df.DIF) - abs(df.DEA))
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
             df['Signal'] = 0
             df['EMA_short_window'] = short_window
             df['EMA_long_window'] = long_window
@@ -282,6 +278,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             # Remove the no transaction record from the DB.
             engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
             df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
         return df
