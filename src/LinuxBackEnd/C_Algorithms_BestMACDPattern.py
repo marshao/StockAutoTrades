@@ -122,216 +122,6 @@ class C_Algorithems_BestPattern(object):
                     time.sleep(1)
             i += 1
 
-
-class C_BestMACDPattern(C_Algorithems_BestPattern):
-    '''
-    Step1: decide what analysis period will be used (5min, 30min, daily)
-    Step2: use MACD_Pattern_lists to calculate all trading signals of all patterns.
-    Step3: use trading signals of all pattern to calculate ending profits of all pattern
-    Step4: Analysis ending profits of all pattern to select the best pattern
-    '''
-
-    def __init__(self, period='m30'):
-        C_Algorithems_BestPattern.__init__(self)
-        self._tb_MACDIndex = Table('tb_MACDIndex', self._metadata, autoload=True)
-        self._tb_StockCodes = Table('tb_StockCodes', self._metadata, autoload=True)
-        self._tb_TradeSignal = Table('tb_StockIndex_MACD_New', self._metadata, autoload=True)
-        if period in self._x_min:
-            self._tb_StockRecords = Table('tb_StockXMinRecords', self._metadata, autoload=True)
-            self._tb_Trades = Table('tb_MACD_Trades', self._metadata, autoload=True)
-        elif period in self._x_period:
-            self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
-            self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
-
-    def best_pattern_daily_calculate(self):
-        for stock_code in self._stock_codes:
-            self._MACD_trading_signals(period='day')
-            self._MACD_ending_profits(period='day')
-            self._MACD_best_pattern()
-
-    def _MACD_trading_signals(self, period='m30', stock_code='sz300226', ):
-        # use MACD_Pattern_lists to calculate all trading signals of all patterns
-        # Calculate signals for 30min data
-        df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
-        # self._MACD_signal_calculation(df_MACD_index, df_stock_records)
-        self._clean_table('tb_StockIndex_MACD_New')
-        self._multi_processors_cal_MACD_signals(df_MACD_index, stock_code, period)
-        # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
-
-    def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
-        print "Jumped into Multiprocessing "
-        # print period
-        sql_fetch_min_records = (
-            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
-        sql_fetch_period_records = (
-            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
-        if period == 'day' or period == 'week':
-            sql_fetch_records = sql_fetch_period_records
-        else:
-            sql_fetch_records = sql_fetch_min_records
-
-        tasks = df_MACD_index.index.size / 7
-        task_args = []
-        processor = 1
-        index_begin = 0
-        index_end = tasks
-        while processor <= 8:
-            df_index = df_MACD_index[index_begin:index_end]
-            #print df_index
-            df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
-                                           params=(period, stock_code))
-            task_args.append((df_index, df_stock_records), )
-
-            processor += 1
-            index_begin = index_end
-            if processor != 8:
-                index_end = processor * tasks
-            else:
-                index_end = df_MACD_index.index.size
-
-        '''
-        pool = Pool(7)
-        #for t in task_args:
-        #    pool.map_async(self._MACD_signal_calculation(t[0], t[1]), ())
-        pool.map_async(self._MACD_signal_calculation(task_args[0][0], task_args[0][1]), ())
-        pool.map_async(self._MACD_signal_calculation(task_args[1][0], task_args[1][1]), ())
-        pool.close()
-        pool.join()
-
-        '''
-        processes = []
-        for i in range(7):
-            p = mp.Process(target=self._MACD_signal_calculation, args=(task_args[i][0], task_args[i][1],))
-            processes.append(p)
-
-        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
-
-
-    def _MACD_signal_calculation(self, df_MACD_index, df_stock_records, to_DB=True):
-        print "Processing MACD Index"
-        widgets = ['MACD_Pattern_BackTest: ',
-                   progressbar.Percentage(), ' ',
-                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
-                   progressbar.ETA()]
-        progress = progressbar.ProgressBar(widgets=widgets)
-
-        # loop breaker
-        loop_breaker = 0
-        df = df_stock_records
-        # print df
-        #  The first loop, go through every MACD Pattern in df_MACD_index
-        for j in progress(range(df_MACD_index.index.size)):
-            # if loop_breaker > 1:
-            #    break
-            # loop_breaker += 1
-
-            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
-            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
-            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
-            MACD_Pattern_Number = df_MACD_index.index[j]
-
-            num_records = len(df.index)
-            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
-            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
-            df['DIF'] = df.EMA_short - df.EMA_long
-            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            df['MACD'] = 2.0 * (df.DIF - df.DEA)
-            df['Signal'] = 0
-            df['EMA_short_window'] = short_window
-            df['EMA_long_window'] = long_window
-            df['DIF_window'] = dif_window
-            df['MACD_Pattern_Number'] = MACD_Pattern_Number
-            index_date = df.index[0].date()
-            tradable = True
-
-            i = 0
-            while i < num_records:
-                # for index in df.index:
-                '''
-                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
-                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
-                '''
-                if i > 0:
-                    if index_date != df.index[i].date():
-                        tradable = True
-                        index_date = df.index[i].date()
-
-                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
-                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = 1
-                            tradable = False
-                        else:
-                            pass
-                    elif ((df.DIF[df.index[i]] < df.DEA[df.index[i]]) &
-                              (df.DIF[df.index[i - 1]] >= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = -1
-                        else:
-                            pass
-                    else:
-                        pass
-                        # df.drop(df.index[i], axis = 0, inplace = True)
-                else:
-                    pass
-                i += 1
-            # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
-                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
-        return df
-
-    def apply_best_MACD_pattern_to_data(self, period='m30', stock_code='sz300226'):
-        done = False
-        # Get Best Pattern Number from DB
-        pattern_number = self._get_best_pattern(stock_code)
-        # Use Best Pattern Number to retrieve EMA_long, short and DIF window
-        sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
-        df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
-                                    index_col='id_tb_MACDIndex')
-        # Fetch corresponsding stock records
-        sql_fetch_min_records = (
-            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
-        sql_fetch_period_records = (
-            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
-        if period == 'day' or period == 'week':
-            sql_fetch_records = sql_fetch_period_records
-        else:
-            sql_fetch_records = sql_fetch_min_records
-
-        df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
-                                       index_col='quote_time')
-        # Send to calculate trade signal according to the best pattern
-        df_signals = self._MACD_signal_calculation(df_MACD_index, df_stock_records, to_DB=False)[-1:]
-        # return  df_signals
-        if df_signals.Signal[0] != 0:  # 3 need to be change to 0
-            # Get Stock Avaliable Informatoin
-            done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
-            if done:
-                # Get real time price information
-                done, df_current_price = self._get_stock_current_price(stock_code)
-                if done:
-                    # Get cash avaliable information
-                    done, cash_avaliable = self._get_stock_asset()
-                    if done:
-                        done = self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
-                                                          df_signals.Signal[0], pattern_number, period)
-                        if done:
-                            self._log_mesg = 'Trading command had been executed successfully at %s' % self._time_tag()
-                        else:
-                            self._log_mesg = 'Trading command had failed to be executed successfully at %s' % self._time_tag()
-                    else:
-                        self._log_mesg = "Unable to get cash avalible infomation at %s" % self._time_tag()
-                else:
-                    self._log_mesg = "Unable to get real time price information at %s" % self._time_tag()
-            else:
-                self._log_mesg = "Unable to get stock_avalible information at %s" % self._time_tag()
-        else:
-            self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
-        print self._log_mesg
-
     def _checking_stock_in_hand(self, stock_code):
         # Need to udpate stock_in_hand Information first
         # This will request to send a code to frontend, and wait for response from confirmation from front end.
@@ -443,6 +233,292 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             pass
 
         return done
+
+
+
+class C_BestMACDPattern(C_Algorithems_BestPattern):
+    '''
+    Step1: decide what analysis period will be used (5min, 30min, daily)
+    Step2: use MACD_Pattern_lists to calculate all trading signals of all patterns.
+    Step3: use trading signals of all pattern to calculate ending profits of all pattern
+    Step4: Analysis ending profits of all pattern to select the best pattern
+    '''
+
+    def __init__(self, period='m30'):
+        C_Algorithems_BestPattern.__init__(self)
+        self._tb_MACDIndex = Table('tb_MACDIndex', self._metadata, autoload=True)
+        self._tb_StockCodes = Table('tb_StockCodes', self._metadata, autoload=True)
+        self._tb_TradeSignal = Table('tb_StockIndex_MACD_New', self._metadata, autoload=True)
+        if period in self._x_min:
+            self._tb_StockRecords = Table('tb_StockXMinRecords', self._metadata, autoload=True)
+            self._tb_Trades = Table('tb_MACD_Trades', self._metadata, autoload=True)
+        elif period in self._x_period:
+            self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
+            self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
+
+    def best_pattern_daily_calculate(self):
+        for stock_code in self._stock_codes:
+            self._MACD_trading_signals(period='day')
+            self._MACD_ending_profits(period='day')
+            self._MACD_best_pattern()
+
+    def _MACD_trading_signals(self, period='m30', stock_code='sz300226', ):
+        # use MACD_Pattern_lists to calculate all trading signals of all patterns
+        # Calculate signals for 30min data
+        df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
+        # self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records)
+        self._clean_table('tb_StockIndex_MACD_New')
+        self._multi_processors_cal_MACD_signals(df_MACD_index, stock_code, period)
+        # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
+
+    def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
+        print "Jumped into Multiprocessing "
+        # print period
+        sql_fetch_min_records = (
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        sql_fetch_period_records = (
+            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
+        if period == 'day' or period == 'week':
+            sql_fetch_records = sql_fetch_period_records
+        else:
+            sql_fetch_records = sql_fetch_min_records
+
+        tasks = df_MACD_index.index.size / 7
+        task_args = []
+        processor = 1
+        index_begin = 0
+        index_end = tasks
+        while processor <= 8:
+            df_index = df_MACD_index[index_begin:index_end]
+            #print df_index
+            df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
+                                           params=(period, stock_code))
+            task_args.append((df_index, df_stock_records), )
+
+            processor += 1
+            index_begin = index_end
+            if processor != 8:
+                index_end = processor * tasks
+            else:
+                index_end = df_MACD_index.index.size
+
+        processes = []
+        for i in range(7):
+            p = mp.Process(target=self._MACD_signal_calculation_MACD, args=(task_args[i][0], task_args[i][1],))
+            processes.append(p)
+
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+
+    def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True):
+        print "Processing MACD Index"
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        # loop breaker
+        loop_breaker = 0
+        df = df_stock_records
+        # print df
+        #  The first loop, go through every MACD Pattern in df_MACD_index
+        for j in progress(range(df_MACD_index.index.size)):
+            # if loop_breaker > 1:
+            #    break
+            # loop_breaker += 1
+
+            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
+            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
+            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
+            MACD_Pattern_Number = df_MACD_index.index[j]
+
+            num_records = len(df.index)
+            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
+            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['DIF'] = df.EMA_short - df.EMA_long
+            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            df['Signal'] = 0
+            df['EMA_short_window'] = short_window
+            df['EMA_long_window'] = long_window
+            df['DIF_window'] = dif_window
+            df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            index_date = df.index[0].date()
+            tradable = True
+
+            i = 0
+            while i < num_records:
+                # for index in df.index:
+                '''
+                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
+                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
+                '''
+                if i > 0:
+                    if index_date != df.index[i].date():
+                        tradable = True
+                        index_date = df.index[i].date()
+
+                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
+                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
+                        if tradable:
+                            df.Signal[df.index[i]] = 1
+                            tradable = False
+                        else:
+                            pass
+                    elif ((df.DIF[df.index[i]] < df.DEA[df.index[i]]) &
+                              (df.DIF[df.index[i - 1]] >= df.DEA[df.index[i - 1]])):
+                        if tradable:
+                            df.Signal[df.index[i]] = -1
+                        else:
+                            pass
+                    else:
+                        pass
+                        # df.drop(df.index[i], axis = 0, inplace = True)
+                else:
+                    pass
+                i += 1
+            # Remove the no transaction record from the DB.
+            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+        return df
+
+    def _MACD_signal_calculation_MACD(self, df_MACD_index, df_stock_records, to_DB=True):
+        print "Processing MACD Index"
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        # loop breaker
+        loop_breaker = 0
+        df = df_stock_records
+        # print df
+        #  The first loop, go through every MACD Pattern in df_MACD_index
+        for j in progress(range(df_MACD_index.index.size)):
+            # if loop_breaker > 1:
+            #    break
+            # loop_breaker += 1
+
+            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
+            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
+            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
+            MACD_Pattern_Number = df_MACD_index.index[j]
+
+            num_records = len(df.index)
+            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
+            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['DIF'] = df.EMA_short - df.EMA_long
+            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            df['Signal'] = 0
+            df['EMA_short_window'] = short_window
+            df['EMA_long_window'] = long_window
+            df['DIF_window'] = dif_window
+            df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            index_date = df.index[0].date()
+            tradable = True
+
+            i = 0
+            while i < num_records:
+                # for index in df.index:
+                '''
+                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
+                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
+                '''
+                if i > 0:
+                    if index_date != df.index[i].date():
+                        tradable = True
+                        index_date = df.index[i].date()
+                    # Action:(Buy1)
+                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
+                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
+                        if tradable:
+                            df.Signal[df.index[i]] = 1
+                            tradable = False
+                        else:
+                            pass
+                    # Action: (Buy2)
+                    elif ((df.MACD.index[i] > df_MACD_index[i - 1]) & (df.DIF.index[i] > df.DEA.index[i])):
+                        if tradable:
+                            df.Signal[df.index[i]] = 1
+                            tradable = False
+                        else:
+                            pass
+                    # Action:(Sale)
+                    elif (df.MACD.index[i] < df_MACD_index[i - 1]):
+                        if tradable:
+                            df.Signal[df.index[i]] = -1
+                        else:
+                            # If the sales cannot be done in day i because of the T+1 policy,
+                            # then it must be sale in the day i+1, unless the day i+1 has another Buy command
+                            if i < num_records - 1:
+                                df.Signal[df.index[i + 1]] = -1
+                    else:
+                        pass
+                        # df.drop(df.index[i], axis = 0, inplace = True)
+                else:
+                    pass
+                i += 1
+            # Remove the no transaction record from the DB.
+            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+        return df
+
+    def apply_best_MACD_pattern_to_data(self, period='m30', stock_code='sz300226'):
+        done = False
+        # Get Best Pattern Number from DB
+        pattern_number = self._get_best_pattern(stock_code)
+        # Use Best Pattern Number to retrieve EMA_long, short and DIF window
+        sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
+        df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
+                                    index_col='id_tb_MACDIndex')
+        # Fetch corresponsding stock records
+        sql_fetch_min_records = (
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+        sql_fetch_period_records = (
+            "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
+        if period == 'day' or period == 'week':
+            sql_fetch_records = sql_fetch_period_records
+        else:
+            sql_fetch_records = sql_fetch_min_records
+
+        df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
+                                       index_col='quote_time')
+        # Send to calculate trade signal according to the best pattern
+        df_signals = self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records, to_DB=False)[-1:]
+        # return  df_signals
+        if df_signals.Signal[0] != 0:  # 3 need to be change to 0
+            # Get Stock Avaliable Informatoin
+            done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
+            if done:
+                # Get real time price information
+                done, df_current_price = self._get_stock_current_price(stock_code)
+                if done:
+                    # Get cash avaliable information
+                    done, cash_avaliable = self._get_stock_asset()
+                    if done:
+                        done = self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
+                                                          df_signals.Signal[0], pattern_number, period)
+                        if done:
+                            self._log_mesg = 'Trading command had been executed successfully at %s' % self._time_tag()
+                        else:
+                            self._log_mesg = 'Trading command had failed to be executed successfully at %s' % self._time_tag()
+                    else:
+                        self._log_mesg = "Unable to get cash avalible infomation at %s" % self._time_tag()
+                else:
+                    self._log_mesg = "Unable to get real time price information at %s" % self._time_tag()
+            else:
+                self._log_mesg = "Unable to get stock_avalible information at %s" % self._time_tag()
+        else:
+            self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
+        print self._log_mesg
 
     def _get_best_pattern(self, stock_code):
         sql_select_best_pattern = (
@@ -852,46 +928,6 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
     def _sending_signal(self):
         pass
 
-    def _processes_pool(self, tasks, processors):
-        # This is a self made Multiprocess pool
-        task_total = len(tasks)
-        loop_total = task_total / processors
-        print "task total is %s, loop_total is %s" % (task_total, loop_total)
-        alive = True
-        task_finished = 0
-        task_alive = 0
-        task_remain = task_total - task_finished
-        count = 0
-        i = 0
-        while i <= loop_total:
-            print "This is the %s round" % i
-            for j in range(processors):
-                k = j + processors * i
-                print "executing task %s" % k
-                if k == task_total:
-                    break
-                tasks[k].start()
-                j += 1
-
-            for j in range(processors):
-                k = j + processors * i
-                if k == task_total:
-                    break
-                tasks[k].join()
-                j += 1
-
-            while alive == True:
-                n = 0
-                alive = False
-                for j in range(processors):
-                    k = j + processors * i
-                    if k == task_total:
-                        # print "This is the %s round of loop"%i
-                        break
-                    if tasks[k].is_alive():
-                        alive = True
-                    time.sleep(3)
-            i += 1
 
 
 
