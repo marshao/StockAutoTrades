@@ -303,7 +303,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 index_end = df_MACD_index.index.size
 
         processes = []
-        for i in range(7):
+        # for i in range(7)
+        for i in range(1):
             p = mp.Process(target=self._MACD_signal_calculation_MACD, args=(task_args[i][0], task_args[i][1],))
             processes.append(p)
 
@@ -401,9 +402,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # print df
         #  The first loop, go through every MACD Pattern in df_MACD_index
         for j in progress(range(df_MACD_index.index.size)):
-            # if loop_breaker > 1:
-            #    break
-            # loop_breaker += 1
+            if loop_breaker > 1:
+                break
+            loop_breaker += 1
 
             short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
             long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
@@ -430,12 +431,19 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
             i = 0
             while i < num_records - 1:
+                if i > 1:
+                    break
+                #loop_breaker += 1
                 #for i < num_records:
 
                 #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
                 #If the index_date is not equal to record date, means diffrent day, set the tradable = True
                 # if i > 0:
                 i += 1
+                print "MACD Pandas Memory Addess = %s" % df.MACD.iloc[i]
+                print "DIF Pandas Memory Addess = %s" % df.DIF.iloc[i]
+                print "DEA Pandas Memory Addess = %s" % df.DEA.iloc[i]
+                print "MACD list Memory Addess = %s" % MACD[i]
                 if index_date != df.index[i].date():
                     tradable = True
                     index_date = df.index[i].date()
