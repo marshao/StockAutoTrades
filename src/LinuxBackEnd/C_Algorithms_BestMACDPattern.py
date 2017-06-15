@@ -10,6 +10,7 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
+import cProfile
 
 
 # import logging
@@ -304,7 +305,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         processes = []
         # for i in range(7)
-        for i in range(1):
+        for i in range(7):
             p = mp.Process(target=self._MACD_signal_calculation_MACD, args=(task_args[i][0], task_args[i][1],))
             processes.append(p)
 
@@ -402,9 +403,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # print df
         #  The first loop, go through every MACD Pattern in df_MACD_index
         for j in progress(range(df_MACD_index.index.size)):
-            if loop_breaker > 1:
-                break
-            loop_breaker += 1
+            # if loop_breaker > 2:
+            #    break
+            # loop_breaker += 1
 
             short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
             long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
@@ -426,13 +427,18 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df['EMA_long_window'] = long_window
             df['DIF_window'] = dif_window
             df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            #print df
             index_date = df.index[0].date()
+            #print "The first index_date is %s"%index_date
             tradable = True
+            re_sale = False
+            saleble = True
 
             i = 0
+
             while i < num_records - 1:
-                if i > 1:
-                    break
+                # if i > 1:
+                #    break
                 #loop_breaker += 1
                 #for i < num_records:
 
@@ -440,39 +446,47 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 #If the index_date is not equal to record date, means diffrent day, set the tradable = True
                 # if i > 0:
                 i += 1
-                print "MACD Pandas Memory Addess = %s" % df.MACD.iloc[i]
-                print "DIF Pandas Memory Addess = %s" % df.DIF.iloc[i]
-                print "DEA Pandas Memory Addess = %s" % df.DEA.iloc[i]
-                print "MACD list Memory Addess = %s" % MACD[i]
+                #print "The second index date is %s"%df.index[i].date()
                 if index_date != df.index[i].date():
                     tradable = True
                     index_date = df.index[i].date()
+                    another_day = True
+                    if re_sale:
+                        df.Signal.iloc[i] = -1
+                        re_sale = False
+                        #print "The third index date is %s"%df.index[i].date()
                 # Action:(Buy1)
                 if ((DIF[i] > DEA[i]) & (DIF[i - 1] <= DEA[i - 1])):
                     if tradable:
                         df.Signal.iloc[i] = 1
                         tradable = False
+                        saleble = True
                     continue
                 # Action: (Buy2)
                 elif ((MACD[i] > MACD[i - 1]) & (DIF[i] > DEA[i])):
                     if tradable:
                         df.Signal.iloc[i] = 1
                         tradable = False
+                        saleble = True
                     continue
                 # Action:(Sale)
-                elif (MACD[i] < MACD[i - 1]):
+                elif (MACD[i] < MACD[i - 1]) & saleble:
                     if tradable:
                         df.Signal.iloc[i] = -1
-                    elif i < num_records - 1:
+                        saleble = False
+                    else:
                         # If the sales cannot be done in day i because of the T+1 policy,
                         # then it must be sale in the day i+1, unless the day i+1 has another Buy command
-                        df.Signal.iloc[i + 1] = -1
+                        re_sale = True
+                        saleble = False
+
 
             # Remove the no transaction record from the DB.
-            # df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            #df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             frames.append(df_save)
         df_save = pd.concat(frames)
+
         # print type(df_save)
         # print df_save
 
@@ -480,95 +494,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True, chunksize=3000)
 
             # return df
-
-    def _MACD_signal_calculation_MACD_bak(self, df_MACD_index, df_stock_records, to_DB=True):
-        print "Processing MACD Index"
-        widgets = ['MACD_Pattern_BackTest: ',
-                   progressbar.Percentage(), ' ',
-                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
-                   progressbar.ETA()]
-        progress = progressbar.ProgressBar(widgets=widgets)
-
-        # loop breaker
-        loop_breaker = 0
-        df = df_stock_records
-        # print df
-        #  The first loop, go through every MACD Pattern in df_MACD_index
-        for j in progress(range(df_MACD_index.index.size)):
-            # if loop_breaker > 1:
-            #    break
-            # loop_breaker += 1
-
-            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
-            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
-            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
-            MACD_Pattern_Number = df_MACD_index.index[j]
-
-            num_records = len(df.index)
-            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
-            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
-            df['DIF'] = df.EMA_short - df.EMA_long
-            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            df['MACD'] = 2.0 * (df.DIF - df.DEA)
-            df['Signal'] = 0
-            df['EMA_short_window'] = short_window
-            df['EMA_long_window'] = long_window
-            df['DIF_window'] = dif_window
-            df['MACD_Pattern_Number'] = MACD_Pattern_Number
-            index_date = df.index[0].date()
-            tradable = True
-
-            i = 0
-            while i < num_records:
-                # for index in df.index:
-
-                # Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
-                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
-
-                if i > 0:
-                    if index_date != df.index[i].date():
-                        tradable = True
-                        index_date = df.index[i].date()
-                    # Action:(Buy1)
-                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
-                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = 1
-                            tradable = False
-                        else:
-                            pass
-                    # Action: (Buy2)
-                    elif ((df.MACD[df.index[i]] > df.MACD[df.index[i - 1]]) & (
-                                df.DIF[df.index[i]] > df.DEA[df.index[i]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = 1
-                            tradable = False
-                        else:
-                            pass
-                    # Action:(Sale)
-                    elif (df.MACD.iloc[i] < df.MACD.iloc[i - 1]):
-                        if tradable:
-                            df.Signal.iloc[i] = -1
-                        elif i < num_records - 1:
-                            # If the sales cannot be done in day i because of the T+1 policy,
-                            # then it must be sale in the day i+1, unless the day i+1 has another Buy command
-                            df.Signal.iloc[i + 1] = -1
-
-                    else:
-                        pass
-                        # df.drop(df.index[i], axis = 0, inplace = True)
-                else:
-                    pass
-                i += 1
-
-            # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-            #df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
-                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
-
-                #return df
 
     def apply_best_MACD_pattern_to_data(self, period='m30', stock_code='sz300226'):
         done = False
@@ -747,6 +672,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     if stockVolume_Current != 0:  # Sale all stocks out
                         trade_cost = stockVolume_Current * close_price
                         # stockVolume_Current = stockVolume_Current - tradeVolume
+                        tradeVolume = stockVolume_Current
                         stockVolume_Current = 0
                         cash_Current = cash_Current + trade_cost
                         totalValue_Current = stockVolume_Current * close_price + cash_Current
@@ -1027,10 +953,14 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_trading_signals(period='day', stock_code='sz300226')
-    #MACDPattern._MACD_ending_profits(period='day', stock_code='sz300226')
+    MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
+    MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern.best_pattern_daily_calculate()
 
 
 if __name__ == '__main__':
-    main()
+    cProfile.run('main()', filename="my.profile")
+    import pstats
+
+    p = pstats.Stats("my.profile")
+    p.strip_dirs().sort_stats("time").print_stats(15)

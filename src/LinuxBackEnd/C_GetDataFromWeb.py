@@ -34,8 +34,8 @@ class C_GettingData:
         self._x_period = ['day', 'week']
         self._q_count = ['320','50','16','8','4']
         self._fq = ['qfq', 'hfq','bfq']
-        self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
-        # self._stock_code = ['sz300226']
+        # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
+        self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -208,55 +208,67 @@ class C_GettingData:
                     best_pattern_daily_calculate()
                 time.sleep(600)
 
-    def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
+    def get_data_qq(self, stock_code=None, period=None, fq=None, q_count=None):
         logging.debug('Starting')
+        if stock_code is None:
+            stock_code = 'sz300226'
+        if period is None:
+            period = 'day'
+        if fq is None:
+            fq = 'qfq'
+        if q_count is None:
+            q_count = '320'
+
         self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
         got = True
-        try:
-            if period in self._x_period:  # precess day/week data
-                fq = ('qfq' if fq not in (self._fq) else fq)
-                url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
-                html = urllib.urlopen(url)
-                data = html.read()
-                self._process_x_period_data_qq(data, period, fq, stock_code)
-                self._save_data_to_db_qq(period, stock_code)
-            elif period in (self._x_min):
-                if period == 'm1':  # process 1 min data
+        # try:
+        if period in self._x_period:  # precess day/week data
+            fq = ('qfq' if fq not in (self._fq) else fq)
+            url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
+            html = urllib.urlopen(url)
+            data = html.read()
+            self._process_x_period_data_qq(data, period, fq, stock_code)
+            self._save_data_to_db_qq(period, stock_code)
+        elif period in (self._x_min):
+            if period == 'm1':  # process 1 min data
                     url = self._data_source['qq_1_min'] % (stock_code, stock_code)
                     html = urllib.urlopen(url)
                     data = html.read()
                     self._process_1_min_data_qq(data, stock_code)
                     self._save_data_to_db_qq(period, stock_code)
-                else:  # process X min data
-                    if period == 'm5':
-                        q_count = self._q_count[1]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm15':
-                        q_count = self._q_count[2]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm30':
-                        q_count = self._q_count[3]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm60':
-                        q_count = self._q_count[3]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    else:
-                        q_count = self._q_count[4]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    html = urllib.urlopen(url)
-                    data = html.read()
-                    self._process_x_min_data_qq(data, period, stock_code)
-                    self._save_data_to_db_qq(period, stock_code)
-            else:  # process real time data
-                url = self._data_source['qq_realtime'] % stock_code
+            else:  # process X min data
+                if period == 'm5':
+                    q_count = self._q_count[1]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                elif period == 'm15':
+                    q_count = self._q_count[2]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                elif period == 'm30':
+                    q_count = self._q_count[3]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    print "Get URL"
+                elif period == 'm60':
+                    q_count = self._q_count[3]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                else:
+                    q_count = self._q_count[4]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                print url
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_real_time_data_qq(data)
+                self._process_x_min_data_qq(data, period, stock_code)
                 self._save_data_to_db_qq(period, stock_code)
-        except:
-            got = False
+        else:  # process real time data
+            url = self._data_source['qq_realtime'] % stock_code
+            html = urllib.urlopen(url)
+            data = html.read()
+            self._process_real_time_data_qq(data)
+            self._save_data_to_db_qq(period, stock_code)
+        # except:
+        #    got = False
+        #    print "Can not load data for %s with Period %s"%(stock_code, period)
         logging.debug('Finished')
         return got
 
@@ -370,9 +382,12 @@ class C_GettingData:
     def _process_x_min_data_qq(self, data, x_min, stock_code):
         self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
         #print self._x_min_data_DF
+
         nPos = data.find(x_min)
-        data = data[(nPos + 7):-5].split('],[')
+        ePos = data.find("prec")
+        data = data[(nPos + 7):(ePos - 4)].split('],[')
         p = re.compile(r'\d+.\d+')
+
         for item in data:
             tmp_l = p.findall(item)
             tmp_l[0] = datetime.datetime.strptime(tmp_l[0],'%Y%m%d%H%M')
@@ -564,10 +579,10 @@ def main():
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
     #pp.service_getting_data()
-    pp.get_data_qq(stock_code='sz300226', period='m60')
-    # pp.get_data_qq(stock_code='sz300146',period='m1')
+    # pp.get_data_qq(stock_code='sz002310', period='day')
+    #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    # pp.get_data_qq(stock_code='sz300146', period='m30')
+    pp.get_data_qq(stock_code='sz002310', period='m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
 
