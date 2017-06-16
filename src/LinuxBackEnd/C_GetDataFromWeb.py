@@ -32,7 +32,7 @@ class C_GettingData:
                            'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
         self._x_min = ['m1','m5','m15','m30','m60']
         self._x_period = ['day', 'week']
-        self._q_count = ['320','50','16','8','4']
+        self._q_count = ['320', '50', '16', '30', '4']
         self._fq = ['qfq', 'hfq','bfq']
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
@@ -515,12 +515,16 @@ class C_GettingData:
     def _empty_fun(self, period):
         pass
 
-    def job_schedule(self):
+    def job_schedule(self, period=None, stock_code=None):
         # job_stores = {'default': MemoryJobStore()}
         # executor = {'processpool': ThreadPoolExecutor(8)}
         # job_default = {'coalesce': False, 'max_instances': 12}
         # scheduler_1 = BackgroundScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
 
+        if period is None:
+            period = 'm30'
+        if stock_code is None:
+            stock_code = 'sz002310'
         scheduler_1 = BackgroundScheduler()
         # scheduler_2 = BlockingScheduler()
         # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
@@ -529,16 +533,16 @@ class C_GettingData:
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
-        scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=['m30'])
+        scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
         scheduler_1.start()
 
         # The switch of scheduler_1
         while True:
             self._scheduler_switch(scheduler_1)
 
-    def _half_hour_tasks(self, period):
+    def _half_hour_tasks(self, period, stock_code):
         self._data_service(period)
-        apply_pattern('m30', 'sz300226')
+        apply_pattern(period, stock_code)
 
 
     def _scheduler_switch(self, scheduler):

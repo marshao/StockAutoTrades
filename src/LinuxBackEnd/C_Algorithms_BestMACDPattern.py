@@ -35,7 +35,7 @@ class C_Algorithems_BestPattern(object):
         self._stock_name_file = self._output_dir + 'StockNames.csv'
         # self._stock_codes = ['sz300226', 'sh600887','300146','600221']
         self._SAR_log = self._output_dir + 'SARLog'
-        self._stock_codes = ['sz300226']
+        self._stock_codes = ['sz002310']
         self._stock_market = ""
         self._window = '10'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -178,8 +178,8 @@ class C_Algorithems_BestPattern(object):
         stock_avaliable = df_stock_infor.stockAvaliable[0]
         current_value = df_stock_infor.currentValue[0]
         trade_volumn = 0
-        volumn_up_limit = 2000
-        volumn_down_limit = 1000
+        volumn_up_limit = 500
+        volumn_down_limit = 300
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
         done = False
@@ -257,13 +257,15 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
             self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
 
-    def best_pattern_daily_calculate(self):
+    def best_pattern_daily_calculate(self, period=None):
+        if period is None:
+            period = 'day'
         for stock_code in self._stock_codes:
-            self._MACD_trading_signals(period='day')
-            self._MACD_ending_profits(period='day')
-            self._MACD_best_pattern()
+            self._MACD_trading_signals(period=period, stock_code=stock_code)
+            self._MACD_ending_profits(period=period, stock_code=stock_code)
+            self._MACD_best_pattern(period=period)
 
-    def _MACD_trading_signals(self, period='m30', stock_code='sz300226', ):
+    def _MACD_trading_signals(self, period, stock_code):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
@@ -386,6 +388,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
         return df
+
     def _MACD_signal_calculation_MACD(self, df_MACD_index, df_stock_records, to_DB=True):
         print "Processing MACD Index"
         widgets = ['MACD_Pattern_BackTest: ',
@@ -495,7 +498,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
             # return df
 
-    def apply_best_MACD_pattern_to_data(self, period='m30', stock_code='sz300226'):
+    def apply_best_MACD_pattern_to_data(self, period, stock_code):
         done = False
         # Get Best Pattern Number from DB
         pattern_number = self._get_best_pattern(stock_code)
@@ -544,6 +547,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
         print self._log_mesg
 
+
     def _get_best_pattern(self, stock_code):
         sql_select_best_pattern = (
             "select best_pattern from tb_StockBestPatterns where algorithem_name = 'MACD' and stock_code = %s ORDER by pattern_date DESC limit 1")
@@ -553,7 +557,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         print pattern
         return pattern
 
-    def _MACD_ending_profits(self, period='m30', stock_code='sz300226'):
+    def _MACD_ending_profits(self, period, stock_code):
         # Fetch out Signal, EMA_short_window, EMA_long_window, DIF_window, quote_time, MACD_pattern_number from tb_StockIndex_MACD_New into a Pandas DF
         # Fetch out pattern_list from DB into MACD_patterns
         conn = self._engine.connect()
@@ -573,9 +577,10 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         self._clean_table('tb_MACD_Trades_HalfHour')
-        self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_stock_records)
+        self._clean_table('tb_MACD_Trades')
+        self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_stock_records, period)
 
-    def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records):
+    def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records, period):
         total_pattern = len(MACD_patterns)
         print total_pattern
         processors = 7
@@ -596,12 +601,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         processes = []
         for i in range(7):
-            p = mp.Process(target=self._MACD_ending_profits_calculation, args=(df_stock_records, pattern_slices[i],))
+            p = mp.Process(target=self._MACD_ending_profits_calculation,
+                           args=(df_stock_records, pattern_slices[i], period,))
             processes.append(p)
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
 
-    def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices):
+    def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices, period):
         # Fetch the lastest close_price and quote_time
         # print df_stock_close_prices
         e_price = df_stock_close_prices.close_price[-1]
@@ -697,12 +703,20 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                pattern]
                 MACD_trades.loc[len(MACD_trades)] = transaction
 
-                MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
+                if period == 'm30':
+                    MACD_trades.to_sql('tb_MACD_Trades_HalfHour', con=engine, if_exists='append', index=False)
+                else:
+                    MACD_trades.to_sql('tb_MACD_Trades', con=engine, if_exists='append', index=False)
 
-    def _MACD_best_pattern(self):
+    def _MACD_best_pattern(self, period):
         # For now, the best pattern is the pattern witch can make the highest ending profit.
-        sql_select_ending_profits = (
+        if period == 'm30':
+            sql_select_ending_profits = (
             'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades_HalfHour where DIF_window = 0 order by profit_rate DESC limit 1')
+        else:
+            sql_select_ending_profits = (
+                'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades where DIF_window = 0 order by profit_rate DESC limit 1')
+
         df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
         df_MACD_ending_profits['algorithem_name'] = 'MACD'
         df_MACD_ending_profits['pattern_date'] = self._time_tag()
@@ -955,7 +969,7 @@ def main():
     MACDPattern = C_BestMACDPattern()
     MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
     MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
-    # MACDPattern.best_pattern_daily_calculate()
+    MACDPattern._MACD_best_pattern(period='m30')
 
 
 if __name__ == '__main__':
