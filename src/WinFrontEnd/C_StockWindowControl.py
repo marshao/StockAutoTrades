@@ -429,7 +429,7 @@ class C_StockWindowControl:
 
         stockCode = stockTrades[1]
         tradeAmount = stockTrades[2]
-        tradeAmount = '1000'
+        # tradeAmount = '1000'
         tradePrice = stockTrades[3]
         done = False
         # Active Buy Window
