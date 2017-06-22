@@ -29,6 +29,10 @@ def call_it(instance, name, args=(), kwargs=None):
 
 
 class C_Algorithems_BestPattern(object):
+    '''
+    Change: 2017-06-22 in _send_trading_command: modified the received signal to 1 and -1 to match the signal calculation result.
+            2017-06-22 in _MACD_Singal_calcualtion_cross use MACD_short = 999 to represent real life stock operation and save them in DB.
+    '''
     def __init__(self):
         self._input_dir = '/home/marshao/DataMiningProjects/Input/'
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
@@ -170,9 +174,16 @@ class C_Algorithems_BestPattern(object):
         return done, cash_avabliable
 
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
-        # 'stock_code','trade_type','trade_volumn','trade_price','trade_time',
-        # 'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period','trade_result'
-        # signal = 3
+        '''
+        Sending Trading singal to Windows Front End
+        :param df_stock_infor:
+        :param df_current_price:
+        :param cash_avaliable:
+        :param signal: source signals from algorithem( 1 for buy, -1 for sale, 0 for nothing).
+        :param pattern_number:
+        :param period:
+        :return:
+        '''
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
@@ -186,7 +197,7 @@ class C_Algorithems_BestPattern(object):
         line = []
         trade_result = 0
 
-        if signal == 2:  # 1 == buy,
+        if signal == 1:  # 1 == buy,
             # Need to evaluate the cash avalible is enough to buy at least 1000 stocks
             # And also make sure the buy up limit will not over 2000 stocks
             current_price = df_current_price.current_price[0]
@@ -204,7 +215,7 @@ class C_Algorithems_BestPattern(object):
 
             cmd = '2 ' + stock_code + ' ' + trade_volumn + ' ' + str(current_price)
             df_trade_history.trade_type.loc[0] = int(signal)
-        elif signal == 3:  # 3 == sale
+        elif signal == -1:  # -1 == sale
             # Need to sale all stocks
             current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
@@ -313,7 +324,15 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
 
-    def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True):
+    def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
+        '''
+        Calculate trading signals for stock operation.
+        :param df_MACD_index:
+        :param df_stock_records:
+        :param to_DB:
+        :param for_real: This is a production operation when = True
+        :return:
+        '''
         print "Processing MACD Index"
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
@@ -386,7 +405,10 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                if for_real:
+                    df_save.EMA_short[0] = 999
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+
         return df
 
     def _MACD_signal_calculation_MACD(self, df_MACD_index, df_stock_records, to_DB=True):
@@ -519,7 +541,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
-        df_signals = self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records, to_DB=False)[-1:]
+        df_signals = self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records, to_DB=True, for_real=True)[
+                     -1:]
         # return  df_signals
         if df_signals.Signal[0] != 0:  # 3 need to be change to 0
             # Get Stock Avaliable Informatoin

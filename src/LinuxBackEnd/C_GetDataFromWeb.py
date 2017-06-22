@@ -234,6 +234,7 @@ class C_GettingData:
         elif period in (self._x_min):
             if period == 'm1':  # process 1 min data
                     url = self._data_source['qq_1_min'] % (stock_code, stock_code)
+                    print url
                     html = urllib.urlopen(url)
                     data = html.read()
                     self._process_1_min_data_qq(data, stock_code)
