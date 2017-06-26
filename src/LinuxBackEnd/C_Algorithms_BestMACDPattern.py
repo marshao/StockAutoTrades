@@ -66,10 +66,16 @@ class C_Algorithems_BestPattern(object):
         only_date = time_stamp.date()
         return only_date
 
-    def _write_log(self, log_mesg='', logPath='operLog.txt'):
+    def _write_log(self, log_mesg, logPath='operLog.txt'):
         fullPath = self._output_dir + logPath
-        with open(fullPath, 'a') as log:
-            log.writelines(log_mesg)
+        if isinstance(log_mesg, str):
+            with open(fullPath, 'a') as log:
+                log.writelines(log_mesg)
+        else:
+            for message in log_mesg:
+                with open(fullPath, 'a') as log:
+                    log.writelines(message)
+        self._log_mesg = ''
 
     def _clean_table(self, table_name):
         conn = self._engine.connect()
@@ -131,6 +137,7 @@ class C_Algorithems_BestPattern(object):
     def _checking_stock_in_hand(self, stock_code):
         # Need to udpate stock_in_hand Information first
         # This will request to send a code to frontend, and wait for response from confirmation from front end.
+
         receive = commu('1')  # update stock in hand information
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         done = False
@@ -138,13 +145,21 @@ class C_Algorithems_BestPattern(object):
             "select stockCode, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
         if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
-            print df_stock_infor
+            self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
             done = True
-            return done, df_stock_infor
         else:
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
-            self._log_mesg = "Could not get current stock in hand information at %s" % self._time_tag()
-            return done, df_stock_infor
+            self._log_mesg = self._log_mesg + "     Could not get current stock in hand information at %s \n" % self._time_tag()
+
+        if df_stock_infor.empty:
+            self._log_mesg = self._log_mesg + "     There is currently no stock %s in hand at %s \n." % (
+            stock_code, self._time_tag())
+            df_stock_infor.set_value(0, 'stockCode', stock_code)
+            df_stock_infor.set_value(0, 'stockAvaliable', 0)
+            df_stock_infor.set_value(0, 'currentValue', 0.0)
+            done = True
+        # self._write_log(self._log_mesg)
+        return done, df_stock_infor
 
     def _get_stock_current_price(self, stock_code):
         # gd = C_GettingData()
@@ -153,13 +168,16 @@ class C_Algorithems_BestPattern(object):
             "select stock_code,current_price, buy1_price, buy2_price, sale1_price, sale2_price  from tb_StockRealTimeRecords where stock_code = %s ORDER by time DESC limit 1")
         if done:
             df_current_price = pd.read_sql(sql_select_current_price, params=(stock_code[2:],), con=self._engine)
-            return done, df_current_price
+            self._log_mesg = self._log_mesg + "     Get stock %s current price at %s .\n" % (
+            stock_code, self._time_tag())
         else:
-            self._log_mesg = "Could not get current price data at %s" % self._time_tag()
             df_current_price = pd.read_sql(sql_select_current_price, params=(stock_code[2:],), con=self._engine)
             done = False
-            return done, df_current_price
+            self._log_mesg = self._log_mesg + "     Could not get stock %s current price data at %s\n" % (
+            stock_code, self._time_tag())
             ### how to call the function to get current price
+        # self._write_log(self._log_mesg)
+        return done, df_current_price
 
     def _get_stock_asset(self):
         done = False  # The mark of success or not.
@@ -169,8 +187,12 @@ class C_Algorithems_BestPattern(object):
         if receives[0] == '5.1':
             cash_avabliable = float(receives[1])
             done = True
+            self._log_mesg = self._log_mesg + "     Get stock asset at %s \n" % (self._time_tag())
         else:
+            self._log_mesg = self._log_mesg + "     Cannot get stock asset at %s \n" % (self._time_tag())
             pass
+
+        #self._write_log(self._log_mesg)
         return done, cash_avabliable
 
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
@@ -189,13 +211,14 @@ class C_Algorithems_BestPattern(object):
         stock_avaliable = df_stock_infor.stockAvaliable[0]
         current_value = df_stock_infor.currentValue[0]
         trade_volumn = 0
-        volumn_up_limit = 500
-        volumn_down_limit = 300
+        volumn_up_limit = 1000
+        volumn_down_limit = 500
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
         done = False
         line = []
         trade_result = 0
+        cmd = '5'
 
         if signal == 1:  # 1 == buy,
             # Need to evaluate the cash avalible is enough to buy at least 1000 stocks
@@ -220,12 +243,17 @@ class C_Algorithems_BestPattern(object):
             current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
             sale2_price = df_current_price.sale2_price[0]
-            cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
+            if stock_avaliable != 0:
+                cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
+            else:
+                print "No stock %s in hand, sales is cancelled." % stock_code
         else:
             print "Unknown trading Signal"
 
+        self._log_mesg = self._log_mesg + "     Trading command CMD %s is sent at %s \n" % (cmd, self._time_tag())
         # Send trading command and analysis the result
         receives = commu(cmd).split()
+        self._log_mesg = self._log_mesg + "     CMD %s is received at %s \n" % (cmd, self._time_tag())
         # print receives
         if receives[0] == '2.1' or receives[0] == '3.1':
             print 'Run into confirmed code'
@@ -240,11 +268,13 @@ class C_Algorithems_BestPattern(object):
             line.append(trade_result)
             df_trade_history.loc[len(df_trade_history)] = line
             df_trade_history.to_sql('tb_StockTradeHistory', con=self._engine, index=False, if_exists='append')
+            self._log_mesg = self._log_mesg + "     Trades %s is saved at %s \n" % (df_trade_history, self._time_tag())
             print df_trade_history
             done = True
         else:
             pass
 
+        #self._write_log(self._log_mesg)
         return done
 
 
@@ -323,6 +353,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             processes.append(p)
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+        self._log_mesg = self._log_mesg + "MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s" % self._time_tag()
+        self._write_log(self._log_mesg)
 
     def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
         '''
@@ -544,32 +576,56 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_signals = self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records, to_DB=True, for_real=True)[
                      -1:]
         # return  df_signals
-        if df_signals.Signal[0] != 0:  # 3 need to be change to 0
+        signal = df_signals.Signal[0]
+        signal = 1  # This line need to be removed
+
+        print "\n -------------------------------"
+        print "Step1: Trading Signal is %s" % signal
+        self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
+        self._log_mesg = self._log_mesg + "Step1: Get Trading Signal at %s \n" % self._time_tag()
+        self._log_mesg = self._log_mesg + \
+                         "      MACD Pattern %s was applied on stock %s, signal %s was got! at %s \n" % (
+                             pattern_number, stock_code, signal, self._time_tag())
+
+        if signal != 0:  # 3 need to be change to 0
             # Get Stock Avaliable Informatoin
+            print "---------------------------------------------------"
+            print "Step2: Get stock Avaliable"
+            self._log_mesg = self._log_mesg + "Step2: Get stock Avaliable at %s \n" % self._time_tag()
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
             if done:
                 # Get real time price information
+                print "---------------------------------------------------"
+                print "Step3: Get real time price"
+                self._log_mesg = self._log_mesg + "Step3: Get real time price at %s \n" % self._time_tag()
                 done, df_current_price = self._get_stock_current_price(stock_code)
                 if done:
                     # Get cash avaliable information
+                    print "---------------------------------------------------"
+                    print "Step4: Got cash Avaliable"
+                    self._log_mesg = self._log_mesg + "Step4: Get cash Avaliable at %s \n" % self._time_tag()
                     done, cash_avaliable = self._get_stock_asset()
                     if done:
+                        print "-------------------------------------------------"
+                        print "step5: Send Traiding Singal"
+                        self._log_mesg = self._log_mesg + "Step5: Send Trading Signal at %s \n" % self._time_tag()
                         done = self._send_trading_command(df_stock_infor, df_current_price, cash_avaliable,
-                                                          df_signals.Signal[0], pattern_number, period)
+                                                          signal, pattern_number, period)
                         if done:
-                            self._log_mesg = 'Trading command had been executed successfully at %s' % self._time_tag()
+                            self._log_mesg = self._log_mesg + '     Trading command had been executed successfully at %s \n' % self._time_tag()
                         else:
-                            self._log_mesg = 'Trading command had failed to be executed successfully at %s' % self._time_tag()
+                            self._log_mesg = self._log_mesg + '     Trading command had failed to be executed successfully at %s \n' % self._time_tag()
                     else:
-                        self._log_mesg = "Unable to get cash avalible infomation at %s" % self._time_tag()
+                        self._log_mesg = self._log_mesg + "     Unable to get cash avalible infomation at %s \n" % self._time_tag()
                 else:
-                    self._log_mesg = "Unable to get real time price information at %s" % self._time_tag()
+                    self._log_mesg = self._log_mesg + "     Unable to get real time price information at %s \n" % self._time_tag()
             else:
-                self._log_mesg = "Unable to get stock_avalible information at %s" % self._time_tag()
+                self._log_mesg = self._log_mesg + "     Unable to get stock_avalible information at %s \n" % self._time_tag()
         else:
-            self._log_mesg = "Trade Signal for stock %s is 0 at %s" % (stock_code, self._time_tag())
-        print self._log_mesg
-
+            self._log_mesg = self._log_mesg + "     Trade Signal for stock %s is 0 at %s \n" % (
+            stock_code, self._time_tag())
+        self._log_mesg = self._log_mesg + "     Trading Process is finished at %s \r\n" % self._time_tag()
+        self._write_log(self._log_mesg)
 
     def _get_best_pattern(self, stock_code):
         sql_select_best_pattern = (
@@ -602,6 +658,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._clean_table('tb_MACD_Trades_HalfHour')
         self._clean_table('tb_MACD_Trades')
         self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_stock_records, period)
+        self._log_mesg = self._log_mesg + "MACD ending profit has been calculated at %s" % self._time_tag()
+        self._write_log(self._log_mesg)
 
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records, period):
         total_pattern = len(MACD_patterns)
@@ -990,14 +1048,15 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
-    MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
-    MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
-    MACDPattern._MACD_best_pattern(period='m30')
-
+    # MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
+    # MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
+    # MACDPattern._MACD_best_pattern(period='m30')
+    MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
 
 if __name__ == '__main__':
-    cProfile.run('main()', filename="my.profile")
-    import pstats
+    main()
+    # cProfile.run('main()', filename="my.profile")
+    #import pstats
 
-    p = pstats.Stats("my.profile")
-    p.strip_dirs().sort_stats("time").print_stats(15)
+    # p = pstats.Stats("my.profile")
+    #p.strip_dirs().sort_stats("time").print_stats(15)
