@@ -67,7 +67,7 @@ class C_Algorithems_BestPattern(object):
         return only_date
 
     def _write_log(self, log_mesg, logPath='operLog.txt'):
-        logPath = str(self._time_tag_dateonly()) + logPath
+        # logPath = str(self._time_tag_dateonly()) + logPath
         fullPath = self._output_dir + logPath
         if isinstance(log_mesg, str):
             with open(fullPath, 'a') as log:
@@ -245,7 +245,14 @@ class C_Algorithems_BestPattern(object):
                                                   stock_code, self._time_tag())
             df_trade_history.trade_type.loc[0] = int(signal)
         elif signal == -1:  # -1 == sale
-            # Need to sale all stocks
+            # Need to sale all stocks except the amount purchased in the same day
+            '''
+            today = self._time_tag_dateonly()
+            sql_select_buy_today = ("select sum(trade_volumn) where stock_code = stock_code and Date_FORMAT(trade_time, '%Y-%m-%d') = today")
+            today_buy = conn.execute(sql_select_buy_today).fetchall()[0][0]
+            stock_avaliable = stock_avaliable - today_buy
+            '''
+
             current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
             sale2_price = df_current_price.sale2_price[0]
