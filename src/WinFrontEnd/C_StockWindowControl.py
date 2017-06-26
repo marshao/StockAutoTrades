@@ -488,8 +488,8 @@ class C_StockWindowControl:
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
             self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
                     stockCode, tradePrice, tradeAmount)
+            print self._log_mesg
             done = True
-            #done = True
         except:
             print "Buy could not be finished"
 
@@ -607,6 +607,7 @@ class C_StockWindowControl:
 
             self._log_mesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
                 stockCode, tradePrice, tradeAmount)
+            print self._log_mesg
             done = True
         except:
             print "sales could not be done"
