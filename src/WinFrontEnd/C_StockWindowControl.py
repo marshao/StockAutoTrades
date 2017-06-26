@@ -471,7 +471,7 @@ class C_StockWindowControl:
                     sleep(0.1)
             sleep(0.3)
 
-            '''
+
             # Send buy Command: B
             sleep(0.2)
             win32api.keybd_event(66, 0, 0, 0)
@@ -489,8 +489,7 @@ class C_StockWindowControl:
             self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
                     stockCode, tradePrice, tradeAmount)
             done = True
-            '''
-            done = True
+            #done = True
         except:
             print "Buy could not be finished"
 
@@ -590,7 +589,7 @@ class C_StockWindowControl:
                 for char in tradeAmount:
                     win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(char), None)
 
-            '''
+
             # Send Sale Command S:
             sleep(0.2)
             win32api.keybd_event(83, 0, 0, 0)
@@ -608,8 +607,6 @@ class C_StockWindowControl:
 
             self._log_mesg = '\n Congratulation, system issue a SALE command of stock code %s, buy price %s, buy amount %s successfully.' % (
                 stockCode, tradePrice, tradeAmount)
-            done = True
-            '''
             done = True
         except:
             print "sales could not be done"
