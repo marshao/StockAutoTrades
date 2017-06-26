@@ -577,7 +577,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                      -1:]
         # return  df_signals
         signal = df_signals.Signal[0]
-        signal = 1  # This line need to be removed
+        # signal = 1  # This line need to be removed
 
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
