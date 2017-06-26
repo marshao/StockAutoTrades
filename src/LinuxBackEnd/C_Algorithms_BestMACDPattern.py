@@ -67,6 +67,7 @@ class C_Algorithems_BestPattern(object):
         return only_date
 
     def _write_log(self, log_mesg, logPath='operLog.txt'):
+        logPath = str(self._time_tag_dateonly()) + logPath
         fullPath = self._output_dir + logPath
         if isinstance(log_mesg, str):
             with open(fullPath, 'a') as log:
@@ -213,6 +214,7 @@ class C_Algorithems_BestPattern(object):
         trade_volumn = 0
         volumn_up_limit = 1000
         volumn_down_limit = 500
+        oneshoot = 500
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
         done = False
@@ -228,15 +230,19 @@ class C_Algorithems_BestPattern(object):
             buy2_price = df_current_price.buy2_price[0]
             trade_volumn = int(cash_avaliable / current_price / 100) * 100
             print trade_volumn
-            if trade_volumn >= volumn_up_limit:
-                trade_volumn = str(volumn_up_limit)
-            elif trade_volumn <= volumn_down_limit:
-                trade_volumn = '0'
+            print stock_avaliable
+            if stock_avaliable < volumn_up_limit:
+                if trade_volumn >= oneshoot:
+                    trade_volumn = str(oneshoot)
+                else:
+                    trade_volumn = str(trade_volumn)
+                cmd = '2 ' + stock_code + ' ' + trade_volumn + ' ' + str(current_price)
+                self._log_mesg = self._log_mesg + "     Stock %s has the amount %s in hand at %s \n" % (
+                stock_code, stock_avaliable, self._time_tag())
             else:
-                trade_volumn = str(trade_volumn)
-                trade_result = 4
-
-            cmd = '2 ' + stock_code + ' ' + trade_volumn + ' ' + str(current_price)
+                self._log_mesg = self._log_mesg + "     Cannot buy more stock %s because " \
+                                                  "the amount reach the up limit at %s \n" % (
+                                                  stock_code, self._time_tag())
             df_trade_history.trade_type.loc[0] = int(signal)
         elif signal == -1:  # -1 == sale
             # Need to sale all stocks
@@ -246,7 +252,8 @@ class C_Algorithems_BestPattern(object):
             if stock_avaliable != 0:
                 cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
             else:
-                print "No stock %s in hand, sales is cancelled." % stock_code
+                self._log_mesg = self._log_mesg + "     No stock %s in hand, sales is cancelled " \
+                                                  "at %s \n." % (stock_code, self._time_tag())
         else:
             print "Unknown trading Signal"
 
