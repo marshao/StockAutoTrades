@@ -478,12 +478,12 @@ class C_StockWindowControl:
             win32api.keybd_event(66, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
 
             # Send Y to Confirm the buy
-            sleep(0.2)
+            sleep(1)
             win32api.keybd_event(89, 0, 0, 0)
             win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
 
             # Send Enter to confirm any message
-            sleep(0.2)
+            sleep(1)
             win32api.keybd_event(VK_RETURN, 0, 0, 0)
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
             self._log_mesg = '\n Congratulation, system issue a BUY command of stock code %s, buy price %s, buy amount %s successfully.' % (
@@ -596,12 +596,12 @@ class C_StockWindowControl:
             win32api.keybd_event(83, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
 
             # Send Y to Confirm the Sale
-            sleep(0.2)
+            sleep(1)
             win32api.keybd_event(89, 0, 0, 0)
             win32api.keybd_event(89, 0, win32con.KEYEVENTF_KEYUP, 0)
 
             # Send Enter to confirm any message
-            sleep(0.2)
+            sleep(1)
             win32api.keybd_event(VK_RETURN, 0, 0, 0)
             win32api.keybd_event(VK_RETURN, 0, win32con.KEYEVENTF_KEYUP, 0)
 
