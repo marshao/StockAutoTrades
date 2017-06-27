@@ -185,6 +185,7 @@ class C_Algorithems_BestPattern(object):
         cash_avabliable = -1
         cmd_line = '5'
         receives = commu(cmd_line).split()
+
         if receives[0] == '5.1':
             cash_avabliable = float(receives[1])
             done = True
@@ -591,7 +592,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                      -1:]
         # return  df_signals
         signal = df_signals.Signal[0]
-        # signal = 1  # This line need to be removed
+        # signal = -1  # This line need to be removed
 
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
