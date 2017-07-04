@@ -10,15 +10,17 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.pool import ThreadPoolExecutor
+# from apscheduler.schedulers import Scheduler
 import multiprocessing as mp
 import logging
 
 class C_GettingData:
     '''
     This is the class to monitor the stock real time price from various resources: (Sina, SnowBall, etc)
+    #Change: 2017-07-04 Found a mistake in schedule task. Everytime before the schedular call the apply_best_pattern()
+    it will also download the m30 data again. It cause there are two very timely closed m30 records in DB every time.
+    Ex: m30 in 2:30 and m30 in 2:39. These closed records will set the signal calcultion and pattern selection into error.
+    To fix that: extract the data_doad step out of appluy_best_pattern(), make is run seperatly.
     '''
 
     def __init__(self):
@@ -530,19 +532,23 @@ class C_GettingData:
         # scheduler_2 = BlockingScheduler()
         # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
         # scheduler_1.add_job(self._fun, 'interval', seconds=300, args=['m5'])
-        # scheduler_1.add_job(self._fun, 'interval', seconds=1800, args=['m30'])
+
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
+        scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
-        scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
+        # scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
+        scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
+        #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
         scheduler_1.start()
+        scheduler_1.print_jobs()
 
         # The switch of scheduler_1
         while True:
             self._scheduler_switch(scheduler_1)
 
     def _half_hour_tasks(self, period, stock_code):
-        self._data_service(period)
+        #self._data_service(period)
         apply_pattern(period, stock_code)
 
 
