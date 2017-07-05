@@ -34,7 +34,7 @@ class C_GettingData:
                            'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
         self._x_min = ['m1','m5','m15','m30','m60']
         self._x_period = ['day', 'week']
-        self._q_count = ['320', '50', '16', '30', '4']
+        self._q_count = ['320', '50', '16', '16', '4']
         self._fq = ['qfq', 'hfq','bfq']
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
@@ -232,7 +232,7 @@ class C_GettingData:
             html = urllib.urlopen(url)
             data = html.read()
             self._process_x_period_data_qq(data, period, fq, stock_code)
-            self._save_data_to_db_qq(period, stock_code)
+            # self._save_data_to_db_qq(period, stock_code)
         elif period in (self._x_min):
             if period == 'm1':  # process 1 min data
                     url = self._data_source['qq_1_min'] % (stock_code, stock_code)
@@ -240,7 +240,7 @@ class C_GettingData:
                     html = urllib.urlopen(url)
                     data = html.read()
                     self._process_1_min_data_qq(data, stock_code)
-                    self._save_data_to_db_qq(period, stock_code)
+                    #self._save_data_to_db_qq(period, stock_code)
             else:  # process X min data
                 if period == 'm5':
                     q_count = self._q_count[1]
@@ -262,13 +262,13 @@ class C_GettingData:
                 html = urllib.urlopen(url)
                 data = html.read()
                 self._process_x_min_data_qq(data, period, stock_code)
-                self._save_data_to_db_qq(period, stock_code)
+                #self._save_data_to_db_qq(period, stock_code)
         else:  # process real time data
             url = self._data_source['qq_realtime'] % stock_code
             html = urllib.urlopen(url)
             data = html.read()
             self._process_real_time_data_qq(data)
-            self._save_data_to_db_qq(period, stock_code)
+        self._save_data_to_db_qq(period, stock_code)
         # except:
         #    got = False
         #    print "Can not load data for %s with Period %s"%(stock_code, period)
@@ -405,7 +405,9 @@ class C_GettingData:
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
         print "processed %s data of stock %s" % (x_min, stock_code)
+        #print self._x_min_data_DF
         return self._x_min_data_DF
+
 
     def _save_data_to_db_qq(self, period, stock_code):
         # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
@@ -415,6 +417,7 @@ class C_GettingData:
         if period in self._x_min:
             # save x min data into DB
             data = self._remove_duplicate_rows(period, stock_code)
+            data = self._remove_unwant_min_rows(data)
             if period != 'm1':
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
@@ -450,6 +453,8 @@ class C_GettingData:
                          tb.c.stock_code == stock_code)). \
                     order_by(tb.c.quote_time.desc()).limit(1)
                 data = self._x_min_data_DF
+                # Insert opening prices for x_min data except m1
+                data = self._insert_today_opening_record(data)
             else:# Process 1 min data
                 tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
                 s = select([tb.c.quote_time]). \
@@ -467,14 +472,90 @@ class C_GettingData:
 
         result = conn.execute(s).fetchall()
         if len(result) != 0:
-            #print result
             last_record_time = result[0][0]
-            #print last_record_time
-            #data = data.loc[lambda df: df.index > last_record_time, :]
             data = data[data.index > last_record_time]
+            print "Dupliated rows has been removed."
             return data
         else:
+            print "Duplicated rows has been removed."
             return data
+
+    def _remove_unwant_min_rows(self, df):
+        '''
+        As the getting data process cannot be runned at exact minitue, the system will download some unwanted data.
+        Ex: want the getting m30 data was runned at 10:39:00, then beside 10:30:00 record, another 10:39:00 m30 records
+        will also be downloaded and saved.
+        This function is to remove stock records which are not exactly at exactly want minitues stamps.
+        :param df: DF fram which has been processed by remove_duplicate_rows
+        :return: a cleaner DF
+        '''
+        if len(df['open_price']) == 0:
+            return df
+        period = df.period[0]
+        download_min = df.index[0].minute
+        download_sec = df.index[0].second
+
+        if period == 'm5':
+            if (int(download_min) % 5 != 0) or (int(download_sec) != 0):
+                df = df.drop(df.index[0])
+        elif period == 'm15':
+            if (int(download_min) % 15 != 0) or (int(download_sec) != 0):
+                df = df.drop(df.index[0])
+        elif period == 'm30':
+            if (int(download_min) % 30 != 0) or (int(download_sec) != 0):
+                df = df.drop(df.index[0])
+        elif period == 'm60':
+            if (int(download_min) != 0) or (int(download_sec) != 0):
+                df = df.drop(df.index[0])
+        else:
+            pass
+
+        print "Unwanted Min Records have been removed."
+        return df
+
+    def _insert_today_opening_record(self, df):
+        '''
+        By observing the data records, I found there is no 9:30 opening records for each day. This missing records will
+        casue the first caulation between 9:30 and 10:00 is the actually the compare of 10:00 today and 15:00 yesterday.
+         The program will not be able to consider the difference of today's opening and yesterday's closing.
+         So: A opening records is inserted by this function with all prices = today's opening and volumn = 0
+         This function affect m5, m15, m30 and m60 records
+        :param df:
+        :return:
+        '''
+        if len(df['open_price']) == 0:
+            return df
+
+        # This part is to select different trading dates
+        dates = df.ix[:, 0:0].reset_index()
+        dates['date'] = 0
+        for idx, row in dates.iterrows():
+            dates.set_value(idx, 'date', row['quote_time'].date())
+        dates.drop_duplicates('date', keep='first', inplace=True)
+
+        # For each trading days, insert opening row
+        for idx, row in dates.iterrows():
+            # tday = datetime.datetime.today()
+            year = row['date'].year
+            month = row['date'].month
+            day = row['date'].day
+            open_stamp = datetime.datetime(year, month, day, 9, 30, 0, 0)
+
+            # From the 10:00 record to retrieve open_price
+            first_stamp = datetime.datetime(year, month, day, 10, 0, 0, 0)
+
+            if first_stamp in df.index:
+                first_stamp_open = df.get_value(first_stamp, 'open_price')
+                stock_code = df.get_value(first_stamp, 'stock_code')
+                period = df.get_value(first_stamp, 'period')
+                # Insert 9:30 record for each day
+                df.ix[open_stamp] = [first_stamp_open, first_stamp_open, first_stamp_open, first_stamp_open, 0,
+                                     stock_code, period]
+        df = df.sort_index()
+        df.index.names = ['quote_time']
+        print "Opening Record has been inserted."
+        return df
+
 
     def _timer(self, func):
         # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
@@ -594,6 +675,7 @@ def main():
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
     pp.get_data_qq(stock_code='sz002310', period='m30')
+    #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
 
