@@ -17,10 +17,12 @@ import logging
 class C_GettingData:
     '''
     This is the class to monitor the stock real time price from various resources: (Sina, SnowBall, etc)
-    #Change: 2017-07-04 Found a mistake in schedule task. Everytime before the schedular call the apply_best_pattern()
+    #Change: 2017-07-05 Found a mistake in schedule task. Everytime before the schedular call the apply_best_pattern()
     it will also download the m30 data again. It cause there are two very timely closed m30 records in DB every time.
     Ex: m30 in 2:30 and m30 in 2:39. These closed records will set the signal calcultion and pattern selection into error.
-    To fix that: extract the data_doad step out of appluy_best_pattern(), make is run seperatly.
+    To fix that: Delete the unwanted rows each time.
+
+    # Change: 2017-07-05 Added opening rows for each day by adding funcion _insert_opening_records()
     '''
 
     def __init__(self):
@@ -454,7 +456,7 @@ class C_GettingData:
                     order_by(tb.c.quote_time.desc()).limit(1)
                 data = self._x_min_data_DF
                 # Insert opening prices for x_min data except m1
-                data = self._insert_today_opening_record(data)
+                data = self._insert_opening_record(data)
             else:# Process 1 min data
                 tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
                 s = select([tb.c.quote_time]). \
@@ -513,7 +515,7 @@ class C_GettingData:
         print "Unwanted Min Records have been removed."
         return df
 
-    def _insert_today_opening_record(self, df):
+    def _insert_opening_record(self, df):
         '''
         By observing the data records, I found there is no 9:30 opening records for each day. This missing records will
         casue the first caulation between 9:30 and 10:00 is the actually the compare of 10:00 today and 15:00 yesterday.
