@@ -37,7 +37,7 @@ class C_GettingData:
                            'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
         self._x_min = ['m1','m5','m15','m30','m60']
         self._x_period = ['day', 'week']
-        self._q_count = ['320', '50', '16', '800', '4']
+        self._q_count = ['320', '50', '16', '16', '4']
         self._fq = ['qfq', 'hfq','bfq']
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         # self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
@@ -424,8 +424,8 @@ class C_GettingData:
         if period in self._x_min:
             # save x min data into DB
             data = self._remove_duplicate_rows(period, stock_code)
-            data = self._remove_unwant_min_rows(data, stock_code)
             if period != 'm1':
+                data = self._remove_unwant_min_rows(data, stock_code)
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
             else:
@@ -504,7 +504,7 @@ class C_GettingData:
         :param df: DF fram which has been processed by remove_duplicate_rows
         :return: a cleaner DF
         '''
-        if len(df['open_price']) == 0:
+        if len(df.index) == 0:
             return df
 
         for idx, row in df.iterrows():
