@@ -26,7 +26,8 @@ class C_GettingData:
     '''
 
     def __init__(self):
-        self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
+        # self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
+        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._input_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
         self._install_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
 
@@ -36,10 +37,11 @@ class C_GettingData:
                            'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
         self._x_min = ['m1','m5','m15','m30','m60']
         self._x_period = ['day', 'week']
-        self._q_count = ['320', '50', '16', '16', '4']
+        self._q_count = ['320', '50', '16', '800', '4']
         self._fq = ['qfq', 'hfq','bfq']
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
-        self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
+        # self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
+        self._stock_code = ['sz002310']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -270,11 +272,14 @@ class C_GettingData:
             html = urllib.urlopen(url)
             data = html.read()
             self._process_real_time_data_qq(data)
+        self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data has been download.\n" % (
+        self._time_tag(), stock_code, period)
         self._save_data_to_db_qq(period, stock_code)
         # except:
         #    got = False
         #    print "Can not load data for %s with Period %s"%(stock_code, period)
         logging.debug('Finished')
+        self._write_log(self._log_mesg)
         return got
 
 
@@ -419,7 +424,7 @@ class C_GettingData:
         if period in self._x_min:
             # save x min data into DB
             data = self._remove_duplicate_rows(period, stock_code)
-            data = self._remove_unwant_min_rows(data)
+            data = self._remove_unwant_min_rows(data, stock_code)
             if period != 'm1':
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
@@ -435,6 +440,10 @@ class C_GettingData:
             # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
             data = self._real_time_data_DF
             data.to_sql('tb_StockRealTimeRecords', self._engine, if_exists='append', index=False)
+
+        self._log_mesg = self._log_mesg + "At %s Data Saving: Stock %s period %s data has been saved. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
 
     def _remove_duplicate_rows(self, period, stock_code):
         '''
@@ -477,12 +486,16 @@ class C_GettingData:
             last_record_time = result[0][0]
             data = data[data.index > last_record_time]
             print "Dupliated rows has been removed."
-            return data
         else:
             print "Duplicated rows has been removed."
-            return data
 
-    def _remove_unwant_min_rows(self, df):
+        self._log_mesg = self._log_mesg + "At %s Duplicated: Duplicate rows for Stock %s period %s data has been removed. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
+
+        return data
+
+    def _remove_unwant_min_rows(self, df, stock_code):
         '''
         As the getting data process cannot be runned at exact minitue, the system will download some unwanted data.
         Ex: want the getting m30 data was runned at 10:39:00, then beside 10:30:00 record, another 10:39:00 m30 records
@@ -493,25 +506,37 @@ class C_GettingData:
         '''
         if len(df['open_price']) == 0:
             return df
-        period = df.period[0]
-        download_min = df.index[0].minute
-        download_sec = df.index[0].second
 
-        if period == 'm5':
-            if (int(download_min) % 5 != 0) or (int(download_sec) != 0):
-                df = df.drop(df.index[0])
-        elif period == 'm15':
-            if (int(download_min) % 15 != 0) or (int(download_sec) != 0):
-                df = df.drop(df.index[0])
-        elif period == 'm30':
-            if (int(download_min) % 30 != 0) or (int(download_sec) != 0):
-                df = df.drop(df.index[0])
-        elif period == 'm60':
-            if (int(download_min) != 0) or (int(download_sec) != 0):
-                df = df.drop(df.index[0])
-        else:
-            pass
+        for idx, row in df.iterrows():
+            # period = df.period[0]
+            # download_min = df.index[0].minute
+            #download_sec = df.index[0].second
 
+            period = row.period
+            # print row.name
+            download_min = row.name.minute
+            # print download_min
+            download_sec = row.name.second
+
+            if period == 'm5':
+                if (int(download_min) % 5 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm15':
+                if (int(download_min) % 15 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm30':
+                if (int(download_min) % 30 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm60':
+                if (int(download_min) != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            else:
+                pass
+
+        self._log_mesg = self._log_mesg + "At %s Unwanted: Unwanted rows for Stock %s period %s data has been removed. \n" % (
+        self._time_tag(),
+        stock_code, period)
+        self._write_log(self._log_mesg)
         print "Unwanted Min Records have been removed."
         return df
 
@@ -584,10 +609,24 @@ class C_GettingData:
         only_date = time_stamp.date()
         return only_date
 
-    def _write_log(self,log_mesg, logPath):
+    '''
+     def _write_log(self,log_mesg, logPath):
         fullPath = self._output_dir + logPath
         with open(fullPath, 'a') as log:
             log.writelines(log_mesg)
+    '''
+
+    def _write_log(self, log_mesg, logPath='DataLog.txt'):
+        # logPath = str(self._time_tag_dateonly()) + logPath
+        fullPath = self._output_dir + logPath
+        if isinstance(log_mesg, str):
+            with open(fullPath, 'a') as log:
+                log.writelines(log_mesg)
+        else:
+            for message in log_mesg:
+                with open(fullPath, 'a') as log:
+                    log.writelines(message)
+        self._log_mesg = ''
 
     def _convert_encoding(self, lines, new_coding='UTF-8'):
         try:

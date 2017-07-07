@@ -368,7 +368,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             processes.append(p)
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
-        self._log_mesg = self._log_mesg + "MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s" % self._time_tag()
+        self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
+        self._log_mesg = self._log_mesg + "Signal: MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
 
     def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
@@ -673,7 +674,10 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._clean_table('tb_MACD_Trades_HalfHour')
         self._clean_table('tb_MACD_Trades')
         self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_stock_records, period)
-        self._log_mesg = self._log_mesg + "MACD ending profit has been calculated at %s" % self._time_tag()
+        self._log_mesg = self._log_mesg + "Profit: MACD ending profit has been calculated at %s \n" % self._time_tag()
+        pattern = self._get_best_pattern(stock_code)
+        self._log_mesg = self._log_mesg + "Profit: MACD Pattern %s has the best performance at %s \n" % (
+        pattern, self._time_tag())
         self._write_log(self._log_mesg)
 
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records, period):
@@ -1063,10 +1067,10 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
-    # MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
-    # MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
+    MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
+    MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern._MACD_best_pattern(period='m30')
-    MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
+    # MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
 
 if __name__ == '__main__':
     main()
