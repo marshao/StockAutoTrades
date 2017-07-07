@@ -504,7 +504,7 @@ class C_GettingData:
         :param df: DF fram which has been processed by remove_duplicate_rows
         :return: a cleaner DF
         '''
-        if len(df.index) == 0:
+        if len(df['open_price']) == 0:
             return df
 
         for idx, row in df.iterrows():
