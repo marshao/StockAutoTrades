@@ -5,6 +5,7 @@ __metclass__ = type
 
 import datetime, time, progressbar, math
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
@@ -332,6 +333,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period):
         print "Jumped into Multiprocessing "
+        # Initialize Signal Calculation
+        C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # print period
         sql_fetch_min_records = (
             "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
@@ -342,12 +345,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         else:
             sql_fetch_records = sql_fetch_min_records
 
-        tasks = df_MACD_index.index.size / 7
+        num_processor = 4
+        tasks = df_MACD_index.index.size / (num_processor - 1)
         task_args = []
         processor = 1
         index_begin = 0
         index_end = tasks
-        while processor <= 8:
+        while processor <= num_processor:
             df_index = df_MACD_index[index_begin:index_end]
             # print df_index
             df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
@@ -356,15 +360,18 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
             processor += 1
             index_begin = index_end
-            if processor != 8:
+            if processor != num_processor:
                 index_end = processor * tasks
             else:
                 index_end = df_MACD_index.index.size
 
         processes = []
+        # print task_args.count(1)
         # for i in range(7)
-        for i in range(7):
-            p = mp.Process(target=self._MACD_signal_calculation_MACD, args=(task_args[i][0], task_args[i][1],))
+        for i in range(num_processor):
+            # Must be really careful of which calculation methond is in used.
+            p = mp.Process(target=C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3,
+                           args=(task_args[i][0], task_args[i][1],))
             processes.append(p)
 
         C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
@@ -372,204 +379,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._log_mesg = self._log_mesg + "Signal: MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
 
-    def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
-        '''
-        Calculate trading signals for stock operation.
-        :param df_MACD_index:
-        :param df_stock_records:
-        :param to_DB:
-        :param for_real: This is a production operation when = True
-        :return:
-        '''
-        print "Processing MACD Index"
-        widgets = ['MACD_Pattern_BackTest: ',
-                   progressbar.Percentage(), ' ',
-                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
-                   progressbar.ETA()]
-        progress = progressbar.ProgressBar(widgets=widgets)
-
-        # loop breaker
-        loop_breaker = 0
-        df = df_stock_records
-        # print df
-        #  The first loop, go through every MACD Pattern in df_MACD_index
-        for j in progress(range(df_MACD_index.index.size)):
-            # if loop_breaker > 1:
-            #    break
-            # loop_breaker += 1
-
-            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
-            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
-            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
-            MACD_Pattern_Number = df_MACD_index.index[j]
-
-            num_records = len(df.index)
-            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
-            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
-            df['DIF'] = df.EMA_short - df.EMA_long
-            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            df['MACD'] = 2.0 * (df.DIF - df.DEA)
-            df['Signal'] = 0
-            df['EMA_short_window'] = short_window
-            df['EMA_long_window'] = long_window
-            df['DIF_window'] = dif_window
-            df['MACD_Pattern_Number'] = MACD_Pattern_Number
-            index_date = df.index[0].date()
-            tradable = True
-
-            i = 0
-            while i < num_records:
-                # for index in df.index:
-                '''
-                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
-                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
-                '''
-                if i > 0:
-                    if index_date != df.index[i].date():
-                        tradable = True
-                        index_date = df.index[i].date()
-
-                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
-                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = 1
-                            tradable = False
-                        else:
-                            pass
-                    elif ((df.DIF[df.index[i]] < df.DEA[df.index[i]]) &
-                              (df.DIF[df.index[i - 1]] >= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = -1
-                        else:
-                            pass
-                    else:
-                        pass
-                        # df.drop(df.index[i], axis = 0, inplace = True)
-                else:
-                    pass
-                i += 1
-            # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
-                if for_real:
-                    df_save.EMA_short[0] = 999
-                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
-
-        return df
-
-    def _MACD_signal_calculation_MACD(self, df_MACD_index, df_stock_records, to_DB=True):
-        print "Processing MACD Index"
-        widgets = ['MACD_Pattern_BackTest: ',
-                   progressbar.Percentage(), ' ',
-                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
-                   progressbar.ETA()]
-        progress = progressbar.ProgressBar(widgets=widgets)
-
-        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-
-        # loop breaker
-        loop_breaker = 0
-        df = df_stock_records
-        frames = []
-        # print df
-        #  The first loop, go through every MACD Pattern in df_MACD_index
-        for j in progress(range(df_MACD_index.index.size)):
-            # if loop_breaker > 2:
-            #    break
-            # loop_breaker += 1
-
-            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
-            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
-            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
-            MACD_Pattern_Number = df_MACD_index.index[j]
-
-            num_records = len(df.index)
-            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
-            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
-            df['DIF'] = df.EMA_short - df.EMA_long
-            DIF = df.DIF.tolist()
-            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
-            DEA = df.DEA.tolist()
-            df['MACD'] = 2.0 * (df.DIF - df.DEA)
-            # df['MACD'] = 0
-            MACD = df.MACD.tolist()
-            df['Signal'] = 0
-            df['EMA_short_window'] = short_window
-            df['EMA_long_window'] = long_window
-            df['DIF_window'] = dif_window
-            df['MACD_Pattern_Number'] = MACD_Pattern_Number
-            #print df
-            index_date = df.index[0].date()
-            #print "The first index_date is %s"%index_date
-            tradable = True
-            re_sale = False
-            saleble = True
-
-            i = 0
-
-            while i < num_records - 1:
-                # if i > 1:
-                #    break
-                #loop_breaker += 1
-                #for i < num_records:
-
-                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
-                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
-                # if i > 0:
-                i += 1
-                #print "The second index date is %s"%df.index[i].date()
-                if index_date != df.index[i].date():
-                    tradable = True
-                    index_date = df.index[i].date()
-                    another_day = True
-                    if re_sale:
-                        df.Signal.iloc[i] = -1
-                        re_sale = False
-                        #print "The third index date is %s"%df.index[i].date()
-                # Action:(Buy1)
-                if ((DIF[i] > DEA[i]) & (DIF[i - 1] <= DEA[i - 1])):
-                    if tradable:
-                        df.Signal.iloc[i] = 1
-                        tradable = False
-                        saleble = True
-                    continue
-                # Action: (Buy2)
-                elif ((MACD[i] > MACD[i - 1]) & (DIF[i] > DEA[i])):
-                    if tradable:
-                        df.Signal.iloc[i] = 1
-                        tradable = False
-                        saleble = True
-                    continue
-                # Action:(Sale)
-                elif (MACD[i] < MACD[i - 1]) & saleble:
-                    if tradable:
-                        df.Signal.iloc[i] = -1
-                        saleble = False
-                    else:
-                        # If the sales cannot be done in day i because of the T+1 policy,
-                        # then it must be sale in the day i+1, unless the day i+1 has another Buy command
-                        re_sale = True
-                        saleble = False
 
 
-            # Remove the no transaction record from the DB.
-            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            #df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            frames.append(df_save)
-        df_save = pd.concat(frames)
-
-        # print type(df_save)
-        # print df_save
-
-        if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
-            df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True, chunksize=3000)
-
-            # return df
 
     def apply_best_MACD_pattern_to_data(self, period, stock_code):
         done = False
+        # Initialize Signal Calculation
+        C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # Get Best Pattern Number from DB
         pattern_number = self._get_best_pattern(stock_code)
         # Use Best Pattern Number to retrieve EMA_long, short and DIF window
@@ -589,7 +405,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
-        df_signals = self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records, to_DB=True, for_real=True)[
+        df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
+                                                                             to_DB=True, for_real=True)[
                      -1:]
         # return  df_signals
         signal = df_signals.Signal[0]
@@ -753,16 +570,16 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 close_price = \
                     df_stock_close_prices[
                         df_stock_close_prices.index == df_MACD_signals.quote_time[i]].close_price.iloc[0]
-                trade_cost = close_price * tradeVolume
+                trade_cost = round((close_price * tradeVolume), 2)
 
                 # Evaluate the trading signals and calculate the profits
                 if df_MACD_signals.Signal[i] == 1:  # Positive Signal, buy more stocks
                     if cash_Current >= trade_cost:  # Have enough cash in hand
                         # tradeVolume = stockVolume_Current * tradePercent
                         stockVolume_Current = tradeVolume + stockVolume_Current
-                        cash_Current = cash_Current - trade_cost
-                        totalValue_Current = stockVolume_Current * close_price + cash_Current
-                        profit_Rate = math.log(totalValue_Current / totalValue_Begin)
+                        cash_Current = round((cash_Current - trade_cost), 2)
+                        totalValue_Current = round((stockVolume_Current * close_price + cash_Current), 2)
+                        profit_Rate = round(math.log(totalValue_Current / totalValue_Begin), 2)
 
                         # Append HalfHour Profit Results into Array
                         transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i], close_price,
@@ -776,13 +593,13 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 elif df_MACD_signals.Signal[i] == (-1):  # NEgative Signal, sell stocks
                     # if stockVolume_Current >= tradeVolume:  # Have enough stocks in hand
                     if stockVolume_Current != 0:  # Sale all stocks out
-                        trade_cost = stockVolume_Current * close_price
+                        trade_cost = round((stockVolume_Current * close_price), 2)
                         # stockVolume_Current = stockVolume_Current - tradeVolume
                         tradeVolume = stockVolume_Current
                         stockVolume_Current = 0
-                        cash_Current = cash_Current + trade_cost
-                        totalValue_Current = stockVolume_Current * close_price + cash_Current
-                        profit_Rate = math.log(totalValue_Current / totalValue_Begin)
+                        cash_Current = round((cash_Current + trade_cost), 2)
+                        totalValue_Current = round((stockVolume_Current * close_price + cash_Current), 2)
+                        profit_Rate = round(math.log(totalValue_Current / totalValue_Begin), 2)
 
                         # Append HalfHour Profit Results into Array
                         transaction = [df_stock_close_prices.stock_code[i], df_MACD_signals.quote_time[i], close_price,
@@ -824,6 +641,422 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # gb_pattern = df_MACD_ending_profits.groupby('MACD_pattern_number')
         print df_MACD_ending_profits
 
+
+class C_MACD_Signal_Calculation(C_BestMACDPattern):
+    def __init__(self):
+        C_BestMACDPattern.__init__(self)
+
+    def _MACD_signal_calculation_M30_3(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
+        '''
+        Calculate trading signals for stock operation.
+        :param df_MACD_index:
+        :param df_stock_records:
+        :param to_DB:
+        :param for_real: This is a production operation when = True
+        :return:
+        '''
+        print "Processing MACD Index"
+        # print "------------------------------------------------------ \n"
+
+        widgets = ['MACD_Pattern_Trading Singal Calculation: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        # alpha is parameter for MACD(t) when buying stock with different sign
+        alpha = [3.0, 2.0, 1.0]
+        # beta is patameter for MACD(t) when buying stock with nagitive shink
+        beta = [-0.2, -0.1, -0.3, -0.4, -0.5]
+        # gama is parameter to MACD(MAX-P) when saling stock
+        gama = [0.8, 0.65, 0.9]
+
+        # loop breaker
+        loop_breaker = 0
+        df = df_stock_records
+        # print df
+        #  The first loop, go through every MACD Pattern in df_MACD_index
+        for j in progress(range(df_MACD_index.index.size)):
+            # if loop_breaker > 1:
+            #    break
+            # loop_breaker += 1
+
+            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
+            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
+            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
+            MACD_Pattern_Number = df_MACD_index.index[j]
+
+            num_records = len(df.index)
+            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
+            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['DIF'] = df.EMA_short - df.EMA_long
+            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            df['Signal'] = 0
+            df['EMA_short_window'] = short_window
+            df['EMA_long_window'] = long_window
+            df['DIF_window'] = dif_window
+            df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            df.round({'EMA_short': 2, 'EMA_long': 2, 'DIF': 2, 'DEA': 2, 'MACD': 2})
+            index_date = df.index[0].date()
+            tradable = True
+            re_buy = False  # Evalution sign for the non-significant buy
+            MACD_down = True  # Set stock is not in the down going tunnel
+            MACD_MAX_P = 0
+            # re_sale = False # Set re-sale signal for T+1 policy
+            MACD_AVG = self._Cal_MACD_AVG(df.MACD)
+            aggresive_buy = False
+
+            row_set = df.iterrows()
+            last_idx, last = row_set.next()
+
+            for idx, row in row_set:
+                # Valid the T+1 policy and check whether there is re_sale signal
+                if index_date != idx.date():
+                    tradable = True
+                    index_date = idx.date()
+
+                # Buy1: MACD Different Sign
+                if (row.MACD > 0) & (last.MACD < 0):
+                    if row.MACD >= MACD_AVG:  # MACD value is significant
+                        df.set_value(idx, 'Signal', 1)
+                        MACD_down = False  # Set stock in up trend
+                        tradable = False  # Stop saling stock in same day
+                        MACD_MAX_P = row.MACD
+                    else:  # if the MACD is not significant
+                        re_buy = True
+                # Buy2: MACD Different Sign with unsignificant signal
+                elif re_buy & (row.MACD > alpha[0] * last.MACD):
+                    df.set_value(idx, 'Signal', 1)
+                    MACD_down = False  # Set stock in up trend
+                    tradable = False  # Stop saling stock in same day
+                    MACD_MAX_P = row.MACD
+                    re_buy = False
+                # Buy3: Aggresive buying policy, MACD nagative Shink
+                elif aggresive_buy & (row.MACD < 0) & (last.MACD < 0):
+                    if np.log(row.MACD / last.MACD) < beta[0]:
+                        df.set_value(idx, 'Signal', 1)
+                        MACD_down = False  # Set stock in up trend
+                        tradable = False  # Stop saling stock in same day
+                        MACD_MAX_P = row.MACD
+                # Sale: Sale Policy, MACD Positive Shrink
+                elif (row.MACD < gama[0] * MACD_MAX_P) & (MACD_down == False):
+                    if tradable:
+                        df.set_value(idx, 'Signal', -1)
+                        MACD_MAX_P = 0
+                    else:
+                        # Assign re-sale signal -5 to signal value
+                        df.set_value(idx, 'Signal', -9)
+                    MACD_down = True  # Setting Stock is in down trend
+                else:  # Valid whether the stock is still in downgoing tunnel
+                    # update MACD_MAX_P and MACD_MIN_P
+                    if (MACD_down == False) & (row.MACD > MACD_MAX_P): MACD_MAX_P = row.MACD
+
+                    # In the next day, if signal is not in buy or sale, then valid resale
+                    if tradable & MACD_down & (idx.hour == 9) & (idx.minute == 30):
+                        pre_idx_open = idx - datetime.timedelta(days=1)
+                        pre_idx_close = idx - datetime.timedelta(hours=1)
+                        df_day = df.loc[pre_idx_open:pre_idx_close, ('Signal', 'MACD')]
+                        if self._Cal_Resalble(df_day, idx):
+                            df.set_value(idx, 'Signal', -1)
+                            # print df.loc[idx]
+                            MACD_down = False  # Setting Stock is in down trend
+                            MACD_MAX_P = 0
+
+                last = row
+                # last_idx = idx
+            # Remove the no transaction record from the DB.
+            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            # print df[df.Signal == -1].count()
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            df_save = df_save[df_save.Signal != -9]
+
+            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                if for_real:
+                    # df_save.iloc[0:1, lambda df:['EMA_short']] = 999
+                    df_save.EMA_short[-1] = 999
+                    # print df_save
+                    # df_save.set_value(0)
+                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+                # df.to_csv('/home/marshao/DataMiningProjects/Output/df1.csv')
+                # print j
+                # print df_save.count()
+        return df
+
+    def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
+        '''
+        Calculate trading signals for stock operation.
+        :param df_MACD_index:
+        :param df_stock_records:
+        :param to_DB:
+        :param for_real: This is a production operation when = True
+        :return:
+        '''
+        print "Processing MACD Index"
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        # loop breaker
+        loop_breaker = 0
+        df = df_stock_records
+        # print df
+        #  The first loop, go through every MACD Pattern in df_MACD_index
+        for j in progress(range(df_MACD_index.index.size)):
+            # if loop_breaker > 1:
+            #    break
+            # loop_breaker += 1
+
+            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
+            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
+            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
+            MACD_Pattern_Number = df_MACD_index.index[j]
+
+            num_records = len(df.index)
+            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
+            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['DIF'] = df.EMA_short - df.EMA_long
+            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            df['Signal'] = 0
+            df['EMA_short_window'] = short_window
+            df['EMA_long_window'] = long_window
+            df['DIF_window'] = dif_window
+            df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            index_date = df.index[0].date()
+            tradable = True
+
+            '''
+            i = 0
+            while i < num_records:
+                # for index in df.index:
+
+                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
+                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
+
+                if i > 0:
+                    if index_date != df.index[i].date():
+                        tradable = True
+                        index_date = df.index[i].date()
+
+                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
+                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
+                        if tradable:
+                            df.Signal[df.index[i]] = 1
+                            tradable = False
+                        else:
+                            pass
+                    elif ((df.DIF[df.index[i]] < df.DEA[df.index[i]]) &
+                              (df.DIF[df.index[i - 1]] >= df.DEA[df.index[i - 1]])):
+                        if tradable:
+                            df.Signal[df.index[i]] = -1
+                        else:
+                            pass
+                    else:
+                        pass
+                        # df.drop(df.index[i], axis = 0, inplace = True)
+                else:
+                    pass
+                print "Last Index date is %s"%df.index[i-1]
+                print "Row index date is %s"%df.index[i]
+                print "Row signal is %s"%df.Signal[i]
+                i += 1
+
+            '''
+            row_set = df.iterrows()
+            last_idx, last = row_set.next()
+
+            for idx, row in row_set:
+                if index_date != idx.date():
+                    tradable = True
+                    index_date = idx.date()
+
+                if (row.DIF > row.DEA) & (last.DIF <= last.DEA) & tradable:
+                    df.set_value(idx, 'Signal', 1)
+                    tradable = False
+                elif (row.DIF < row.DEA) & (last.DIF >= last.DEA) & tradable:
+                    df.set_value(idx, 'Signal', -1)
+                else:
+                    pass
+
+                # print "Last index Date is %s"%last_idx
+                # print "Row index date is %s"%idx
+                # print "Row signal is %s at date %s" % (df.ix[idx].Signal, idx)
+                last = row
+                last_idx = idx
+
+            # Remove the no transaction record from the DB.
+            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+                if for_real:
+                    df_save.EMA_short[0] = 999
+                df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+        return df
+
+    def _MACD_signal_calculation_MACD(self, df_MACD_index, df_stock_records, to_DB=True):
+        print "Processing MACD Index"
+        widgets = ['MACD_Pattern_BackTest: ',
+                   progressbar.Percentage(), ' ',
+                   progressbar.Bar(marker='0', left='[', right=']'), ' ',
+                   progressbar.ETA()]
+        progress = progressbar.ProgressBar(widgets=widgets)
+
+        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+
+        # loop breaker
+        loop_breaker = 0
+        df = df_stock_records
+        frames = []
+        # print df
+        #  The first loop, go through every MACD Pattern in df_MACD_index
+        for j in progress(range(df_MACD_index.index.size)):
+            # if loop_breaker > 2:
+            #    break
+            # loop_breaker += 1
+
+            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
+            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
+            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
+            MACD_Pattern_Number = df_MACD_index.index[j]
+
+            num_records = len(df.index)
+            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
+            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['DIF'] = df.EMA_short - df.EMA_long
+            DIF = df.DIF.tolist()
+            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            DEA = df.DEA.tolist()
+            df['MACD'] = 2.0 * (df.DIF - df.DEA)
+            # df['MACD'] = 0
+            MACD = df.MACD.tolist()
+            df['Signal'] = 0
+            df['EMA_short_window'] = short_window
+            df['EMA_long_window'] = long_window
+            df['DIF_window'] = dif_window
+            df['MACD_Pattern_Number'] = MACD_Pattern_Number
+            # print df
+            index_date = df.index[0].date()
+            # print "The first index_date is %s"%index_date
+            tradable = True
+            re_sale = False
+            saleble = True
+
+            i = 0
+
+            while i < num_records - 1:
+                # if i > 1:
+                #    break
+                # loop_breaker += 1
+                # for i < num_records:
+
+                # Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
+                # If the index_date is not equal to record date, means diffrent day, set the tradable = True
+                # if i > 0:
+                i += 1
+                # print "The second index date is %s"%df.index[i].date()
+                if index_date != df.index[i].date():
+                    tradable = True
+                    index_date = df.index[i].date()
+                    another_day = True
+                    if re_sale:
+                        df.Signal.iloc[i] = -1
+                        re_sale = False
+                        # print "The third index date is %s"%df.index[i].date()
+                # Action:(Buy1)
+                if ((DIF[i] > DEA[i]) & (DIF[i - 1] <= DEA[i - 1])):
+                    if tradable:
+                        df.Signal.iloc[i] = 1
+                        tradable = False
+                        saleble = True
+                    continue
+                # Action: (Buy2)
+                elif ((MACD[i] > MACD[i - 1]) & (DIF[i] > DEA[i])):
+                    if tradable:
+                        df.Signal.iloc[i] = 1
+                        tradable = False
+                        saleble = True
+                    continue
+                # Action:(Sale)
+                elif (MACD[i] < MACD[i - 1]) & saleble:
+                    if tradable:
+                        df.Signal.iloc[i] = -1
+                        saleble = False
+                    else:
+                        # If the sales cannot be done in day i because of the T+1 policy,
+                        # then it must be sale in the day i+1, unless the day i+1 has another Buy command
+                        re_sale = True
+                        saleble = False
+
+            # Remove the no transaction record from the DB.
+            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+            frames.append(df_save)
+        df_save = pd.concat(frames)
+
+        # print type(df_save)
+        # print df_save
+
+        if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
+            df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True, chunksize=3000)
+
+    def _Cal_MACD_AVG(self, MACD_se, quo=None, theta=None, step=None):
+        '''
+        This function is calculate the MACD_AVG using MACD Series. MACD_AVG should filter out the smallest quo percent
+        of records, make those records as useless records
+        :param MACD_se: MACD Series
+        :param quo: Quatererial of percentage should be kept
+        :param theta: Inital excelarator of MACD
+        :param step: Inital Step of excelarator's increasement
+        :return:
+        '''
+        # theta is the paramenter of MACD_AVG
+        if quo is None:
+            quo = 0.9
+        if theta is None:
+            theta = 0.5
+        if step is None:
+            step = 0.02
+        MACD_AVG = theta * (round(np.sum(np.abs(MACD_se)) / MACD_se.size, 5))
+        MACD_AVG_percent = MACD_se[MACD_se > MACD_AVG].count() / float(MACD_se.count())
+        if MACD_AVG_percent < quo:
+            while MACD_AVG_percent < quo:
+                theta -= step
+                MACD_AVG = theta * (round(np.sum(np.abs(MACD_se)) / MACD_se.size, 5))
+                MACD_AVG_percent = MACD_se[MACD_se > MACD_AVG].count() / float(MACD_se.count())
+                # print MACD_AVG_percent
+        else:
+            while MACD_AVG_percent > quo:
+                theta += step
+                MACD_AVG = theta * (round(np.sum(np.abs(MACD_se)) / MACD_se.size, 5))
+                MACD_AVG_percent = MACD_se[MACD_se > MACD_AVG].count() / float(MACD_se.count())
+                # print MACD_AVG_percent
+
+        # print "MACD AVG: %s" % MACD_AVG
+        # print "MACD MAX: %s" % MACD_se.max()
+        # print "MACD MIN: %s" % np.abs(MACD_se).min()
+        # print "MACD Percentange is %s" % MACD_AVG_percent
+        return MACD_AVG
+
+    def _Cal_Resalble(self, df, idx):
+        '''
+        This is the function to evaluate whether the resale should be contact or not
+        This is only valid for M30 data
+        :param :
+        :return True/False:
+        '''
+        resaleble = False
+        for i, r in df.iterrows():
+            if r.Signal == -9:
+                # df.set_value(idx, 'Signal', -1)
+                resaleble = True
+            elif r.Signal == 1 or r.Signal == -1:
+                resaleble = False
+        # resaleble = False
+        return  resaleble
 
 class C_BestSARPattern(C_Algorithems_BestPattern):
     def __init__(self):
@@ -1060,6 +1293,7 @@ class C_BestSARPattern(C_Algorithems_BestPattern):
         pass
 
 
+
 def main():
     # SARPattern = C_BestSARPattern()
     # SARPattern.SAR_patterns_exams(period='day')
@@ -1069,8 +1303,8 @@ def main():
     MACDPattern = C_BestMACDPattern()
     MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
     MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
-    # MACDPattern._MACD_best_pattern(period='m30')
-    # MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
+    MACDPattern._MACD_best_pattern(period='m30')
+    #MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
 
 if __name__ == '__main__':
     main()
