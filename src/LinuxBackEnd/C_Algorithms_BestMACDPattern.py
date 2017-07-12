@@ -82,7 +82,7 @@ class C_Algorithems_BestPattern(object):
     def _clean_table(self, table_name):
         conn = self._engine.connect()
         conn.execute("truncate %s" % table_name)
-        print "Table is cleaned"
+        print "Table %s is cleaned" % table_name
 
     def _progress_monitor(self):
         '''
@@ -99,15 +99,15 @@ class C_Algorithems_BestPattern(object):
         # This is a self made Multiprocess pool
         task_total = len(tasks)
         loop_total = task_total / processors
-        print "task total is %s, loop_total is %s" % (task_total, loop_total)
+        print "task total is %s, processors is %s, loop_total is %s" % (task_total, processors, loop_total)
         alive = True
         task_finished = 0
-        task_alive = 0
-        task_remain = task_total - task_finished
-        count = 0
+        # task_alive = 0
+        # task_remain = task_total - task_finished
+        # count = 0
         i = 0
-        while i <= loop_total:
-            print "This is the %s round" % i
+        while i < loop_total:
+            #print "This is the %s round" % i
             for j in range(processors):
                 k = j + processors * i
                 print "executing task %s" % k
@@ -315,11 +315,12 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
 
     def best_pattern_daily_calculate(self, period=None):
+        MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
         if period is None:
             period = 'day'
         for stock_code in self._stock_codes:
             self._MACD_trading_signals(period=period, stock_code=stock_code)
-            self._MACD_ending_profits(period=period, stock_code=stock_code)
+            MACD_Ending_Profit_Cal._MACD_ending_profits(period=period, stock_code=stock_code)
             self._MACD_best_pattern(period=period)
 
     def _MACD_trading_signals(self, period, stock_code):
@@ -337,7 +338,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # print period
         sql_fetch_min_records = (
-            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 550")
         sql_fetch_period_records = (
             "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
@@ -345,40 +346,42 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         else:
             sql_fetch_records = sql_fetch_min_records
 
-        num_processor = 4
-        tasks = df_MACD_index.index.size / (num_processor - 1)
+        num_processor = 8
+        MACD_pattern_size = df_MACD_index.index.size
+        tasks = MACD_pattern_size / (num_processor - 1)
+        print "In total: there are %s MACD Patterns" % MACD_pattern_size
         task_args = []
-        processor = 1
+        p = 1
         index_begin = 0
         index_end = tasks
-        while processor <= num_processor:
+        while p <= num_processor:
+            print "For %s part, index begin is %s, index end is %s" % (p, index_begin, index_end)
             df_index = df_MACD_index[index_begin:index_end]
-            # print df_index
             df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
                                            params=(period, stock_code))
             task_args.append((df_index, df_stock_records), )
 
-            processor += 1
+            p += 1
             index_begin = index_end
-            if processor != num_processor:
-                index_end = processor * tasks
+            if p != num_processor:
+                index_end = p * tasks
             else:
-                index_end = df_MACD_index.index.size
-
+                index_end = MACD_pattern_size - 1
+        #print task_args
         processes = []
         # print task_args.count(1)
         # for i in range(7)
         for i in range(num_processor):
+            #print "This is the %s th job"%i
             # Must be really careful of which calculation methond is in used.
             p = mp.Process(target=C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3,
                            args=(task_args[i][0], task_args[i][1],))
             processes.append(p)
 
-        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=num_processor)
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
         self._log_mesg = self._log_mesg + "Signal: MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
-
 
 
 
@@ -388,13 +391,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # Get Best Pattern Number from DB
         pattern_number = self._get_best_pattern(stock_code)
+        #pattern_number = 442
         # Use Best Pattern Number to retrieve EMA_long, short and DIF window
         sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
         df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
                                     index_col='id_tb_MACDIndex')
         # Fetch corresponsding stock records
         sql_fetch_min_records = (
-            "select * from tb_StockXMinRecords where period = %s and stock_code = %s")
+            "select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 550")
         sql_fetch_period_records = (
             "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
@@ -469,6 +473,28 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         print pattern
         return pattern
 
+
+    def _MACD_best_pattern(self, period):
+        # For now, the best pattern is the pattern witch can make the highest ending profit.
+        if period == 'm30':
+            sql_select_ending_profits = (
+            'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades_HalfHour where DIF_window = 0 order by profit_rate DESC limit 1')
+        else:
+            sql_select_ending_profits = (
+                'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades where DIF_window = 0 order by profit_rate DESC limit 1')
+
+        df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
+        df_MACD_ending_profits['algorithem_name'] = 'MACD'
+        df_MACD_ending_profits['pattern_date'] = self._time_tag()
+        df_MACD_ending_profits.to_sql('tb_StockBestPatterns', con=self._engine, index=False, if_exists='append')
+        # gb_pattern = df_MACD_ending_profits.groupby('MACD_pattern_number')
+        print df_MACD_ending_profits
+
+
+class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
+    def __init__(self):
+        C_BestMACDPattern.__init__(self)
+
     def _MACD_ending_profits(self, period, stock_code):
         # Fetch out Signal, EMA_short_window, EMA_long_window, DIF_window, quote_time, MACD_pattern_number from tb_StockIndex_MACD_New into a Pandas DF
         # Fetch out pattern_list from DB into MACD_patterns
@@ -478,7 +504,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
 
         # Fetch out closing data from DB
         sql_fetch_min_records = (
-            "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s")
+            "select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 550")
         sql_fetch_period_records = (
             "select stock_code, close_price, quote_time from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
@@ -494,35 +520,35 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._log_mesg = self._log_mesg + "Profit: MACD ending profit has been calculated at %s \n" % self._time_tag()
         pattern = self._get_best_pattern(stock_code)
         self._log_mesg = self._log_mesg + "Profit: MACD Pattern %s has the best performance at %s \n" % (
-        pattern, self._time_tag())
+            pattern, self._time_tag())
         self._write_log(self._log_mesg)
 
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_stock_records, period):
         total_pattern = len(MACD_patterns)
         print total_pattern
-        processors = 7
+        num_processor = 7
         index_beg = 0
-        index_end = total_pattern / 7
+        index_end = total_pattern / num_processor
         pattern_slices = []
 
-        for i in range(8):
-            if i != 7:
+        for i in range(num_processor + 1):
+            if i != num_processor:
                 print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
                 pattern_slices.append(MACD_patterns[index_beg:index_end])
                 index_beg = index_end
-                index_end = index_end + total_pattern / 7
+                index_end = index_end + total_pattern / num_processor
                 # else:
                 #    print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
                 #    pattern_slices.append(MACD_patterns[index_beg:])
                 # i += 1
 
         processes = []
-        for i in range(7):
+        for i in range(num_processor):
             p = mp.Process(target=self._MACD_ending_profits_calculation,
                            args=(df_stock_records, pattern_slices[i], period,))
             processes.append(p)
 
-        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=7)
+        C_Algorithems_BestPattern._processes_pool(self, tasks=processes, processors=num_processor)
 
     def _MACD_ending_profits_calculation(self, df_stock_close_prices, pattern_slices, period):
         # Fetch the lastest close_price and quote_time
@@ -625,23 +651,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 else:
                     MACD_trades.to_sql('tb_MACD_Trades', con=engine, if_exists='append', index=False)
 
-    def _MACD_best_pattern(self, period):
-        # For now, the best pattern is the pattern witch can make the highest ending profit.
-        if period == 'm30':
-            sql_select_ending_profits = (
-            'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades_HalfHour where DIF_window = 0 order by profit_rate DESC limit 1')
-        else:
-            sql_select_ending_profits = (
-                'select stock_code, MACD_pattern_number as best_pattern, profit_rate from tb_MACD_Trades where DIF_window = 0 order by profit_rate DESC limit 1')
-
-        df_MACD_ending_profits = pd.read_sql(sql_select_ending_profits, con=self._engine)
-        df_MACD_ending_profits['algorithem_name'] = 'MACD'
-        df_MACD_ending_profits['pattern_date'] = self._time_tag()
-        df_MACD_ending_profits.to_sql('tb_StockBestPatterns', con=self._engine, index=False, if_exists='append')
-        # gb_pattern = df_MACD_ending_profits.groupby('MACD_pattern_number')
-        print df_MACD_ending_profits
-
-
 class C_MACD_Signal_Calculation(C_BestMACDPattern):
     def __init__(self):
         C_BestMACDPattern.__init__(self)
@@ -655,7 +664,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         :param for_real: This is a production operation when = True
         :return:
         '''
-        print "Processing MACD Index"
+        #print "Processing MACD Index"
         # print "------------------------------------------------------ \n"
 
         widgets = ['MACD_Pattern_Trading Singal Calculation: ',
@@ -676,28 +685,33 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         df = df_stock_records
         # print df
         #  The first loop, go through every MACD Pattern in df_MACD_index
-        for j in progress(range(df_MACD_index.index.size)):
+        # MACD_Index_set = df_MACD_index.iterrows()
+        # pattern_idx, pattern_row = MACD_Index_set.next()
+        for pattern_idx, pattern_row in df_MACD_index.iterrows():
+            # for j in progress(range(df_MACD_index.index.size)):
+            '''
             # if loop_breaker > 1:
             #    break
             # loop_breaker += 1
+            '''
 
-            short_window = df_MACD_index.EMA_short_window[df_MACD_index.index[j]]
-            long_window = df_MACD_index.EMA_long_window[df_MACD_index.index[j]]
-            dif_window = df_MACD_index.DIF_window[df_MACD_index.index[j]]
-            MACD_Pattern_Number = df_MACD_index.index[j]
+            short_window = pattern_row.EMA_short_window
+            long_window = pattern_row.EMA_long_window
+            dif_window = pattern_row.DIF_window
+            MACD_Pattern_Number = pattern_idx
+            #print "Pattern %s is under processing "%MACD_Pattern_Number
 
-            num_records = len(df.index)
-            df['EMA_short'] = pd.ewma(df.close_price, span=short_window)
-            df['EMA_long'] = pd.ewma(df.close_price, span=long_window)
+            df['EMA_short'] = np.round(pd.ewma(df.close_price, span=short_window), 2)
+            df['EMA_long'] = np.round(pd.ewma(df.close_price, span=long_window),2 )
             df['DIF'] = df.EMA_short - df.EMA_long
-            df['DEA'] = pd.rolling_mean(df.DIF, window=dif_window)
+            df['DEA'] = np.round(pd.rolling_mean(df.DIF, window=dif_window))
             df['MACD'] = 2.0 * (df.DIF - df.DEA)
             df['Signal'] = 0
             df['EMA_short_window'] = short_window
             df['EMA_long_window'] = long_window
             df['DIF_window'] = dif_window
             df['MACD_Pattern_Number'] = MACD_Pattern_Number
-            df.round({'EMA_short': 2, 'EMA_long': 2, 'DIF': 2, 'DEA': 2, 'MACD': 2})
+            #df.round({'EMA_short': 2, 'EMA_long': 2, 'DIF': 2, 'DEA': 2, 'MACD': 2})
             index_date = df.index[0].date()
             tradable = True
             re_buy = False  # Evalution sign for the non-significant buy
@@ -705,8 +719,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             MACD_MAX_P = 0
             # re_sale = False # Set re-sale signal for T+1 policy
             MACD_AVG = self._Cal_MACD_AVG(df.MACD)
-            aggresive_buy = False
-
+            aggresive_buy = True
             row_set = df.iterrows()
             last_idx, last = row_set.next()
 
@@ -775,12 +788,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 if for_real:
                     # df_save.iloc[0:1, lambda df:['EMA_short']] = 999
                     df_save.EMA_short[-1] = 999
-                    # print df_save
-                    # df_save.set_value(0)
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
                 # df.to_csv('/home/marshao/DataMiningProjects/Output/df1.csv')
-                # print j
-                # print df_save.count()
         return df
 
     def _MACD_signal_calculation_cross(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False):
@@ -828,43 +837,6 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             index_date = df.index[0].date()
             tradable = True
 
-            '''
-            i = 0
-            while i < num_records:
-                # for index in df.index:
-
-                #Since T+1 policy, There trade should be disabled if there is a buy happend in each trading day.
-                #If the index_date is not equal to record date, means diffrent day, set the tradable = True
-
-                if i > 0:
-                    if index_date != df.index[i].date():
-                        tradable = True
-                        index_date = df.index[i].date()
-
-                    if ((df.DIF[df.index[i]] > df.DEA[df.index[i]]) & (
-                                df.DIF[df.index[i - 1]] <= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = 1
-                            tradable = False
-                        else:
-                            pass
-                    elif ((df.DIF[df.index[i]] < df.DEA[df.index[i]]) &
-                              (df.DIF[df.index[i - 1]] >= df.DEA[df.index[i - 1]])):
-                        if tradable:
-                            df.Signal[df.index[i]] = -1
-                        else:
-                            pass
-                    else:
-                        pass
-                        # df.drop(df.index[i], axis = 0, inplace = True)
-                else:
-                    pass
-                print "Last Index date is %s"%df.index[i-1]
-                print "Row index date is %s"%df.index[i]
-                print "Row signal is %s"%df.Signal[i]
-                i += 1
-
-            '''
             row_set = df.iterrows()
             last_idx, last = row_set.next()
 
@@ -1020,8 +992,9 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             theta = 0.5
         if step is None:
             step = 0.02
-        MACD_AVG = theta * (round(np.sum(np.abs(MACD_se)) / MACD_se.size, 5))
-        MACD_AVG_percent = MACD_se[MACD_se > MACD_AVG].count() / float(MACD_se.count())
+        # print MACD_se
+        MACD_AVG = theta * (round(np.sum(np.abs(MACD_se)) / MACD_se.count(), 5))
+        MACD_AVG_percent = MACD_se[MACD_se > MACD_AVG].count() / round(MACD_se.count(),2)
         if MACD_AVG_percent < quo:
             while MACD_AVG_percent < quo:
                 theta -= step
@@ -1301,8 +1274,9 @@ def main():
 
 
     MACDPattern = C_BestMACDPattern()
+    MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
-    MACDPattern._MACD_ending_profits(period='m30', stock_code='sz002310')
+    MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
     MACDPattern._MACD_best_pattern(period='m30')
     #MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
 
