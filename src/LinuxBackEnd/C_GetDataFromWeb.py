@@ -657,13 +657,17 @@ class C_GettingData:
 
         scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
+        # scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='31/30',
+                            args=['m30'])
         scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
         # scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
-        scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
+        # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
+        scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='32/30',
+                            args=[period, stock_code])
         #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
         scheduler_1.start()
-        scheduler_1.print_jobs()
+        #scheduler_1.print_jobs()
 
         # The switch of scheduler_1
         while True:
@@ -680,6 +684,7 @@ class C_GettingData:
         if (current_time > self._start_morning and current_time < self._end_morning) or (
                         current_time > self._start_afternoon and current_time < self._end_afternoon):
             scheduler.resume()
+            scheduler.print_jobs()
             print "scheduler back to work"
             #time.sleep(600)
         else:
@@ -689,7 +694,7 @@ class C_GettingData:
             ed_time = datetime.time(21, 15, 0)
             if (current_time > st_time) and (current_time < ed_time):
                 best_pattern_daily_calculate()
-        time.sleep(600)
+        time.sleep(60)
 
 
     def _data_service(self, period):
@@ -707,7 +712,7 @@ class C_GettingData:
 
 def main():
     pp = C_GettingData()
-    # pp.job_schedule()
+    pp.job_schedule()
     #pp.get_real_time_data('sina', 'sz300226')
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
@@ -715,7 +720,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sz002310', period='m30')
+    #pp.get_data_qq(stock_code='sz002310', period='m30')
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
