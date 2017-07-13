@@ -67,7 +67,7 @@ class C_GettingData:
         self._start_morning = datetime.time(9, 30, 0)
         self._end_morning = datetime.time(11, 30, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
-        self._end_afternoon = datetime.time(15, 2, 0)
+        self._end_afternoon = datetime.time(15, 10, 0)
         self._fun = self._empty_fun
 
 
