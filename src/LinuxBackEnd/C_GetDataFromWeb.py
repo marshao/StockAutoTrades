@@ -65,9 +65,9 @@ class C_GettingData:
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
         self._start_morning = datetime.time(9, 30, 0)
-        self._end_morning = datetime.time(11, 42, 0)
+        self._end_morning = datetime.time(11, 30, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
-        self._end_afternoon = datetime.time(15, 12, 0)
+        self._end_afternoon = datetime.time(15, 2, 0)
         self._fun = self._empty_fun
 
 
@@ -655,15 +655,21 @@ class C_GettingData:
         # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
         # scheduler_1.add_job(self._fun, 'interval', seconds=300, args=['m5'])
 
-        scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
+        # scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='35/15',
+                            args=['m1'])
+        # scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='37/15',
+                            args=['m1'])
         # scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='31/30',
                             args=['m30'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
+        # scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='40/30',
+                            args=['m60'])
         # scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
         # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
-        scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='32/30',
+        scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='33/30',
                             args=[period, stock_code])
         #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
         scheduler_1.start()
