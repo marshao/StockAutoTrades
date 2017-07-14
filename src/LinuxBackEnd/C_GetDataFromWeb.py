@@ -65,7 +65,7 @@ class C_GettingData:
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
         self._start_morning = datetime.time(9, 30, 0)
-        self._end_morning = datetime.time(11, 30, 0)
+        self._end_morning = datetime.time(11, 32, 0)
         self._start_afternoon = datetime.time(13, 0, 0)
         self._end_afternoon = datetime.time(15, 10, 0)
         self._fun = self._empty_fun
