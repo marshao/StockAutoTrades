@@ -410,9 +410,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
         df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
-                                                                             to_DB=True, for_real=True)[
-                     -1:]
+                                                                             to_DB=True, for_real=True)[0:1]
         # return  df_signals
+        print df_signals
         signal = df_signals.Signal[0]
         # signal = -1  # This line need to be removed
 
@@ -1295,10 +1295,10 @@ def main():
 
     MACDPattern = C_BestMACDPattern()
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
-    MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
-    MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
-    MACDPattern._MACD_best_pattern(period='m30')
-    #MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
+    # MACDPattern._MACD_trading_signals(period="m30", stock_code="sz002310")
+    # MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
+    # MACDPattern._MACD_best_pattern(period='m30')
+    MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310')
 
 if __name__ == '__main__':
     main()
