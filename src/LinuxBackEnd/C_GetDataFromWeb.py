@@ -465,7 +465,7 @@ class C_GettingData:
                     order_by(tb.c.quote_time.desc()).limit(1)
                 data = self._x_min_data_DF
                 # Insert opening prices for x_min data except m1
-                data = self._insert_opening_record(data)
+                #data = self._insert_opening_record(data)
             else:# Process 1 min data
                 tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
                 s = select([tb.c.quote_time]). \
@@ -726,7 +726,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sz002310', period='m30')
+    pp.get_data_qq(stock_code='sz002310', period='m30',q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
