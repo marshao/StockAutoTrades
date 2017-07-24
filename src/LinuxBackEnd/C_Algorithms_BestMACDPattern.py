@@ -324,14 +324,16 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             MACD_Ending_Profit_Cal._MACD_ending_profits(period=period, stock_code=stock_code)
             self._save_MACD_best_pattern(period=period)
 
-
-    def apply_best_MACD_pattern_to_data(self, period, stock_code):
+    def apply_best_MACD_pattern_to_data(self, period, stock_code, quo=None, ga=None):
         done = False
+        if quo is None:
+            quo = 0.7
+        if ga is None:
+            ga = 0.3
         # Initialize Signal Calculation
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # Get Best Pattern Number from DB
         pattern_number = self._get_best_pattern(stock_code)
-        #pattern_number = 442
         # Use Best Pattern Number to retrieve EMA_long, short and DIF window
         sql_select_MACD_pattern = ("select * from tb_MACDIndex where id_tb_MACDIndex = %s")
         df_MACD_index = pd.read_sql(sql_select_MACD_pattern, params=(pattern_number,), con=self._engine,
@@ -351,19 +353,19 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
         df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
-                                                                             to_DB=True, for_real=True)[0:1]
+                                                                             to_DB=True, for_real=True, quo=quo, ga=ga)[
+                     0:1]
         # return  df_signals
         #print df_signals
         signal = df_signals.Signal[0]
         # signal = -1  # This line need to be removed
-
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
         self._log_mesg = self._log_mesg + "Step1: Get Trading Signal at %s \n" % self._time_tag()
         self._log_mesg = self._log_mesg + \
-                         "      MACD Pattern %s was applied on stock %s, signal %s was got! at %s \n" % (
-                             pattern_number, stock_code, signal, self._time_tag())
+                         "      MACD Pattern %s with quo=%s and ga = %s was applied on stock %s, signal %s was got! at %s \n" % (
+                             pattern_number, quo, ga, stock_code, signal, self._time_tag())
 
         if signal != 0:  # 3 need to be change to 0
             # Get Stock Avaliable Informatoin
@@ -415,8 +417,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         result = con.execute(sql_select_best_pattern, stock_code).fetchall()
         pattern = result[0][0]
         profit = result[0][1]
-        result2 = con.execute(sql_select_best_pattern_parameters, pattern)
-        parameters = result2.fetchall()
+        parameters = con.execute(sql_select_best_pattern_parameters, pattern).fetchall()
         self._log_mesg = self._log_mesg + "     At %s, pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
         parameters[0][8], pattern, parameters[0][14], profit, self._time_tag())
         self._write_log(self._log_mesg)
@@ -840,6 +841,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                     df_save.EMA_short[-1] = 999
                 #print df_save
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
+                engine.dispose()
                 # df.to_csv('/home/marshao/DataMiningProjects/Output/df1.csv')
         return df
 
@@ -1333,15 +1335,15 @@ def main():
     MACDPattern = C_BestMACDPattern()
     MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
-    # MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=0.7, ga=0.45)
-    # MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
+    MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=0.7, ga=0.3)
+    MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern._save_MACD_best_pattern(period='m30')
     MACDPattern._get_best_pattern('sz002310')
-
+    '''
     # gama is parameter to MACD(MAX-P) when saleing stock
+    # Using loops to find out the best MACD parameters.
     gama = [0.8, 0.65, 0.5, 0.4, 0.45, 0.3]
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
-    '''
     for each_quo in quo:
         for each_ga in gama:
             MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo= each_quo, ga=each_ga)

@@ -534,8 +534,7 @@ class C_GettingData:
                 pass
 
         self._log_mesg = self._log_mesg + "At %s Unwanted: Unwanted rows for Stock %s period %s data has been removed. \n" % (
-        self._time_tag(),
-        stock_code, period)
+        self._time_tag(),stock_code, period)
         self._write_log(self._log_mesg)
         print "Unwanted Min Records have been removed."
         return df
