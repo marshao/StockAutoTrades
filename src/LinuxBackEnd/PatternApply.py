@@ -11,7 +11,7 @@ def apply_pattern(period=None, stock_code=None):
         stock_code = 'sz002310'
     bMACD = C_BestMACDPattern()
     # for each_stock_code in stock_codes:
-    bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=stock_code, quo=0.7, ga=0.3)
+    bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=stock_code, quo=0.7, ga=0.3, beta=0.2)
 
 
 
