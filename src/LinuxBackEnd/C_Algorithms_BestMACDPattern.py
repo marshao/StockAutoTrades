@@ -355,9 +355,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
         df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
-                                                                             to_DB=True, for_real=True, quo=quo, ga=ga, beta=beta)[
-                     0:1]
-        # return  df_signals
+                                                                             to_DB=True, for_real=True, quo=quo, ga=ga,
+                                                                             beta=beta).tail(1)
         #print df_signals
         signal = df_signals.Signal[0]
         # signal = -1  # This line need to be removed
@@ -1446,7 +1445,7 @@ def cal_specific_pattern():
         for each_ga in gama:
             for each_beta in beta:
                 MACD_Trading_Signal_Cal._single_pattern_signal_cal(MACD_pattern=pattern_signal, period="m30", stock_code="sz002310", quo=each_quo, ga=each_ga, beta=each_beta)
-                MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30', stock_code='sz002310')
+                # MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30', stock_code='sz002310')
                 # MACDPattern._save_MACD_best_pattern(period='m30')
                 MACDPattern._get_best_pattern('sz002310')
 
