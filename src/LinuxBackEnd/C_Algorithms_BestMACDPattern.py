@@ -656,9 +656,9 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         # use MACD_Pattern_lists to calculate all trading signals of all patterns
         # Calculate signals for 30min data
         if quo is None:
-            quo = 0.8
+            quo = 0.7
         if ga is None:
-            ga = 0.45
+            ga = 0.3
         if beta is None:
             beta = 0.2
         df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
@@ -669,9 +669,9 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period, quo=None, ga=None, beta=None):
         if quo is None:
-            quo = 0.8
+            quo = 0.7
         if ga is None:
-            ga = 0.45
+            ga = 0.3
         if beta is None:
             beta = 0.2
         print "Jumped into Multiprocessing "
@@ -763,9 +763,9 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         #print "Processing MACD Index"
         # print "------------------------------------------------------ \n"
         if quo is None:
-            quo = 0.8
+            quo = 0.7
         if ga is None:
-            ga = 0.45
+            ga = 0.3
         if beta is None:
             beta = 0.2
         widgets = ['MACD_Pattern_Trading Singal Calculation: ',
