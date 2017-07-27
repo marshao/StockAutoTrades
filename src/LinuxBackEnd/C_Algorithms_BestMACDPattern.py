@@ -423,6 +423,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._log_mesg = self._log_mesg + "     At %s, pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
         parameters[0][8], pattern, parameters[0][14], profit, self._time_tag())
         self._write_log(self._log_mesg)
+        # print pattern
         return pattern
 
     def _save_MACD_best_pattern(self, period):
@@ -550,14 +551,14 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
             # if loop_breaker==2:break
             # else: loop_breaker += 1
             stockVolume_Begin = 0
-            cash_Begin = 120000.00
-            #cash_Begin = 60000.00
+            # cash_Begin = 120000.00
+            cash_Begin = 60000.00
             tradeVolume = 3000
             cash_Current = cash_Begin
             stockVolume_Current = stockVolume_Begin
             # Mulitple continue buying is allowed when up_limit > 2*tradeVolumn
-            stockVolume_up_limit = 6500
-            #stockVolume_up_limit = 3500
+            # stockVolume_up_limit = 6500
+            stockVolume_up_limit = 3500
             totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
             # The signal order must be from the oldest to the newest
             sql_fetch_signals = (
@@ -673,7 +674,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         if ga is None:
             ga = 0.45
         if beta is None:
-            beta = -0.2
+            beta = 0.2
         print "Jumped into Multiprocessing "
         # Initialize Signal Calculation
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
@@ -822,8 +823,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             # MACD Average value calculation
             MACD_AVG = self._Cal_MACD_AVG(df.MACD, quo=quo)
             # This is the signal to switch the Agressive buy on or off
-            aggresive_buy = True
-            #aggresive_buy = False
+            # aggresive_buy = True
+            aggresive_buy = False
             #Iter rows of stock records
             row_set = df.iterrows()
             last_idx, last = row_set.next()
@@ -1402,15 +1403,15 @@ def main():
     # SARPattern.SAR_ending_profit_all_patterns('sz300226')
 
 
-    #MACDPattern = C_BestMACDPattern()
+    MACDPattern = C_BestMACDPattern()
     #MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
     #MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     #MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=0.7, ga=0.3)
     #MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern._save_MACD_best_pattern(period='m30')
-    #MACDPattern._get_best_pattern('sz002310')
+    MACDPattern._get_best_pattern('sz002310')
     #cal_specific_pattern()
-    caL_all_pattern()
+    #caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock
@@ -1436,8 +1437,8 @@ def cal_specific_pattern():
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     gama = [0.3]
     quo = [0.7]
-    beta = [0.1, 0.15, 0.2, 0.25,  0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
-    beta = [0.85]
+    # beta = [0.1, 0.15, 0.2, 0.25,  0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    beta = [0.6]
     pattern_signal = ["229",]
     pattern_profit = [["229"]]
     for each_quo in quo:
