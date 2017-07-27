@@ -343,7 +343,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         # Fetch corresponsding stock records
         sql_fetch_min_records = (
             # "select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 550")
-            "select * from (select stock_code, close_price, quote_time from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 555) as tbl order by quote_time ASC")
+            "select * from (select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 555) as tbl order by quote_time ASC")
         sql_fetch_period_records = (
             "select * from tb_StockXPeriodRecords where period = %s and stock_code = %s")
         if period == 'day' or period == 'week':
@@ -1409,7 +1409,8 @@ def main():
     #MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=0.7, ga=0.3)
     #MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern._save_MACD_best_pattern(period='m30')
-    MACDPattern._get_best_pattern('sz002310')
+    # MACDPattern._get_best_pattern('sz002310')
+    MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #cal_specific_pattern()
     #caL_all_pattern()
 
