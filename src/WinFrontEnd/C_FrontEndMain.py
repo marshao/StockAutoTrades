@@ -20,6 +20,7 @@ class C_FrontEndSockets:
         s.bind((host, port))
         s.listen(5)
         print "Port Listening is started"
+        # Can be invoked 30 secs before applying the pattern calculation, and make the listen survive for 120 secs.
         while True:
             c, addr = s.accept()
             print 'Got connection from', addr
