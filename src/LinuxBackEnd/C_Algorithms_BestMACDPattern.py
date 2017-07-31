@@ -51,6 +51,8 @@ class C_Algorithems_BestPattern(object):
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
+        self._trading_volume = 3000
+        self._stock_inhand_uplimit = 3500
         self._trade_history_column = ['stock_code', 'trade_type', 'trade_volumn', 'trade_price', 'trade_time',
                                       'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period',
                                       'trade_result']
@@ -214,9 +216,9 @@ class C_Algorithems_BestPattern(object):
         stock_avaliable = df_stock_infor.stockAvaliable[0]
         current_value = df_stock_infor.currentValue[0]
         trade_volumn = 0
-        volumn_up_limit = 1100
+        volumn_up_limit = self._stock_inhand_uplimit
         volumn_down_limit = 500
-        oneshoot = 500
+        oneshoot = self._trading_volume
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
         done = False
@@ -359,7 +361,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                                                                              beta=beta).tail(1)
         #print df_signals
         signal = df_signals.Signal[0]
-        # signal = -1  # This line need to be removed
+        signal = 1  # This line need to be removed
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
@@ -552,12 +554,12 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
             stockVolume_Begin = 0
             # cash_Begin = 120000.00
             cash_Begin = 60000.00
-            tradeVolume = 3000
+            tradeVolume = self._trading_volume
             cash_Current = cash_Begin
             stockVolume_Current = stockVolume_Begin
             # Mulitple continue buying is allowed when up_limit > 2*tradeVolumn
             # stockVolume_up_limit = 6500
-            stockVolume_up_limit = 3500
+            stockVolume_up_limit = self._stock_inhand_uplimit
             totalValue_Begin = (stockVolume_Begin * df_stock_close_prices.close_price[0] + cash_Begin)
             # The signal order must be from the oldest to the newest
             sql_fetch_signals = (
