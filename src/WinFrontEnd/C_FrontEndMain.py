@@ -6,13 +6,14 @@ from C_StockWindowControl import *
 from apscheduler.schedulers.background import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+import logging
 
 class C_FrontEndSockets:
     def __init__(self):
         self._swc = C_StockWindowControl()
         self._swc._get_handles()
         self._swc._get_various_data()
-        pass
+        logging.basicConfig()
 
     def Tasks(self):
         # scheduler = BlockingScheduler()
