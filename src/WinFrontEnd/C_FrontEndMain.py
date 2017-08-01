@@ -60,11 +60,11 @@ class C_FrontEndSockets:
             if current - last > 30:
                 print "listening 2"
                 break
-
-            c, addr = s.accept()
             print "listening 3"
-            mesg = c.recv(1024)
+            c, addr = s.accept()
             print "listening 4"
+            mesg = c.recv(1024)
+            print "listening 5"
             back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
             c.close()
