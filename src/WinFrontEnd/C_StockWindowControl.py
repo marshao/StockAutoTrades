@@ -702,6 +702,8 @@ class C_StockWindowControl:
         total_asset.append(self._asset_infor['totalAsset'])
         date_time = self._time_tag()
         total_asset.append(date_time)
+        # sleep(1)
+        self._buy_page()
 
         # write stock asset information into DB.
         df = pd.DataFrame(columns=['cash_avaliable', 'stock_value', 'total_asset', 'date_time'])
