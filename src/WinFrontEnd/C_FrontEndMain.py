@@ -5,6 +5,7 @@ import socket, time, datetime, random
 from C_StockWindowControl import *
 from apscheduler.schedulers.background import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 
 class C_FrontEndSockets:
     def __init__(self):
@@ -15,7 +16,10 @@ class C_FrontEndSockets:
 
     def Tasks(self):
         # scheduler = BlockingScheduler()
-        scheduler = BackgroundScheduler()
+        executors = {'default': ThreadPoolExecutor(10),
+                     'processpool': ProcessPoolExecutor(3)}
+        job_defaults = {'coalesce': False, 'max_instances': 3}
+        scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
         # scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
         #                  id='SocketListen')
         scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
