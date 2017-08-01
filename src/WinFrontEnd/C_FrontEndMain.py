@@ -20,7 +20,7 @@ class C_FrontEndSockets:
         #                  id='SocketListen')
         scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
                           id='SocketListen')
-        scheduler.add_job(self._refresh_window_control, 'interval', seconds='20', id='RefreshWindow')
+        scheduler.add_job(self._refresh_window_control, 'interval', seconds=20, id='RefreshWindow')
         scheduler.start()
         scheduler.print_jobs()
         while True:
