@@ -42,7 +42,6 @@ class C_FrontEndSockets:
         :return:
         '''
         # self.__init__()
-        print "listen started -----------------------------------------------"
         # swc = C_StockWindowControl()
         # swc._get_handles()
         # swc._get_various_data()
@@ -53,23 +52,14 @@ class C_FrontEndSockets:
         port = 32768
         s.bind((host, port))
         s.listen(5)
-        print "Port Listening is started"
         while alive:
-            print "listening 1"
-            current = time.time()
-            if current - last > 30:
-                print "listening 2"
-                break
-            print "listening 3"
+            # 进入监听模式,只有收到数据才会进行下一步
             c, addr = s.accept()
-            print "listening 4"
             mesg = c.recv(1024)
-            print "listening 5"
             back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
             c.close()
         s.close()
-        print "Listen finished -----------------------------------------------"
 
     def _prcess_message(self, from_mesg):
         back_mesg = ''
