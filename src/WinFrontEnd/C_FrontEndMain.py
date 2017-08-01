@@ -86,13 +86,7 @@ class C_FrontEndSockets:
 def main():
     soc = C_FrontEndSockets()
     soc._listen()
-    #soc._listen()
-    #refresh_window = Timer(20, soc._refresh_window_control())
-    #port_listen = Thread(target=soc._listen())
-    #refresh_window.start()
-    #port_listen.start()
-    #refresh_window.join()
-    #port_listen.join()
+
 
 if __name__ == '__main__':
     main()

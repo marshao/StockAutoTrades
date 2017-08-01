@@ -8,7 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
 
-class C_FrontEndSockets:
+
+class C_FrontEndRefresh:
     def __init__(self):
         self._swc = C_StockWindowControl()
         self._swc._get_handles()
@@ -80,7 +81,7 @@ class C_FrontEndSockets:
 
 
 def main():
-    soc = C_FrontEndSockets()
+    soc = C_FrontEndRefresh()
     soc.Tasks()
 
 
