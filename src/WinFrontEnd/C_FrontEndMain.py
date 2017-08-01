@@ -20,8 +20,8 @@ class C_FrontEndSockets:
         executors = {'default': ThreadPoolExecutor(10),
                      'processpool': ProcessPoolExecutor(3)}
         job_defaults = {'coalesce': False, 'max_instances': 3}
-        # scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
-        scheduler = BackgroundScheduler()
+        scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
+        # scheduler = BackgroundScheduler()
         # scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
         #                  id='SocketListen')
         scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
@@ -55,15 +55,16 @@ class C_FrontEndSockets:
         s.listen(5)
         print "Port Listening is started"
         while alive:
+            print "listening 1"
             current = time.time()
-            if current - last > 30:
-                alive = False
+            if current - last > 30: break
             c, addr = s.accept()
             mesg = c.recv(1024)
             back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
             c.close()
-            print "listening"
+            print "listening 2"
+        s.close()
         print "Listen finished -----------------------------------------------"
 
     def _prcess_message(self, from_mesg):
