@@ -20,12 +20,13 @@ class C_FrontEndSockets:
         executors = {'default': ThreadPoolExecutor(10),
                      'processpool': ProcessPoolExecutor(3)}
         job_defaults = {'coalesce': False, 'max_instances': 3}
-        scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
-        # scheduler = BackgroundScheduler()
+        # scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
+        scheduler = BackgroundScheduler()
         # scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
         #                  id='SocketListen')
-        scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
-                          id='SocketListen')
+        self._listen()
+        scheduler.add_job(self.__init__, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
+                          id='PlatformInitiation')
         scheduler.add_job(self._refresh_window_control, 'interval', seconds=20, id='RefreshWindow')
         scheduler.start()
         scheduler.print_jobs()
@@ -36,16 +37,9 @@ class C_FrontEndSockets:
 
     def _listen(self):
         '''
-        The port listening function will be activated 30 seconds before the pattern apply. The port will stay alive for
-        120 seconds.
-        The port listening job will also reset the StockWindowsControl
+        This is the port listening function, once it goes into listen mode, it will not exit unless meet a exception
         :return:
         '''
-        # self.__init__()
-        # swc = C_StockWindowControl()
-        # swc._get_handles()
-        # swc._get_various_data()
-        last = time.time()
         alive = True
         s = socket.socket()
         host = 'Bei1Python'
