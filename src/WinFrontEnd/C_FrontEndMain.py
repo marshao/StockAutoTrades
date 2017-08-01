@@ -57,13 +57,14 @@ class C_FrontEndSockets:
         while alive:
             print "listening 1"
             current = time.time()
-            if current - last > 30: break
+            if current - last > 30:
+                print "listening 2"
+                break
+            print "listening 3"
             c, addr = s.accept()
             mesg = c.recv(1024)
-            print "listening 2"
             back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
-            print "listening 3"
             c.close()
             print "listening 4"
         s.close()
