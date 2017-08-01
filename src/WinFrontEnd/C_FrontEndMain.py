@@ -42,9 +42,9 @@ class C_FrontEndSockets:
         '''
         # self.__init__()
         print "listen started -----------------------------------------------"
-        swc = C_StockWindowControl()
-        swc._get_handles()
-        swc._get_various_data()
+        # swc = C_StockWindowControl()
+        # swc._get_handles()
+        # swc._get_various_data()
         last = time.time()
         alive = True
         s = socket.socket()
@@ -59,26 +59,26 @@ class C_FrontEndSockets:
                 alive = False
             c, addr = s.accept()
             mesg = c.recv(1024)
-            back_mesg = self._prcess_message(mesg, swc)
+            back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
             c.close()
             print "listening"
         print "Listen finished -----------------------------------------------"
 
-    def _prcess_message(self, from_mesg, swc):
+    def _prcess_message(self, from_mesg):
         back_mesg = ''
         print from_mesg
         items = from_mesg.split()
         if items[0] == '5':
             print "go to get cash avalible information"
-            cash_avaliable = swc.update_asset()
+            cash_avaliable = self._swc.update_asset()
             if cash_avaliable != '':
                 back_mesg = '5.1 ' + cash_avaliable
             else:
                 back_mesg = '5.2'
         elif items[0] == '1':
             print 'Go to get stock avalible information'
-            done = swc._save_stock_infor_to_file()
+            done = self._swc._save_stock_infor_to_file()
             if done:
                 back_mesg = '1.1'
             else:
@@ -87,7 +87,7 @@ class C_FrontEndSockets:
             print "issue a buy command"
             stockTrades = from_mesg.split()
             print "stockTrades is %s" % stockTrades
-            done = swc.buy_stock(stockTrades)
+            done = self._swc.buy_stock(stockTrades)
             # done = True
             if done:
                 back_mesg = '2.1'
@@ -96,7 +96,7 @@ class C_FrontEndSockets:
         elif items[0] == '3':
             print "issue a sales command"
             stockTrades = from_mesg.split()
-            done = swc.sale_stock(stockTrades)
+            done = self._swc.sale_stock(stockTrades)
             #done = True
             if done:
                 back_mesg = '3.1'
