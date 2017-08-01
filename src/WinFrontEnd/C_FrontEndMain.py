@@ -40,16 +40,17 @@ class C_FrontEndSockets:
         swc._get_handles()
         swc._get_various_data()
         last = time.time()
-        live = True
+        alive = True
         s = socket.socket()
         host = 'Bei1Python'
         port = 32768
         s.bind((host, port))
         s.listen(5)
         print "Port Listening is started"
-        while live:
+        while alive:
             current = time.time()
-            if current - last > 30: live = False
+            if current - last > 30:
+                alive = False
             c, addr = s.accept()
             print 'Got connection from', addr
             mesg = c.recv(1024)
