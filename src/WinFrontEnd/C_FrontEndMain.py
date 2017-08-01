@@ -3,6 +3,7 @@
 
 import socket, time, datetime, random
 from C_StockWindowControl import *
+from apscheduler.schedulers.background import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 
 class C_FrontEndSockets:
@@ -10,14 +11,16 @@ class C_FrontEndSockets:
         self._swc = C_StockWindowControl()
         self._swc._get_handles()
         self._swc._get_various_data()
+        pass
 
     def Tasks(self):
+        # scheduler = BlockingScheduler()
         scheduler = BackgroundScheduler()
         # scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
         #                  id='SocketListen')
         scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
                           id='SocketListen')
-        # scheduler.add_job(self._refresh_window_control, 'interval', seconds='20', id='RefreshWindow')
+        scheduler.add_job(self._refresh_window_control, 'interval', seconds='20', id='RefreshWindow')
         scheduler.start()
         scheduler.print_jobs()
         while True:
@@ -33,6 +36,9 @@ class C_FrontEndSockets:
         :return:
         '''
         # self.__init__()
+        swc = C_StockWindowControl()
+        swc._get_handles()
+        swc._get_various_data()
         last = time.time()
         live = True
         s = socket.socket()
@@ -42,29 +48,31 @@ class C_FrontEndSockets:
         s.listen(5)
         print "Port Listening is started"
         while live:
-            # current = time.time()
-            #if current - last > 120: live = False
+            current = time.time()
+            if current - last > 30: live = False
             c, addr = s.accept()
             print 'Got connection from', addr
             mesg = c.recv(1024)
-            back_mesg = self._prcess_message(mesg)
+            back_mesg = self._prcess_message(mesg, swc)
             c.send(back_mesg)
             c.close()
+            print "listening"
+            sleep(1)
 
-    def _prcess_message(self, from_mesg):
+    def _prcess_message(self, from_mesg, swc):
         back_mesg = ''
         print from_mesg
         items = from_mesg.split()
         if items[0] == '5':
             print "go to get cash avalible information"
-            cash_avaliable = self._swc.update_asset()
+            cash_avaliable = swc.update_asset()
             if cash_avaliable != '':
                 back_mesg = '5.1 ' + cash_avaliable
             else:
                 back_mesg = '5.2'
         elif items[0] == '1':
             print 'Go to get stock avalible information'
-            done = self._swc._save_stock_infor_to_file()
+            done = swc._save_stock_infor_to_file()
             if done:
                 back_mesg = '1.1'
             else:
@@ -73,7 +81,7 @@ class C_FrontEndSockets:
             print "issue a buy command"
             stockTrades = from_mesg.split()
             print "stockTrades is %s" % stockTrades
-            done = self._swc.buy_stock(stockTrades)
+            done = swc.buy_stock(stockTrades)
             # done = True
             if done:
                 back_mesg = '2.1'
@@ -82,7 +90,7 @@ class C_FrontEndSockets:
         elif items[0] == '3':
             print "issue a sales command"
             stockTrades = from_mesg.split()
-            done = self._swc.sale_stock(stockTrades)
+            done = swc.sale_stock(stockTrades)
             #done = True
             if done:
                 back_mesg = '3.1'
@@ -110,7 +118,7 @@ class C_FrontEndSockets:
         last = time.time()
         # cx = 60
         # cy = 327
-        # '''
+        '''
         while True:
             current = time.time()
             if current - last > 20:
@@ -129,7 +137,7 @@ class C_FrontEndSockets:
         win32api.keybd_event(39, 0, 0, 0)
         win32api.keybd_event(39, 0, win32con.KEYEVENTF_KEYUP, 0)
         print "Trading software is refreshed and actived."
-        '''
+
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -140,8 +148,8 @@ class C_FrontEndSockets:
 
 def main():
     soc = C_FrontEndSockets()
-    #soc.Tasks()
-    soc._listen()
+    soc.Tasks()
+    #soc._listen()
     #refresh_window = Timer(20, soc._refresh_window_control())
     #port_listen = Thread(target=soc._listen())
     #refresh_window.start()
