@@ -27,7 +27,7 @@ class C_FrontEndSockets:
                 win32api.keybd_event(39, 0, win32con.KEYEVENTF_KEYUP, 0)
                 last = current
                 print "Trading software is refreshed and actived."
-
+            sleep(3)
 
 
 def main():

@@ -1,10 +1,9 @@
 #!/usr/local/bin/python
 # coding: utf-8
 
-import socket, time, datetime
+import socket, time, datetime, random
 from C_StockWindowControl import *
-from threading import Thread, Timer
-
+from apscheduler.schedulers.background import BackgroundScheduler
 
 class C_FrontEndSockets:
     def __init__(self):
@@ -12,16 +11,39 @@ class C_FrontEndSockets:
         self._swc._get_handles()
         self._swc._get_various_data()
 
+    def Tasks(self):
+        scheduler = BackgroundScheduler()
+        # scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
+        #                  id='SocketListen')
+        scheduler.add_job(self._listen, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/1',
+                          id='SocketListen')
+        # scheduler.add_job(self._refresh_window_control, 'interval', seconds='20', id='RefreshWindow')
+        scheduler.start()
+        scheduler.print_jobs()
+        while True:
+            scheduler.print_jobs()
+            sleep(20)
+            # self._refresh_window_control()
 
     def _listen(self):
+        '''
+        The port listening function will be activated 30 seconds before the pattern apply. The port will stay alive for
+        120 seconds.
+        The port listening job will also reset the StockWindowsControl
+        :return:
+        '''
+        # self.__init__()
+        last = time.time()
+        live = True
         s = socket.socket()
         host = 'Bei1Python'
         port = 32768
         s.bind((host, port))
         s.listen(5)
         print "Port Listening is started"
-        # Can be invoked 30 secs before applying the pattern calculation, and make the listen survive for 120 secs.
-        while True:
+        while live:
+            # current = time.time()
+            #if current - last > 120: live = False
             c, addr = s.accept()
             print 'Got connection from', addr
             mesg = c.recv(1024)
@@ -71,7 +93,7 @@ class C_FrontEndSockets:
         print back_mesg + " at " + self._time_tag()
         return back_mesg
 
-    def _refresh_window_control(self):
+    def _refresh_window_control_old(self):
         print "refresh started"
         last = time.time()
         while True:
@@ -83,6 +105,32 @@ class C_FrontEndSockets:
                 last = current
                 print "Trading software is refreshed and actived."
 
+    def _refresh_window_control(self):
+        print "refresh started"
+        last = time.time()
+        # cx = 60
+        # cy = 327
+        # '''
+        while True:
+            current = time.time()
+            if current - last > 20:
+                # cx = cx + random.randint(50,500)
+                # cy = cy + random.randint(50,500)
+                # win32api.SetCursorPos((cx, cy))
+                win32api.keybd_event(39, 0, 0, 0)
+                win32api.keybd_event(39, 0, win32con.KEYEVENTF_KEYUP, 0)
+                last = current
+                print "Trading software is refreshed and actived."
+            sleep(3)
+        '''
+        #cx = cx + random.randint(50,500)
+        #cy = cy + random.randint(50,500)
+        #win32api.SetCursorPos((cx, cy))
+        win32api.keybd_event(39, 0, 0, 0)
+        win32api.keybd_event(39, 0, win32con.KEYEVENTF_KEYUP, 0)
+        print "Trading software is refreshed and actived."
+        '''
+
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
         time_stamp = datetime.datetime.now()
@@ -92,6 +140,7 @@ class C_FrontEndSockets:
 
 def main():
     soc = C_FrontEndSockets()
+    #soc.Tasks()
     soc._listen()
     #refresh_window = Timer(20, soc._refresh_window_control())
     #port_listen = Thread(target=soc._listen())
