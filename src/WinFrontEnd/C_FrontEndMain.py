@@ -40,6 +40,7 @@ class C_FrontEndSockets:
         :return:
         '''
         # self.__init__()
+        print "listen started -----------------------------------------------"
         swc = C_StockWindowControl()
         swc._get_handles()
         swc._get_various_data()
@@ -56,13 +57,12 @@ class C_FrontEndSockets:
             if current - last > 30:
                 alive = False
             c, addr = s.accept()
-            print 'Got connection from', addr
             mesg = c.recv(1024)
             back_mesg = self._prcess_message(mesg, swc)
             c.send(back_mesg)
             c.close()
             print "listening"
-            sleep(1)
+        print "Listen finished -----------------------------------------------"
 
     def _prcess_message(self, from_mesg, swc):
         back_mesg = ''
