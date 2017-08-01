@@ -46,6 +46,7 @@ class C_FrontEndSockets:
         port = 32768
         s.bind((host, port))
         s.listen(5)
+        print "Start Listening"
         while alive:
             # 进入监听模式,只有收到数据才会进行下一步
             c, addr = s.accept()
