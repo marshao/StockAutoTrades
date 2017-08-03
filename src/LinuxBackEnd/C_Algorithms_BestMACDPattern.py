@@ -356,12 +356,18 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
         # Send to calculate trade signal according to the best pattern
+        # '''
         df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
                                                                              to_DB=True, for_real=True, quo=quo, ga=ga,
                                                                              beta=beta).tail(1)
-        #print df_signals
+        '''
+        df_signals = C_MACD_Signal_Calculator._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records,
+                                                                             to_DB=True, for_real=True, quo=quo, ga=ga,
+                                                                             beta=beta)
+        df_signals.to_csv('/home/marshao/DataMiningProjects/Output/signals.csv')
+        '''
         signal = df_signals.Signal[0]
-        signal = 1  # This line need to be removed
+        #signal = 1  # This line need to be removed
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
