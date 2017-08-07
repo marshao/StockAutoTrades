@@ -24,7 +24,7 @@ class C_FrontEndRefresh:
         # scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults)
         scheduler = BackgroundScheduler()
         scheduler.add_job(self._reActive_Platform, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30',
-                          id='PlatformReActive')
+                          second='30', id='PlatformReActive')
         scheduler.add_job(self._refresh_window_control, 'interval', seconds=20, id='RefreshWindow')
         scheduler.start()
         scheduler.print_jobs()
@@ -34,7 +34,10 @@ class C_FrontEndRefresh:
             # self._refresh_window_control()
 
     def _reActive_Platform(self):
-        self._swc.update_asset()
+        self._swc._stock_holding_page()
+        sleep(2)
+        self._swc._buy_page()
+        # self._swc.update_asset()
 
     def _refresh_window_control_old(self):
         print "refresh started"

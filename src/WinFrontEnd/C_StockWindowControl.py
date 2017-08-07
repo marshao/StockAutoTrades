@@ -323,6 +323,7 @@ class C_StockWindowControl:
         self._set_active_window2(hwnd)
         sleep(0.1)
         self._stock_holding_page()
+        sleep(2)
 
         win32api.keybd_event(VK_CONTROL, 0, 0, 0)
         # sleep(1)
