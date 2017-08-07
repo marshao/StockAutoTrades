@@ -692,7 +692,7 @@ class C_StockWindowControl:
         total_asset = []
         # set stock_holding page be active
         self._stock_holding_page()
-        sleep(1)
+        sleep(2)
 
         # Getting value from application
         self._asset_infor['cashAvaliable'] = win32gui.GetWindowText(self._attrs_window['cashAvaliableHandle'])
