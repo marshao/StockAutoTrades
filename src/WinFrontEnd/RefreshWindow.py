@@ -35,7 +35,7 @@ class C_FrontEndRefresh:
 
     def _reActive_Platform(self):
         self._swc._stock_holding_page()
-        sleep(2)
+        sleep(3)
         self._swc._buy_page()
         # self._swc.update_asset()
 
