@@ -51,8 +51,8 @@ class C_Algorithems_BestPattern(object):
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
-        self._trading_volume = 3000
-        self._stock_inhand_uplimit = 3500
+        self._trading_volume = 10
+        self._stock_inhand_uplimit = 750
         self._trade_history_column = ['stock_code', 'trade_type', 'trade_volumn', 'trade_price', 'trade_time',
                                       'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period',
                                       'trade_result']
@@ -146,7 +146,7 @@ class C_Algorithems_BestPattern(object):
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         done = False
         sql_select_stock_infor = (
-            "select stockCode, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
+            "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
         if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
@@ -162,7 +162,8 @@ class C_Algorithems_BestPattern(object):
             df_stock_infor.set_value(0, 'stockAvaliable', 0)
             df_stock_infor.set_value(0, 'currentValue', 0.0)
             done = True
-        # self._write_log(self._log_mesg)
+        # self._write_log(self._log_mesg
+        # print df_stock_infor
         return done, df_stock_infor
 
     def _get_stock_current_price(self, stock_code):
@@ -217,7 +218,7 @@ class C_Algorithems_BestPattern(object):
         current_value = df_stock_infor.currentValue[0]
         trade_volumn = 0
         volumn_up_limit = self._stock_inhand_uplimit
-        volumn_down_limit = 500
+        #volumn_down_limit = 500
         oneshoot = self._trading_volume
         trade_algorithem_name = 'MACD Best Pattern'
         trade_algorithem_method = pattern_number
@@ -232,8 +233,8 @@ class C_Algorithems_BestPattern(object):
             current_price = df_current_price.current_price[0]
             buy1_price = df_current_price.buy1_price[0]
             buy2_price = df_current_price.buy2_price[0]
-            trade_volumn = int(cash_avaliable / current_price / 100) * 100
-            print trade_volumn
+            # trade_volumn = int(cash_avaliable / current_price / 100) * 100
+            #print trade_volumn
             print stock_avaliable
             if stock_avaliable < volumn_up_limit:
                 if trade_volumn >= oneshoot:
@@ -367,7 +368,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_signals.to_csv('/home/marshao/DataMiningProjects/Output/signals.csv')
         '''
         signal = df_signals.Signal[0]
-        #signal = 1  # This line need to be removed
+        signal = 1  # This line need to be removed
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
@@ -382,7 +383,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             print "Step2: Get stock Avaliable"
             self._log_mesg = self._log_mesg + "Step2: Get stock Avaliable at %s \n" % self._time_tag()
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
-            if done:
+            if done and ((df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit):
                 # Get real time price information
                 print "---------------------------------------------------"
                 print "Step3: Get real time price"
@@ -409,7 +410,10 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                 else:
                     self._log_mesg = self._log_mesg + "     Unable to get real time price information at %s \n" % self._time_tag()
             else:
-                self._log_mesg = self._log_mesg + "     Unable to get stock_avalible information at %s \n" % self._time_tag()
+                self._log_mesg = self._log_mesg + "     Unable to get stock_avalible information or stockRemain %s over " \
+                                                  "the up limit %s at %s \n" % (
+                                                  df_stock_infor.stockRemain[0], self._stock_inhand_uplimit,
+                                                  self._time_tag())
         else:
             self._log_mesg = self._log_mesg + "     Trade Signal for stock %s is 0 at %s \n" % (
             stock_code, self._time_tag())
