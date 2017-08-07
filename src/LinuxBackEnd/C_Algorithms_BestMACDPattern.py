@@ -51,8 +51,8 @@ class C_Algorithems_BestPattern(object):
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
-        self._trading_volume = 10
-        self._stock_inhand_uplimit = 750
+        self._trading_volume = 3000
+        self._stock_inhand_uplimit = 3500
         self._trade_history_column = ['stock_code', 'trade_type', 'trade_volumn', 'trade_price', 'trade_time',
                                       'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period',
                                       'trade_result']
@@ -214,6 +214,7 @@ class C_Algorithems_BestPattern(object):
         '''
         df_trade_history = pd.DataFrame(columns=self._trade_history_column)
         stock_code = df_stock_infor.stockCode[0]
+        stock_Remain = df_stock_infor.stockRemain[0]
         stock_avaliable = df_stock_infor.stockAvaliable[0]
         current_value = df_stock_infor.currentValue[0]
         trade_volumn = 0
@@ -233,17 +234,17 @@ class C_Algorithems_BestPattern(object):
             current_price = df_current_price.current_price[0]
             buy1_price = df_current_price.buy1_price[0]
             buy2_price = df_current_price.buy2_price[0]
-            # trade_volumn = int(cash_avaliable / current_price / 100) * 100
+            trade_volumn = int(cash_avaliable / current_price / 100) * 100
             #print trade_volumn
-            print stock_avaliable
-            if stock_avaliable < volumn_up_limit:
+            print stock_Remain
+            if (stock_Remain + oneshoot) < volumn_up_limit:
                 if trade_volumn >= oneshoot:
                     trade_volumn = str(oneshoot)
                 else:
                     trade_volumn = str(trade_volumn)
                 cmd = '2 ' + stock_code + ' ' + trade_volumn + ' ' + str(current_price)
                 self._log_mesg = self._log_mesg + "     Stock %s has the amount %s in hand at %s \n" % (
-                stock_code, stock_avaliable, self._time_tag())
+                    stock_code, stock_Remain, self._time_tag())
             else:
                 self._log_mesg = self._log_mesg + "     Cannot buy more stock %s because " \
                                                   "the amount reach the up limit at %s \n" % (
@@ -264,8 +265,8 @@ class C_Algorithems_BestPattern(object):
             if stock_avaliable != 0:
                 cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
             else:
-                self._log_mesg = self._log_mesg + "     No stock %s in hand, sales is cancelled " \
-                                                  "at %s \n." % (stock_code, self._time_tag())
+                self._log_mesg = self._log_mesg + "     No avaliable stock %s in hand, stock_Remain is %s , sales is cancelled " \
+                                                  "at %s \n." % (stock_code, stock_Remain, self._time_tag())
         else:
             print "Unknown trading Signal"
 
@@ -368,7 +369,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_signals.to_csv('/home/marshao/DataMiningProjects/Output/signals.csv')
         '''
         signal = df_signals.Signal[0]
-        signal = 1  # This line need to be removed
+        # signal = -1  # This line need to be removed
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
