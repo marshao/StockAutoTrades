@@ -201,6 +201,9 @@ class C_Algorithems_BestPattern(object):
         #self._write_log(self._log_mesg)
         return done, cash_avabliable
 
+    def _check_stock_resale(self):
+        pass
+
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
         '''
         Sending Trading singal to Windows Front End
@@ -264,21 +267,28 @@ class C_Algorithems_BestPattern(object):
             sale2_price = df_current_price.sale2_price[0]
             if stock_avaliable != 0:
                 cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
+                trade_volumn = stock_avaliable
+            elif stock_Remain != 0 and stock_avaliable == 0:
+                trade_volumn = stock_remain
+                trade_type = 9 # 9 is the resale sign
+                self._log_mesg = self._log_mesg + "     T1 policy blocking, No avaliable stock %s in hand, stock_Remain is %s , sales is cancelled " \
+                                              "at %s \n." % (stock_code, stock_Remain, self._time_tag())
             else:
-                self._log_mesg = self._log_mesg + "     No avaliable stock %s in hand, stock_Remain is %s , sales is cancelled " \
-                                                  "at %s \n." % (stock_code, stock_Remain, self._time_tag())
+                self._log_mesg = self._log_mesg + "     No avaliable stock %s in hand, sales is cancelled " \
+                                                  "at %s \n." % (stock_code, self._time_tag())
         else:
             print "Unknown trading Signal"
 
         self._log_mesg = self._log_mesg + "     Trading command CMD %s is sent at %s \n" % (cmd, self._time_tag())
         # Send trading command and analysis the result
         receives = commu(cmd).split()
+        trade_type = receives[0]
         self._log_mesg = self._log_mesg + "     CMD %s is received at %s \n" % (cmd, self._time_tag())
         # print receives
         if receives[0] == '2.1' or receives[0] == '3.1':
             print 'Run into confirmed code'
             line.append(stock_code)
-            line.append(receives[0])
+            line.append(trade_type)
             line.append(trade_volumn)
             line.append(current_price)
             line.append(self._time_tag())
