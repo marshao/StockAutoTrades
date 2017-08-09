@@ -670,6 +670,7 @@ class C_GettingData:
         # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
         scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
                             args=[period, stock_code])
+        # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
         #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
         scheduler_1.start()
         #scheduler_1.print_jobs()
@@ -680,6 +681,10 @@ class C_GettingData:
 
     def _half_hour_tasks(self, period, stock_code):
         #self._data_service(period)
+        from CommuSocket import commu
+        receive = commu('1')
+        print "Updated stock in hand %s" % receive
+        time.sleep(5)
         apply_pattern(period, stock_code)
 
 

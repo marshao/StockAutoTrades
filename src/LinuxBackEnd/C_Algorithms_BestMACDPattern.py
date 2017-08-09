@@ -144,6 +144,7 @@ class C_Algorithems_BestPattern(object):
 
         receive = commu('1')  # update stock in hand information
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
+        print "Updated Stock Inhand"
         done = False
         sql_select_stock_infor = (
             "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
@@ -201,7 +202,8 @@ class C_Algorithems_BestPattern(object):
         #self._write_log(self._log_mesg)
         return done, cash_avabliable
 
-    def _check_stock_resale(self):
+    def _check_stock_resale(self, ):
+
         pass
 
     def _send_trading_command(self, df_stock_infor, df_current_price, cash_avaliable, signal, pattern_number, period):
@@ -269,7 +271,7 @@ class C_Algorithems_BestPattern(object):
                 cmd = '3 ' + stock_code + ' ' + str(stock_avaliable) + ' ' + str(current_price)
                 trade_volumn = stock_avaliable
             elif stock_Remain != 0 and stock_avaliable == 0:
-                trade_volumn = stock_remain
+                trade_volumn = stock_Remain
                 trade_type = 9 # 9 is the resale sign
                 self._log_mesg = self._log_mesg + "     T1 policy blocking, No avaliable stock %s in hand, stock_Remain is %s , sales is cancelled " \
                                               "at %s \n." % (stock_code, stock_Remain, self._time_tag())
@@ -379,7 +381,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         df_signals.to_csv('/home/marshao/DataMiningProjects/Output/signals.csv')
         '''
         signal = df_signals.Signal[0]
-        # signal = -1  # This line need to be removed
+        # signal = -1# This line need to be removed
         print "\n -------------------------------"
         print "Step1: Trading Signal is %s" % signal
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
