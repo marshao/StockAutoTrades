@@ -234,6 +234,7 @@ class C_Algorithems_BestPattern(object):
         cmd = '5'
 
         if signal == 1:  # 1 == buy,
+            print "Buying Stock %s" % stock_code
             # Need to evaluate the cash avalible is enough to buy at least 1000 stocks
             # And also make sure the buy up limit will not over 2000 stocks
             current_price = df_current_price.current_price[0]
@@ -263,7 +264,7 @@ class C_Algorithems_BestPattern(object):
             today_buy = conn.execute(sql_select_buy_today).fetchall()[0][0]
             stock_avaliable = stock_avaliable - today_buy
             '''
-
+            print "Saling stock %s" % stock_code
             current_price = df_current_price.current_price[0]
             sale1_price = df_current_price.sale1_price[0]
             sale2_price = df_current_price.sale2_price[0]
@@ -286,7 +287,8 @@ class C_Algorithems_BestPattern(object):
         receives = commu(cmd).split()
         trade_type = receives[0]
         self._log_mesg = self._log_mesg + "     CMD %s is received at %s \n" % (cmd, self._time_tag())
-        # print receives
+        print self._log_mesg
+        print "Receive is %s" % receives
         if receives[0] == '2.1' or receives[0] == '3.1':
             print 'Run into confirmed code'
             line.append(stock_code)
@@ -396,6 +398,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             print "Step2: Get stock Avaliable"
             self._log_mesg = self._log_mesg + "Step2: Get stock Avaliable at %s \n" % self._time_tag()
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
+            print df_stock_infor
             if done and ((df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit):
                 # Get real time price information
                 print "---------------------------------------------------"
@@ -1435,6 +1438,7 @@ def main():
     # MACDPattern._save_MACD_best_pattern(period='m30')
     # MACDPattern._get_best_pattern('sz002310')
     MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
+    #commu('1')
     #cal_specific_pattern()
     #caL_all_pattern()
 
