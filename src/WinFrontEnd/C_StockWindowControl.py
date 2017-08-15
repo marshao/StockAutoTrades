@@ -820,7 +820,7 @@ class C_StockWindowControl:
         # Active Infor Window
         win32api.keybd_event(VK_F4, 0, 0, 0)  # 释放按键
         win32api.keybd_event(VK_F4, 0, win32con.KEYEVENTF_KEYUP, 0)
-        sleep(1)
+        sleep(2)
 
     def _stock_withdraw_page(self):
         # win32gui.SetForeGroundWindow(mainWindowHwnd)
