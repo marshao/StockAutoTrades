@@ -148,7 +148,7 @@ class C_Algorithems_BestPattern(object):
         done = False
         sql_select_stock_infor = (
             "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
-        if receive == '1.1':
+        if receive != '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
             done = True
@@ -399,7 +399,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._log_mesg = self._log_mesg + "Step2: Get stock Avaliable at %s \n" % self._time_tag()
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
             print df_stock_infor
-            if done and ((df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit):
+            if (done and signal == -1) or \
+                    (done and signal == 1 and (
+                        (df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit)):
                 # Get real time price information
                 print "---------------------------------------------------"
                 print "Step3: Get real time price"
