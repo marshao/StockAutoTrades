@@ -25,7 +25,7 @@ class C_FrontEndRefresh:
         scheduler = BackgroundScheduler()
         scheduler.add_job(self._reActive_Platform, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30',
                           second='30', id='PlatformReActive')
-        scheduler.add_job(self._reActive_Platform, 'cron', day_of_week='mon-fri', hour='8', minute='*/5',
+        scheduler.add_job(self._reActive_Platform, 'cron', day_of_week='mon-fri', hour='9-15', minute='*/5',
                           id='PlatformDailyActive')
         scheduler.add_job(self._refresh_window_control, 'interval', seconds=20, id='RefreshWindow')
         scheduler.start()
