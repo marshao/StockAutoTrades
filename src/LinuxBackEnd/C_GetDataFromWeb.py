@@ -670,6 +670,7 @@ class C_GettingData:
         # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
         scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
                             args=[period, stock_code])
+        scheduler_1.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='21')
         # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
         #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
         scheduler_1.start()
@@ -700,10 +701,10 @@ class C_GettingData:
         else:
             print "out of the time of getting data"
             scheduler.pause()
-            st_time = datetime.time(21, 0, 0)
-            ed_time = datetime.time(21, 15, 0)
-            if (current_time > st_time) and (current_time < ed_time):
-                best_pattern_daily_calculate()
+            # st_time = datetime.time(21, 0, 0)
+            # ed_time = datetime.time(21, 15, 0)
+            # if (current_time > st_time) and (current_time < ed_time):
+            # best_pattern_daily_calculate()
         time.sleep(60)
 
 
