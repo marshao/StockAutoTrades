@@ -400,7 +400,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
             print df_stock_infor
             if (done and signal == -1) or \
-                    (done and signal == 1 and (
+                    (signal == 1 and (
                         (df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit)):
                 # Get real time price information
                 print "---------------------------------------------------"
@@ -1441,8 +1441,8 @@ def main():
     # MACDPattern._get_best_pattern('sz002310')
     # MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #commu('1')
-    cal_specific_pattern()
-    #caL_all_pattern()
+    # cal_specific_pattern()
+    caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock
@@ -1453,6 +1453,9 @@ def caL_all_pattern():
     gama = [0.8, 0.7, 0.65, 0.6, 0.4, 0.45, 0.3]
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
     beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    quo = [0.7]
+    gama = [0.3]
+    beta = [0.2]
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
