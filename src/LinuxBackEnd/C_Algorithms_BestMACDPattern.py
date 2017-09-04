@@ -185,7 +185,7 @@ class C_Algorithems_BestPattern(object):
         # self._write_log(self._log_mesg)
         return done, df_current_price
 
-    def _get_stock_asset(self):
+    def _get_cash_avaliable(self):
         done = False  # The mark of success or not.
         cash_avabliable = -1
         cmd_line = '5'
@@ -332,12 +332,14 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._tb_StockRecords = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
             self._tb_Trades = Table('tb_MACD_Trades_HalfHour', self._metadata, autoload=True)
 
-    def best_pattern_daily_calculate(self, period=None):
+    def best_pattern_daily_calculate(self, period=None, stock_codes=None):
+        if stock_codes is None:
+            stock_codes = self._stock_codes
         MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
         MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
         if period is None:
             period = 'day'
-        for stock_code in self._stock_codes:
+        for stock_code in stock_codes:
             MACD_Trading_Signal_Cal._MACD_trading_signals(period=period, stock_code=stock_code)
             MACD_Ending_Profit_Cal._MACD_ending_profits(period=period, stock_code=stock_code)
             self._save_MACD_best_pattern(period=period)
@@ -412,7 +414,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
                     print "---------------------------------------------------"
                     print "Step4: Got cash Avaliable"
                     self._log_mesg = self._log_mesg + "Step4: Get cash Avaliable at %s \n" % self._time_tag()
-                    done, cash_avaliable = self._get_stock_asset()
+                    done, cash_avaliable = self._get_cash_avaliable()
                     if done:
                         print "-------------------------------------------------"
                         print "step5: Send Traiding Singal"
@@ -437,6 +439,9 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             stock_code, self._time_tag())
         self._log_mesg = self._log_mesg + "     Trading Process is finished at %s \r\n" % self._time_tag()
         self._write_log(self._log_mesg)
+
+        finish_sign = True
+        return finish_sign
 
     def _get_best_pattern(self, stock_code):
         sql_select_best_pattern = (
@@ -1450,16 +1455,14 @@ def caL_all_pattern():
     gama = [0.8, 0.7, 0.65, 0.6, 0.4, 0.45, 0.3]
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
     beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
-    quo = [0.7]
-    gama = [0.3]
-    beta = [0.2]
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
-                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo= each_quo, ga=each_ga, beta=each_beta)
-                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
+                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sh600867", quo=each_quo,
+                                                              ga=each_ga, beta=each_beta)
+                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sh600867')
                 #MACDPattern._save_MACD_best_pattern(period='m30')
-                MACDPattern._get_best_pattern('sz002310')
+                MACDPattern._get_best_pattern('sh600867')
 
 
 def cal_specific_pattern():

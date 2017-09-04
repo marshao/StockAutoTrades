@@ -672,13 +672,6 @@ class C_GettingData:
         while True:
             self._scheduler_switch(scheduler_1, scheduler_2)
 
-    def _half_hour_tasks(self, period, stock_code):
-        #self._data_service(period)
-        from CommuSocket import commu
-        receive = commu('1')
-        print "Updated stock in hand %s" % receive
-        time.sleep(5)
-        apply_pattern(period, stock_code)
 
     def _scheduler_switch(self, scheduler_1, scheduler_2):
         current_time = datetime.datetime.now().time()
