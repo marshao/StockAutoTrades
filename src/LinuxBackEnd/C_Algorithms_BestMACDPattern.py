@@ -472,7 +472,6 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         print df_MACD_ending_profits
         return df_MACD_ending_profits.best_pattern[0]
 
-
 class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
     def __init__(self):
         C_BestMACDPattern.__init__(self)
@@ -1170,8 +1169,6 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 # print "MACD above avg is %s and total is %s" % (MACD_se[MACD_se > MACD_AVG].count(), MACD_se.count())
                 # print "MACD_AVG is %s and MACD_AVG_Percent is %s" % (MACD_AVG, MACD_AVG_percent)
             return MACD_AVG
-
-
 
     def _Cal_Resalble(self, df, idx):
         '''
