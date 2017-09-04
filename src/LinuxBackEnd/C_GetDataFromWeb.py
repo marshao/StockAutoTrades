@@ -650,35 +650,26 @@ class C_GettingData:
         if stock_code is None:
             stock_code = 'sz002310'
         scheduler_1 = BackgroundScheduler()
-        # scheduler_2 = BlockingScheduler()
-        # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
-        # scheduler_1.add_job(self._fun, 'interval', seconds=300, args=['m5'])
+        scheduler_2 = BackgroundScheduler()
 
-        # scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
                             args=['m1'])
-        # scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
                             args=['m1'])
-        # scheduler_1.add_job(self._data_service, 'interval', seconds=1800, args=['m30'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30',
                             args=['m30'])
-        # scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
                             args=['m60'])
-        # scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=[period, stock_code])
-        # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
         scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
                             args=[period, stock_code])
-        scheduler_1.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='21')
-        # scheduler_1.add_job(apply_pattern, 'interval', seconds=1820, args=[period, stock_code])
-        #scheduler_1.add_cron_job(self._half_hour_tasks, day_of_week='mon-fri', hour=9, mintue="35/30", args=[period, stock_code])
+        scheduler_2.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='22')
+
         scheduler_1.start()
-        #scheduler_1.print_jobs()
+        scheduler_2.start()
 
         # The switch of scheduler_1
         while True:
-            self._scheduler_switch(scheduler_1)
+            self._scheduler_switch(scheduler_1, scheduler_2)
 
     def _half_hour_tasks(self, period, stock_code):
         #self._data_service(period)
@@ -688,23 +679,23 @@ class C_GettingData:
         time.sleep(5)
         apply_pattern(period, stock_code)
 
-
-    def _scheduler_switch(self, scheduler):
+    def _scheduler_switch(self, scheduler_1, scheduler_2):
         current_time = datetime.datetime.now().time()
 
         if (current_time > self._start_morning and current_time < self._end_morning) or (
                         current_time > self._start_afternoon and current_time < self._end_afternoon):
-            scheduler.resume()
-            scheduler.print_jobs()
-            print "scheduler back to work"
+            scheduler_2.pause()
+            scheduler_1.resume()
+            scheduler_1.print_jobs()
+            scheduler_2.print_jobs()
+            print "scheduler_1 back to work"
             #time.sleep(600)
         else:
             print "out of the time of getting data"
-            scheduler.pause()
-            # st_time = datetime.time(21, 0, 0)
-            # ed_time = datetime.time(21, 15, 0)
-            # if (current_time > st_time) and (current_time < ed_time):
-            # best_pattern_daily_calculate()
+            scheduler_1.pause()
+            scheduler_2.resume()
+            scheduler_2.print_jobs()
+
         time.sleep(60)
 
 
