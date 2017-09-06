@@ -26,7 +26,7 @@ def best_pattern_daily_calculate():
 
 def apply_multi_patterns(period=None, stock_codes=None):
     stock_pars_m30 = {'sz002310':[0.7, 0.3, 0.2],
-                    'sh600867':[0.7, 0.3, 0.2]
+                    'sh600867':[0.8, 0.6, 0.2]
                   }
 
     if period is None:

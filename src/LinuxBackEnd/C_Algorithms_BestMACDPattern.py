@@ -148,7 +148,7 @@ class C_Algorithems_BestPattern(object):
         done = False
         sql_select_stock_infor = (
             "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
-        if receive != '1.1':
+        if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
             done = True
@@ -1454,34 +1454,40 @@ def caL_all_pattern():
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     gama = [0.8, 0.7, 0.65, 0.6, 0.4, 0.45, 0.3]
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
-    beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    # beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    beta = [0.2]
+    # quo = [0.8]
+    #gama = [0.6]
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
-                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sh600867", quo=each_quo,
+                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz300146", quo=each_quo,
                                                               ga=each_ga, beta=each_beta)
-                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sh600867')
+                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz300146')
                 #MACDPattern._save_MACD_best_pattern(period='m30')
-                MACDPattern._get_best_pattern('sh600867')
+                MACDPattern._get_best_pattern('sz300146')
 
 
 def cal_specific_pattern():
     MACDPattern = C_BestMACDPattern()
     MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
-    gama = [0.3]
-    quo = [0.7]
-    # beta = [0.1, 0.15, 0.2, 0.25,  0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    gama = [0.6]
+    quo = [0.8]
+    #beta = [0.1, 0.15, 0.2, 0.25,  0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
     beta = [0.2]
-    pattern_signal = ["483", ]
-    pattern_profit = [["483"]]
+    pattern_signal = ["973", ]
+    pattern_profit = [["973"]]
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
-                MACD_Trading_Signal_Cal._single_pattern_signal_cal(MACD_pattern=pattern_signal, period="m30", stock_code="sz002310", quo=each_quo, ga=each_ga, beta=each_beta)
-                # MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30', stock_code='sz002310')
+                MACD_Trading_Signal_Cal._single_pattern_signal_cal(MACD_pattern=pattern_signal, period="m30",
+                                                                   stock_code="sh600867", quo=each_quo, ga=each_ga,
+                                                                   beta=each_beta)
+                MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30',
+                                                                         stock_code='sh600867')
                 # MACDPattern._save_MACD_best_pattern(period='m30')
-                #MACDPattern._get_best_pattern('sz002310')
+                MACDPattern._get_best_pattern('sh600867')
 
 
 if __name__ == '__main__':
