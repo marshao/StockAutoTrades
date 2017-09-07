@@ -401,7 +401,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             self._log_mesg = self._log_mesg + "Step2: Get stock Avaliable at %s \n" % self._time_tag()
             done, df_stock_infor = self._checking_stock_in_hand(stock_code[2:])
             print df_stock_infor
-            if (done and signal == -1) or \
+            if (done and signal == -1 and df_stock_infor.stockAvalible[0] != 0) or \
                     (signal == 1 and (
                         (df_stock_infor.stockRemain[0] + self._trading_volume) < self._stock_inhand_uplimit)):
                 # Get real time price information
