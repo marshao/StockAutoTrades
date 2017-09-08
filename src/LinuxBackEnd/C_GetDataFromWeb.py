@@ -41,7 +41,7 @@ class C_GettingData:
         self._fq = ['qfq', 'hfq','bfq']
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         # self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
-        self._stock_code = ['sz002310', 'sh600867', 'sz300146']
+        self._stock_code = ['sz002310', 'sh600867', 'sz300146','sh600271']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -716,7 +716,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sz300146', period='m30', q_count=800)
+    pp.get_data_qq(stock_code='sh600271', period='m30', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')

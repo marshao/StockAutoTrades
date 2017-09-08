@@ -454,8 +454,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         pattern = result[0][0]
         profit = result[0][1]
         parameters = con.execute(sql_select_best_pattern_parameters, pattern).fetchall()
-        self._log_mesg = self._log_mesg + "     At %s, pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
-        parameters[0][8], pattern, parameters[0][14], profit, self._time_tag())
+        self._log_mesg = self._log_mesg + "     At %s, stock %s pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
+            parameters[0][8], stock_code, pattern, parameters[0][14], profit, self._time_tag())
         self._write_log(self._log_mesg)
         # print pattern
         return pattern
@@ -1443,8 +1443,8 @@ def main():
     # MACDPattern._get_best_pattern('sz002310')
     # MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #commu('1')
-    cal_specific_pattern()
-    #caL_all_pattern()
+    # cal_specific_pattern()
+    caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock
@@ -1461,11 +1461,11 @@ def caL_all_pattern():
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
-                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz300146", quo=each_quo,
+                MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sh600271", quo=each_quo,
                                                               ga=each_ga, beta=each_beta)
-                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz300146')
+                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sh600271')
                 #MACDPattern._save_MACD_best_pattern(period='m30')
-                MACDPattern._get_best_pattern('sz300146')
+                MACDPattern._get_best_pattern('sh600271')
 
 
 def cal_specific_pattern():
