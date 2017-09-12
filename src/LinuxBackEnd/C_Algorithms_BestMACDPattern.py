@@ -352,6 +352,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
             ga = 0.3
         if beta is None:
             beta = 0.2
+
+        self._clean_table('tb_StockIndex_MACD_New')
         # Initialize Signal Calculation
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # Get Best Pattern Number from DB
@@ -446,16 +448,18 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
     def _get_best_pattern(self, stock_code):
         sql_select_best_pattern = (
             "select best_pattern, profit_rate from tb_StockBestPatterns where algorithem_name = 'MACD' and stock_code = %s ORDER by pattern_date DESC limit 1")
-        sql_select_best_pattern_parameters = (
-            "select * from tb_StockIndex_MACD_New where MACD_pattern_number = %s ORDER by quote_time DESC limit 1")
+        # sql_select_best_pattern_parameters = (
+        #    "select * from tb_StockIndex_MACD_New where MACD_pattern_number = %s ORDER by quote_time DESC limit 1")
 
         con = self._engine.connect()
         result = con.execute(sql_select_best_pattern, stock_code).fetchall()
         pattern = result[0][0]
         profit = result[0][1]
-        parameters = con.execute(sql_select_best_pattern_parameters, pattern).fetchall()
-        self._log_mesg = self._log_mesg + "     At %s, stock %s pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
-            parameters[0][8], stock_code, pattern, parameters[0][14], profit, self._time_tag())
+        # parameters = con.execute(sql_select_best_pattern_parameters, pattern).fetchall()
+        # self._log_mesg = self._log_mesg + "     At %s, stock %s pattern %s with parameters %s did best profit: %s  at %s \r\n" % (
+        #    parameters[0][8], stock_code, pattern, parameters[0][14], profit, self._time_tag())
+        self._log_mesg = self._log_mesg + "     Stock %s pattern %s did best profit: %s  at %s \r\n" % (
+        stock_code, pattern, profit, self._time_tag())
         self._write_log(self._log_mesg)
         # print pattern
         return pattern
@@ -931,7 +935,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                             MACD_MAX_P = 0
                             df.set_value(idx, 'Reason', 'ReS quo:%s, ga:%s' % (quo, ga))
                 last = row
-                # last_idx = idx
+                # last_idx = idxdf_save.EMA_short[-1] = 999
             # Remove the no transaction record from the DB.
             engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
             # print df[df.Signal == -1].count()
@@ -942,7 +946,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
                 if for_real:
                     # df_save.iloc[0:1, lambda df:['EMA_short']] = 999
-                    df_save.EMA_short[-1] = 999
+                    # df_save.EMA_short[-1] = 999
+                    pass
                 #print df_save
                 df_save.to_sql('tb_StockIndex_MACD_New', con=engine, if_exists='append', index=True)
                 engine.dispose()
@@ -1441,9 +1446,9 @@ def main():
     #MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
     # MACDPattern._save_MACD_best_pattern(period='m30')
     # MACDPattern._get_best_pattern('sz002310')
-    # MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
+    MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #commu('1')
-    cal_specific_pattern()
+    #cal_specific_pattern()
     # MACDPattern._get_best_pattern('sz002310')
     #caL_all_pattern()
 

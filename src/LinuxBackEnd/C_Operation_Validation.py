@@ -79,9 +79,6 @@ class C_Operation_Validation(object):
                 return stock_code, quote_date, quote_time, signal
 
 
-
-
-
     def get_daily_signals_from_DB(self):
         pass
 
