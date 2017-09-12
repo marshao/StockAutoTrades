@@ -52,20 +52,35 @@ class C_Operation_Validation(object):
                           'quote_time < %s order by quote_time DESC'
         df_signals = pd.read_sql(sql_select_last, con=self._engine, params=(stock_code, quote_time),
                                  index_col='quote_time')
-        print df_signals.index[0], df_signals.Signal[0]
+        print stock_code, df_signals.index[0], df_signals.Signal[0]
+        return stock_code, df_signals.index[0], df_signals.Signal[0]
 
     def get_last_signal_from_log(self, stock_code):
         quote_time = self._time_tag_dateonly()
-        f = open(self._operation_log, 'r')
         key = ['Step1', 'Signal']
-        i = 0
-        for line in reversed(f.readlines()):
-            print line.rstrip()
+        f = reversed(open(self._operation_log, 'r').readlines())
+        # with reversed(open(self._operation_log, 'r').readlines()) as f:
+        for line in f:
+            prev, curr = line, f.next()
+            # print line.rstrip()
             words = line.split()
-            print words
-            i += 1
-            if i > 5:
-                break
+            '''
+                            if line.find("Step1:") != -1:
+                    print line.find("Step1:")
+                    print f.next()
+                    break
+                '''
+            if curr.startswith("Step1:"):
+                words = prev.split()
+                signal = int(words[15])
+                quote_date = words[19]
+                quote_time = words[20]
+                print stock_code, quote_date + " " + quote_time, signal
+                return stock_code, quote_date, quote_time, signal
+
+
+
+
 
     def get_daily_signals_from_DB(self):
         pass
@@ -79,7 +94,7 @@ class C_Operation_Validation(object):
 
 def main():
     ov = C_Operation_Validation()
-    # ov.get_last_signal_from_DB('sz002310')
+    ov.get_last_signal_from_DB('sz002310')
     ov.get_last_signal_from_log('sz002310')
 
 
