@@ -656,7 +656,7 @@ class C_GettingData:
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
                             args=['m1'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
-                            args=['m5'])
+                            args=['m15'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30',
                             args=['m30'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
@@ -716,7 +716,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sh600271', period='m30', q_count=800)
+    pp.get_data_qq(stock_code='sh600271', period='m5', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
