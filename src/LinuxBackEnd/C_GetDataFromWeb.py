@@ -656,7 +656,7 @@ class C_GettingData:
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
                             args=['m1'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
-                            args=['m1'])
+                            args=['m5'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30',
                             args=['m30'])
         scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
