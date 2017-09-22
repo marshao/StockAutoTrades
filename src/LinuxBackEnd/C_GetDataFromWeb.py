@@ -7,7 +7,7 @@ __metclass__ = type
 import os, time, pandas, urllib, re
 import datetime
 from sqlalchemy import create_engine, Table, Column, MetaData
-from sqlalchemy.sql import select, and_, or_, not_
+from sqlalchemy.sql import select, and_, or_, not_, delete
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
 # from apscheduler.schedulers import Scheduler
@@ -424,17 +424,18 @@ class C_GettingData:
         data = self._x_min_data_DF
         if period in self._x_min:
             # save x min data into DB
-            data = self._remove_duplicate_rows(period, stock_code)
+            data = self._remove_overlaied_rows(period, stock_code)
             if period != 'm1':
                 data = self._remove_unwant_min_rows(data, stock_code)
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
+                self._remove_zero_trading_volumn_rows(period, stock_code)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
             else:
                 data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
                 print "saved m1 data of stock code %s at %s" % (stock_code, self._time_tag())
         elif period in self._x_period:
             # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
-            data = self._remove_duplicate_rows(period, stock_code)
+            data = self._remove_overlaied_rows(period, stock_code)
             data.to_sql('tb_StockXPeriodRecords', self._engine, if_exists='append', index=True)
             print "saved %s period data of stock code %s at %s" % (period, stock_code, self._time_tag())
         else:
@@ -446,7 +447,7 @@ class C_GettingData:
             self._time_tag(), stock_code, period)
         self._write_log(self._log_mesg)
 
-    def _remove_duplicate_rows(self, period, stock_code):
+    def _remove_overlaied_rows(self, period, stock_code):
         '''
         Step 1: 从数据库中取出相应股票最后一个记录的时间戳
         Step 2：从data 删除早于这个时间戳的记录
@@ -486,15 +487,37 @@ class C_GettingData:
         if len(result) != 0:
             last_record_time = result[0][0]
             data = data[data.index > last_record_time]
-            print "Dupliated rows has been removed."
+            print "Overlaied rows has been removed."
         else:
-            print "Duplicated rows has been removed."
+            print "Overlaied rows has been removed."
 
-        self._log_mesg = self._log_mesg + "At %s Duplicated: Duplicate rows for Stock %s period %s data has been removed. \n" % (
+        self._log_mesg = self._log_mesg + "At %s Overlaied: Overlaied rows for Stock %s period %s data has been removed. \n" % (
             self._time_tag(), stock_code, period)
         self._write_log(self._log_mesg)
-
+        conn.close()
         return data
+
+    def _remove_zero_trading_volumn_rows(self, period, stock_code):
+        '''
+        Some time in ShangHai stocks m30 records, duplicated M30 rows with 0 trading_volumns shows in DB, these rows
+        need to be deleted.
+        :param period:
+        :param stock_code:
+        :return:
+        '''
+        conn = self._engine.connect()
+        tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
+        d = tb.delete(and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))
+
+        # s = select(tb.c.id_tb_StockXMinRecords where (and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))))
+        # d1 = tb.delete(tb.c.id_tb_StockXMinRecords == s.id_tb_StockXMinRecords)
+        # s = delete FROM tb where tb.c.id_tb_StockXMinRecords = (select a.id_tb_StockXMinRecords from (SELECT id_tb_StockXMinRecords FROM DB_StockDataBackTest.tb_StockXMinRecords where stock_code = 'sh600867' and period='m30' and trading_volumn = 0) as a);
+        conn.execute(d)
+        conn.close()
+        print "Zero_trading_volumn_rows be removed"
+        self._log_mesg = self._log_mesg + "At %s Zero_trading_volumn_rows: zero_trading_volumn rows for Stock %s period %s data has been removed. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
 
     def _remove_unwant_min_rows(self, df, stock_code):
         '''
@@ -704,6 +727,7 @@ class C_GettingData:
 
         for p in processes:
             p.join()
+
 
 
 def main():
