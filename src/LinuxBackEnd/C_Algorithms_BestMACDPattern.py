@@ -627,7 +627,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                         # tradeVolume = stockVolume_Current * tradePercent
                         stockVolume_Current = tradeVolume + stockVolume_Current
                         cash_Current = cash_Current - trade_cost
-                        totalValue_Current = stockVolume_Current * close_price + cash_Current
+                        totalValue_Current = np.round((stockVolume_Current * close_price + cash_Current), 3)
                         profit_Rate = math.log(totalValue_Current / totalValue_Begin)
 
                         # Append HalfHour Profit Results into Array
@@ -649,7 +649,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                         tradeVolume = stockVolume_Current
                         stockVolume_Current = 0
                         cash_Current = cash_Current + trade_cost
-                        totalValue_Current = stockVolume_Current * close_price + cash_Current
+                        totalValue_Current = np.round((stockVolume_Current * close_price + cash_Current), 3)
                         profit_Rate = math.log(totalValue_Current / totalValue_Begin)
 
                         # Append HalfHour Profit Results into Array
@@ -669,7 +669,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                 # Calculate lastest profit rate with lastest close_price: e_price for each pattern
                 stockVolume_Current = MACD_trades.iloc[-1].stockVolume_Current
                 cash_Current = MACD_trades.iloc[-1].cash_Current
-                totalValue_Current = stockVolume_Current * e_price + cash_Current
+                totalValue_Current = np.round((stockVolume_Current * e_price + cash_Current), 3)
                 profit_Rate = math.log(totalValue_Current / totalValue_Begin)
                 transaction = [e_stock_code, e_quote_time, 0, 0, 0, 0, 0, totalValue_Current, profit_Rate, 0, 0, 0,
                                pattern]
@@ -1448,9 +1448,9 @@ def main():
     # MACDPattern._get_best_pattern('sz002310')
     #MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #commu('1')
-    cal_specific_pattern()
+    # cal_specific_pattern()
     # MACDPattern._get_best_pattern('sz002310')
-    #caL_all_pattern()
+    caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock
@@ -1469,9 +1469,9 @@ def caL_all_pattern():
             for each_beta in beta:
                 MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=each_quo,
                                                               ga=each_ga, beta=each_beta)
-                #MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
+                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
                 #MACDPattern._save_MACD_best_pattern(period='m30')
-                #MACDPattern._get_best_pattern('sz002310')
+                MACDPattern._get_best_pattern('sz002310')
 
 
 def cal_specific_pattern():
