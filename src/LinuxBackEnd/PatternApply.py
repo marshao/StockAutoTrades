@@ -13,7 +13,7 @@ def apply_pattern(period=None, stock_code=None):
 
     bMACD = C_BestMACDPattern()
     # for each_stock_code in stock_codes:
-    bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=stock_code, quo=0.7, ga=0.3, beta=0.2)
+    bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=stock_code, quo=0.9, ga=0.3, beta=0.2)
 
 
 def best_pattern_daily_calculate():
@@ -25,7 +25,7 @@ def best_pattern_daily_calculate():
 
 
 def apply_multi_patterns(period=None, stock_codes=None):
-    stock_pars_m30 = {'sz002310':[0.7, 0.3, 0.2],
+    stock_pars_m30 = {'sz002310': [0.9, 0.3, 0.2],
                       'sh600867': [0.8, 0.6, 0.2],
                       'sz300146': [0.7, 0.3, 0.2],
                       'sh600271': [0.9, 0.4, 0.2]
