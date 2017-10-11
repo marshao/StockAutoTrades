@@ -43,7 +43,7 @@ class C_Algorithems_BestPattern(object):
         self._stock_codes = ['sz002310']
         self._stock_market = ""
         self._window = '10'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
         self._metadata = MetaData(self._engine)
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
@@ -585,7 +585,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         MACD_trade_column_names = ['stock_code', 'quote_time', 'close_price', 'tradeVolume', 'tradeCost',
                                    'stockVolume_Current', 'cash_Current', 'totalValue_Current', 'profit_Rate',
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
-        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
 
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
@@ -953,7 +953,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 last = row
                 # last_idx = idxdf_save.EMA_short[-1] = 999
             # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
             # print df[df.Signal == -1].count()
             #df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
@@ -1038,7 +1038,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 last_idx = idx
 
             # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
             df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
@@ -1055,7 +1055,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                    progressbar.ETA()]
         progress = progressbar.ProgressBar(widgets=widgets)
 
-        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
 
         # loop breaker
         loop_breaker = 0

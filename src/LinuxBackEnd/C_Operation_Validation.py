@@ -20,7 +20,7 @@ class C_Operation_Validation(object):
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._operation_log = self._output_dir + 'operLog.txt'
         self._validation_log = self._output_dir + 'validateLog.txt'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))

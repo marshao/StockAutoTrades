@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 
 def get_data_qq(stock_code='sz300226'):
     data_source = {'qq_realtime': 'http://qt.gtimg.cn/q=%s'}
-    engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+    engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
     got = True
     url = data_source['qq_realtime'] % stock_code
     html = urllib.urlopen(url)
