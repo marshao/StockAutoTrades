@@ -1,32 +1,38 @@
 #!/usr/local/bin/python
 # coding: utf-8
 
-import socket, time, datetime
+import socket, time
 from C_StockWindowControl import *
-from threading import Thread, Timer
-
+import logging
 
 class C_FrontEndSockets:
     def __init__(self):
         self._swc = C_StockWindowControl()
         self._swc._get_handles()
         self._swc._get_various_data()
-
+        logging.basicConfig()
 
     def _listen(self):
+        '''
+        This is the port listening function, once it goes into listen mode, it will not exit unless meet a exception
+        :return:
+        '''
+        alive = True
         s = socket.socket()
         host = 'Bei1Python'
         port = 32768
         s.bind((host, port))
         s.listen(5)
-        print "Port Listening is started"
-        while True:
+        print "Start Listening"
+        while alive:
+            # 进入监听模式,只有收到数据才会进行下一步
             c, addr = s.accept()
-            print 'Got connection from', addr
             mesg = c.recv(1024)
             back_mesg = self._prcess_message(mesg)
             c.send(back_mesg)
             c.close()
+        s.close()
+
 
     def _prcess_message(self, from_mesg):
         back_mesg = ''
@@ -51,7 +57,7 @@ class C_FrontEndSockets:
             stockTrades = from_mesg.split()
             print "stockTrades is %s" % stockTrades
             done = self._swc.buy_stock(stockTrades)
-            done = True
+            # done = True
             if done:
                 back_mesg = '2.1'
             else:
@@ -60,7 +66,7 @@ class C_FrontEndSockets:
             print "issue a sales command"
             stockTrades = from_mesg.split()
             done = self._swc.sale_stock(stockTrades)
-            done = True
+            #done = True
             if done:
                 back_mesg = '3.1'
             else:
@@ -69,18 +75,6 @@ class C_FrontEndSockets:
             print "unknow command"
         print back_mesg + " at " + self._time_tag()
         return back_mesg
-
-    def _refresh_window_control(self):
-        print "refresh started"
-        last = time.time()
-        while True:
-            current = time.time()
-            if current - last > 30:
-                self._swc._buy_page()
-                sleep(0.3)
-                self._swc._stock_withdraw_page()
-                last = current
-                print "Trading software is refreshed and actived."
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))
@@ -92,12 +86,7 @@ class C_FrontEndSockets:
 def main():
     soc = C_FrontEndSockets()
     soc._listen()
-    #refresh_window = Timer(20, soc._refresh_window_control())
-    #port_listen = Thread(target=soc._listen())
-    #refresh_window.start()
-    #port_listen.start()
-    #refresh_window.join()
-    #port_listen.join()
+
 
 if __name__ == '__main__':
     main()

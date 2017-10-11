@@ -7,22 +7,27 @@ __metclass__ = type
 import os, time, pandas, urllib, re
 import datetime
 from sqlalchemy import create_engine, Table, Column, MetaData
-from sqlalchemy.sql import select, and_, or_, not_
+from sqlalchemy.sql import select, and_, or_, not_, delete
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.pool import ThreadPoolExecutor
+# from apscheduler.schedulers import Scheduler
 import multiprocessing as mp
 import logging
 
 class C_GettingData:
     '''
     This is the class to monitor the stock real time price from various resources: (Sina, SnowBall, etc)
+    #Change: 2017-07-05 Found a mistake in schedule task. Everytime before the schedular call the apply_best_pattern()
+    it will also download the m30 data again. It cause there are two very timely closed m30 records in DB every time.
+    Ex: m30 in 2:30 and m30 in 2:39. These closed records will set the signal calcultion and pattern selection into error.
+    To fix that: Delete the unwanted rows each time.
+
+    # Change: 2017-07-05 Added opening rows for each day by adding funcion _insert_opening_records()
     '''
 
     def __init__(self):
-        self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
+        # self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
+        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._input_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
         self._install_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
 
@@ -32,10 +37,11 @@ class C_GettingData:
                            'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
         self._x_min = ['m1','m5','m15','m30','m60']
         self._x_period = ['day', 'week']
-        self._q_count = ['320','50','16','8','4']
+        self._q_count = ['320', '50', '16', '16', '4']
         self._fq = ['qfq', 'hfq','bfq']
-        self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
-        # self._stock_code = ['sz300226']
+        # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
+        # self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
+        self._stock_code = ['sz002310', 'sh600867', 'sz300146','sh600271']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
         self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
@@ -58,10 +64,10 @@ class C_GettingData:
         self._x_min_data_DF = pandas.DataFrame(columns = self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
-        self._start_morning = datetime.time(9, 30, 0)
-        self._end_morning = datetime.time(11, 42, 0)
-        self._start_afternoon = datetime.time(13, 0, 0)
-        self._end_afternoon = datetime.time(15, 12, 0)
+        self._start_morning = datetime.time(9, 20, 0)
+        self._end_morning = datetime.time(11, 32, 0)
+        self._start_afternoon = datetime.time(12, 50, 0)
+        self._end_afternoon = datetime.time(15, 10, 0)
         self._fun = self._empty_fun
 
 
@@ -208,56 +214,73 @@ class C_GettingData:
                     best_pattern_daily_calculate()
                 time.sleep(600)
 
-    def get_data_qq(self, stock_code='sz300226', period='day', fq='qfq', q_count='320'):
+    def get_data_qq(self, stock_code=None, period=None, fq=None, q_count=None):
         logging.debug('Starting')
+        if stock_code is None:
+            stock_code = 'sz300226'
+        if period is None:
+            period = 'day'
+        if fq is None:
+            fq = 'qfq'
+        if q_count is None:
+            q_count = '320'
+
         self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
         got = True
-        try:
-            if period in self._x_period:  # precess day/week data
-                fq = ('qfq' if fq not in (self._fq) else fq)
-                url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
-                html = urllib.urlopen(url)
-                data = html.read()
-                self._process_x_period_data_qq(data, period, fq, stock_code)
-                self._save_data_to_db_qq(period, stock_code)
-            elif period in (self._x_min):
-                if period == 'm1':  # process 1 min data
+        # try:
+        if period in self._x_period:  # precess day/week data
+            fq = ('qfq' if fq not in (self._fq) else fq)
+            url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
+            html = urllib.urlopen(url)
+            data = html.read()
+            self._process_x_period_data_qq(data, period, fq, stock_code)
+            # self._save_data_to_db_qq(period, stock_code)
+        elif period in (self._x_min):
+            if period == 'm1':  # process 1 min data
                     url = self._data_source['qq_1_min'] % (stock_code, stock_code)
+                    print url
                     html = urllib.urlopen(url)
                     data = html.read()
                     self._process_1_min_data_qq(data, stock_code)
-                    self._save_data_to_db_qq(period, stock_code)
-                else:  # process X min data
-                    if period == 'm5':
-                        q_count = self._q_count[1]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm15':
-                        q_count = self._q_count[2]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm30':
+                    #self._save_data_to_db_qq(period, stock_code)
+            else:  # process X min data
+                if period == 'm5':
+                    q_count = self._q_count[1]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                elif period == 'm15':
+                    q_count = self._q_count[2]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                elif period == 'm30':
+                    if q_count is None:
                         q_count = self._q_count[3]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    elif period == 'm60':
-                        q_count = self._q_count[3]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    else:
-                        q_count = self._q_count[4]
-                        url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    html = urllib.urlopen(url)
-                    data = html.read()
-                    self._process_x_min_data_qq(data, period, stock_code)
-                    self._save_data_to_db_qq(period, stock_code)
-            else:  # process real time data
-                url = self._data_source['qq_realtime'] % stock_code
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    print "Get URL"
+                elif period == 'm60':
+                    q_count = self._q_count[3]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                else:
+                    q_count = self._q_count[4]
+                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                print url
                 html = urllib.urlopen(url)
                 data = html.read()
-                self._process_real_time_data_qq(data)
-                self._save_data_to_db_qq(period, stock_code)
-        except:
-            got = False
+                self._process_x_min_data_qq(data, period, stock_code)
+                #self._save_data_to_db_qq(period, stock_code)
+        else:  # process real time data
+            url = self._data_source['qq_realtime'] % stock_code
+            html = urllib.urlopen(url)
+            data = html.read()
+            self._process_real_time_data_qq(data)
+        self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data has been download.\n" % (
+        self._time_tag(), stock_code, period)
+        self._save_data_to_db_qq(period, stock_code)
+        # except:
+        #    got = False
+        #    print "Can not load data for %s with Period %s"%(stock_code, period)
         logging.debug('Finished')
+        self._write_log(self._log_mesg)
         return got
 
 
@@ -370,9 +393,12 @@ class C_GettingData:
     def _process_x_min_data_qq(self, data, x_min, stock_code):
         self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
         #print self._x_min_data_DF
+
         nPos = data.find(x_min)
-        data = data[(nPos + 7):-5].split('],[')
+        ePos = data.find("prec")
+        data = data[(nPos + 7):(ePos - 4)].split('],[')
         p = re.compile(r'\d+.\d+')
+
         for item in data:
             tmp_l = p.findall(item)
             tmp_l[0] = datetime.datetime.strptime(tmp_l[0],'%Y%m%d%H%M')
@@ -387,7 +413,9 @@ class C_GettingData:
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
         print "processed %s data of stock %s" % (x_min, stock_code)
+        #print self._x_min_data_DF
         return self._x_min_data_DF
+
 
     def _save_data_to_db_qq(self, period, stock_code):
         # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
@@ -396,16 +424,18 @@ class C_GettingData:
         data = self._x_min_data_DF
         if period in self._x_min:
             # save x min data into DB
-            data = self._remove_duplicate_rows(period, stock_code)
+            data = self._remove_overlaied_rows(period, stock_code)
             if period != 'm1':
+                data = self._remove_unwant_min_rows(data, stock_code)
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
+                self._remove_zero_trading_volumn_rows(period, stock_code)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
             else:
                 data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
                 print "saved m1 data of stock code %s at %s" % (stock_code, self._time_tag())
         elif period in self._x_period:
             # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
-            data = self._remove_duplicate_rows(period, stock_code)
+            data = self._remove_overlaied_rows(period, stock_code)
             data.to_sql('tb_StockXPeriodRecords', self._engine, if_exists='append', index=True)
             print "saved %s period data of stock code %s at %s" % (period, stock_code, self._time_tag())
         else:
@@ -413,7 +443,11 @@ class C_GettingData:
             data = self._real_time_data_DF
             data.to_sql('tb_StockRealTimeRecords', self._engine, if_exists='append', index=False)
 
-    def _remove_duplicate_rows(self, period, stock_code):
+        self._log_mesg = self._log_mesg + "At %s Data Saving: Stock %s period %s data has been saved. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
+
+    def _remove_overlaied_rows(self, period, stock_code):
         '''
         Step 1: 从数据库中取出相应股票最后一个记录的时间戳
         Step 2：从data 删除早于这个时间戳的记录
@@ -432,6 +466,8 @@ class C_GettingData:
                          tb.c.stock_code == stock_code)). \
                     order_by(tb.c.quote_time.desc()).limit(1)
                 data = self._x_min_data_DF
+                # Insert opening prices for x_min data except m1
+                #data = self._insert_opening_record(data)
             else:# Process 1 min data
                 tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
                 s = select([tb.c.quote_time]). \
@@ -449,14 +485,127 @@ class C_GettingData:
 
         result = conn.execute(s).fetchall()
         if len(result) != 0:
-            #print result
             last_record_time = result[0][0]
-            #print last_record_time
-            #data = data.loc[lambda df: df.index > last_record_time, :]
             data = data[data.index > last_record_time]
-            return data
+            print "Overlaied rows has been removed."
         else:
-            return data
+            print "Overlaied rows has been removed."
+
+        self._log_mesg = self._log_mesg + "At %s Overlaied: Overlaied rows for Stock %s period %s data has been removed. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
+        conn.close()
+        return data
+
+    def _remove_zero_trading_volumn_rows(self, period, stock_code):
+        '''
+        Some time in ShangHai stocks m30 records, duplicated M30 rows with 0 trading_volumns shows in DB, these rows
+        need to be deleted.
+        :param period:
+        :param stock_code:
+        :return:
+        '''
+        conn = self._engine.connect()
+        tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
+        d = tb.delete(and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))
+
+        # s = select(tb.c.id_tb_StockXMinRecords where (and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))))
+        # d1 = tb.delete(tb.c.id_tb_StockXMinRecords == s.id_tb_StockXMinRecords)
+        # s = delete FROM tb where tb.c.id_tb_StockXMinRecords = (select a.id_tb_StockXMinRecords from (SELECT id_tb_StockXMinRecords FROM DB_StockDataBackTest.tb_StockXMinRecords where stock_code = 'sh600867' and period='m30' and trading_volumn = 0) as a);
+        conn.execute(d)
+        conn.close()
+        print "Zero_trading_volumn_rows be removed"
+        self._log_mesg = self._log_mesg + "At %s Zero_trading_volumn_rows: zero_trading_volumn rows for Stock %s period %s data has been removed. \n" % (
+            self._time_tag(), stock_code, period)
+        self._write_log(self._log_mesg)
+
+    def _remove_unwant_min_rows(self, df, stock_code):
+        '''
+        As the getting data process cannot be runned at exact minitue, the system will download some unwanted data.
+        Ex: want the getting m30 data was runned at 10:39:00, then beside 10:30:00 record, another 10:39:00 m30 records
+        will also be downloaded and saved.
+        This function is to remove stock records which are not exactly at exactly want minitues stamps.
+        :param df: DF fram which has been processed by remove_duplicate_rows
+        :return: a cleaner DF
+        '''
+        if len(df['open_price']) == 0:
+            return df
+
+        for idx, row in df.iterrows():
+            # period = df.period[0]
+            # download_min = df.index[0].minute
+            #download_sec = df.index[0].second
+
+            period = row.period
+            # print row.name
+            download_min = row.name.minute
+            # print download_min
+            download_sec = row.name.second
+
+            if period == 'm5':
+                if (int(download_min) % 5 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm15':
+                if (int(download_min) % 15 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm30':
+                if (int(download_min) % 30 != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            elif period == 'm60':
+                if (int(download_min) != 0) or (int(download_sec) != 0):
+                    df.drop(idx, inplace=True)
+            else:
+                pass
+
+        self._log_mesg = self._log_mesg + "At %s Unwanted: Unwanted rows for Stock %s period %s data has been removed. \n" % (
+        self._time_tag(),stock_code, period)
+        self._write_log(self._log_mesg)
+        print "Unwanted Min Records have been removed."
+        return df
+
+    def _insert_opening_record(self, df):
+        '''
+        By observing the data records, I found there is no 9:30 opening records for each day. This missing records will
+        casue the first caulation between 9:30 and 10:00 is the actually the compare of 10:00 today and 15:00 yesterday.
+         The program will not be able to consider the difference of today's opening and yesterday's closing.
+         So: A opening records is inserted by this function with all prices = today's opening and volumn = 0
+         This function affect m5, m15, m30 and m60 records
+        :param df:
+        :return:
+        '''
+        if len(df['open_price']) == 0:
+            return df
+
+        # This part is to select different trading dates
+        dates = df.ix[:, 0:0].reset_index()
+        dates['date'] = 0
+        for idx, row in dates.iterrows():
+            dates.set_value(idx, 'date', row['quote_time'].date())
+        dates.drop_duplicates('date', keep='first', inplace=True)
+
+        # For each trading days, insert opening row
+        for idx, row in dates.iterrows():
+            # tday = datetime.datetime.today()
+            year = row['date'].year
+            month = row['date'].month
+            day = row['date'].day
+            open_stamp = datetime.datetime(year, month, day, 9, 30, 0, 0)
+
+            # From the 10:00 record to retrieve open_price
+            first_stamp = datetime.datetime(year, month, day, 10, 0, 0, 0)
+
+            if first_stamp in df.index:
+                first_stamp_open = df.get_value(first_stamp, 'open_price')
+                stock_code = df.get_value(first_stamp, 'stock_code')
+                period = df.get_value(first_stamp, 'period')
+                # Insert 9:30 record for each day
+                df.ix[open_stamp] = [first_stamp_open, first_stamp_open, first_stamp_open, first_stamp_open, 0,
+                                     stock_code, period]
+        df = df.sort_index()
+        df.index.names = ['quote_time']
+        print "Opening Record has been inserted."
+        return df
+
 
     def _timer(self, func):
         # 定义一个计时器函数，让get_real_time_data 每60秒向数据库传送一次更新的数据。
@@ -483,10 +632,24 @@ class C_GettingData:
         only_date = time_stamp.date()
         return only_date
 
-    def _write_log(self,log_mesg, logPath):
+    '''
+     def _write_log(self,log_mesg, logPath):
         fullPath = self._output_dir + logPath
         with open(fullPath, 'a') as log:
             log.writelines(log_mesg)
+    '''
+
+    def _write_log(self, log_mesg, logPath='DataLog.txt'):
+        # logPath = str(self._time_tag_dateonly()) + logPath
+        fullPath = self._output_dir + logPath
+        if isinstance(log_mesg, str):
+            with open(fullPath, 'a') as log:
+                log.writelines(log_mesg)
+        else:
+            for message in log_mesg:
+                with open(fullPath, 'a') as log:
+                    log.writelines(message)
+        self._log_mesg = ''
 
     def _convert_encoding(self, lines, new_coding='UTF-8'):
         try:
@@ -500,48 +663,57 @@ class C_GettingData:
     def _empty_fun(self, period):
         pass
 
-    def job_schedule(self):
+    def job_schedule(self, period=None, stock_code=None):
         # job_stores = {'default': MemoryJobStore()}
         # executor = {'processpool': ThreadPoolExecutor(8)}
         # job_default = {'coalesce': False, 'max_instances': 12}
         # scheduler_1 = BackgroundScheduler(jobstores=job_stores, executors=executor, job_defaults=job_default)
 
+        if period is None:
+            period = 'm30'
+        if stock_code is None:
+            stock_code = 'sz002310'
         scheduler_1 = BackgroundScheduler()
-        # scheduler_2 = BlockingScheduler()
-        # scheduler_1.add_job(self._fun, 'interval', seconds=180, args=['m1'])
-        # scheduler_1.add_job(self._fun, 'interval', seconds=300, args=['m5'])
-        # scheduler_1.add_job(self._fun, 'interval', seconds=1800, args=['m30'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=180, args=['m1'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=300, args=['m5'])
-        scheduler_1.add_job(self._data_service, 'interval', seconds=3600, args=['m60'])
-        scheduler_1.add_job(self._half_hour_tasks, 'interval', seconds=1800, args=['m30'])
+        scheduler_2 = BackgroundScheduler()
+
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
+                            args=['m1'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
+                            args=['m15'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30',
+                            args=['m30'])
+        scheduler_1.add_job(self._data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
+                            args=['m60'])
+        scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
+                            args=[period, stock_code])
+        scheduler_2.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='22')
+
         scheduler_1.start()
+        scheduler_2.start()
 
         # The switch of scheduler_1
         while True:
-            self._scheduler_switch(scheduler_1)
-
-    def _half_hour_tasks(self, period):
-        self._data_service(period)
-        apply_pattern('m30', 'sz300226')
+            self._scheduler_switch(scheduler_1, scheduler_2)
 
 
-    def _scheduler_switch(self, scheduler):
+    def _scheduler_switch(self, scheduler_1, scheduler_2):
         current_time = datetime.datetime.now().time()
 
         if (current_time > self._start_morning and current_time < self._end_morning) or (
                         current_time > self._start_afternoon and current_time < self._end_afternoon):
-            scheduler.resume()
-            print "scheduler back to work"
+            scheduler_2.pause()
+            scheduler_1.resume()
+            scheduler_1.print_jobs()
+            scheduler_2.print_jobs()
+            print "scheduler_1 back to work"
             #time.sleep(600)
         else:
             print "out of the time of getting data"
-            scheduler.pause()
-            st_time = datetime.time(21, 0, 0)
-            ed_time = datetime.time(21, 15, 0)
-            if (current_time > st_time) and (current_time < ed_time):
-                best_pattern_daily_calculate()
-        time.sleep(600)
+            scheduler_1.pause()
+            scheduler_2.resume()
+            scheduler_2.print_jobs()
+
+        time.sleep(60)
 
 
     def _data_service(self, period):
@@ -557,6 +729,7 @@ class C_GettingData:
             p.join()
 
 
+
 def main():
     pp = C_GettingData()
     # pp.job_schedule()
@@ -564,10 +737,11 @@ def main():
     #pp.get_real_time_data(None, None)
     #pp.save_real_time_data_to_db()
     #pp.service_getting_data()
-    pp.get_data_qq(stock_code='sz300226', period='m60')
-    # pp.get_data_qq(stock_code='sz300146',period='m1')
+    # pp.get_data_qq(stock_code='sz002310', period='day')
+    #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    # pp.get_data_qq(stock_code='sz300146', period='m30')
+    pp.get_data_qq(stock_code='sh600271', period='m5', q_count=800)
+    #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
 
