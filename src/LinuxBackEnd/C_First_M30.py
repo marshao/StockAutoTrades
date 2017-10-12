@@ -7,6 +7,7 @@ from sqlalchemy.sql import select
 from sqlalchemy import create_engine
 import pandas as pd
 import datetime, time
+from CommuSocket import db_engine
 
 
 class C_First_M30(object):
@@ -20,7 +21,8 @@ class C_First_M30(object):
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._operation_log = self._output_dir + 'operLog.txt'
         self._validation_log = self._output_dir + 'validateLog.txt'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+        self._engine = db_engine()
+
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))

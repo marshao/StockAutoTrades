@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_, delete
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
+from CommuSocket import db_engine
 # from apscheduler.schedulers import Scheduler
 import multiprocessing as mp
 import logging
@@ -44,7 +45,7 @@ class C_GettingData:
         self._stock_code = ['sz002310', 'sh600867', 'sz300146','sh600271']
         self._log_mesg = ''
         self._op_log = 'operLog.txt'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+        self._engine = db_engine()
         self._metadata = MetaData(self._engine)
         self._my_real_time_DF_columns_sina = ['stock_code', 'close_price', 'open_price', 'current_price', 'high_price', 'low_price', 'buy_price', 'sale_price', 'trading_volumn', 'trading_amount',
                    'buy1_apply','buy1_price','buy2_apply','buy2_price','buy3_apply','buy3_price','buy4_apply','buy4_price','buy5_apply','buy5_price',

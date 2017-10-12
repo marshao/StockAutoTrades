@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="MySQL - DB_StockDataBackTest@localhost">
+  <database-model serializer="dbm" rdbms="MYSQL" format-version="2.6">
+    <schema id="1" name="cinder">
+      <visible>1</visible>
+    </schema>
+    <schema id="2" name="DB_StockDataBackTest"/>
+    <schema id="3" name="EnviromentalData"/>
+    <schema id="4" name="glance"/>
+    <schema id="5" name="information_schema"/>
+    <schema id="6" name="keystone"/>
+    <schema id="7" name="mysql"/>
+    <schema id="8" name="nova"/>
+    <schema id="9" name="performance_schema"/>
+    <schema id="10" name="quantum"/>
+    <schema id="11" name="sys"/>
+  </database-model>
+</dataSource>

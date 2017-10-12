@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import socket
+from sqlalchemy import create_engine
 
 
 def commu(cmd='1'):
@@ -28,3 +29,9 @@ def commu(cmd='1'):
         return receive
     except:
         print "The front end server error"
+
+
+def db_engine():
+    eng1 = create_engine('mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
+    eng2 = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+    return eng1

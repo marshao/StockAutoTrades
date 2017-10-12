@@ -1,0 +1,1543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="MySQL - DB_StockDataBackTest@10.175.10.231">
+  <database-model serializer="dbm" rdbms="MYSQL" format-version="2.6">
+    <schema id="1" name="DB_StockDataBackTest">
+      <visible>1</visible>
+    </schema>
+    <schema id="2" name="cinder"/>
+    <schema id="3" name="EnviromentalData"/>
+    <schema id="4" name="glance"/>
+    <schema id="5" name="information_schema"/>
+    <schema id="6" name="keystone"/>
+    <schema id="7" name="mysql"/>
+    <schema id="8" name="nova"/>
+    <schema id="9" name="performance_schema"/>
+    <schema id="10" name="quantum"/>
+    <schema id="11" name="sys"/>
+    <table id="12" parent="1" name="tb_MACDIndex"/>
+    <table id="13" parent="1" name="tb_MACD_Trades"/>
+    <table id="14" parent="1" name="tb_MACD_Trades_HalfHour"/>
+    <table id="15" parent="1" name="tb_Stock1MinRecords"/>
+    <table id="16" parent="1" name="tb_StockAsset"/>
+    <table id="17" parent="1" name="tb_StockBestPatterns"/>
+    <table id="18" parent="1" name="tb_StockCodes"/>
+    <table id="19" parent="1" name="tb_StockDailyRecords"/>
+    <table id="20" parent="1" name="tb_StockHalfHourRecords"/>
+    <table id="21" parent="1" name="tb_StockIndex_MACD"/>
+    <table id="22" parent="1" name="tb_StockIndex_MACD_HalfHour"/>
+    <table id="23" parent="1" name="tb_StockIndex_MACD_New"/>
+    <table id="24" parent="1" name="tb_StockIndex_SAR"/>
+    <table id="25" parent="1" name="tb_StockInhand"/>
+    <table id="26" parent="1" name="tb_StockRealTimeRecords"/>
+    <table id="27" parent="1" name="tb_StockTradeHistory"/>
+    <table id="28" parent="1" name="tb_StockXMinRecords"/>
+    <table id="29" parent="1" name="tb_StockXPeriodRecords"/>
+    <table id="30" parent="1" name="temp_MACD_Day"/>
+    <table id="31" parent="1" name="temp_MACD_Day_Index"/>
+    <table id="32" parent="1" name="temp_MACD_M60_Index"/>
+    <table id="33" parent="1" name="temp_SAR_Day_Index"/>
+    <table id="34" parent="1" name="temp_SAR_Hour_Index"/>
+    <view id="35" parent="1" name="vw_MACD_EndingProfits">
+      <comment>VIEW</comment>
+    </view>
+    <view id="36" parent="1" name="vw_MACD_EndingProfits_HalfHour">
+      <comment>VIEW</comment>
+    </view>
+    <view id="37" parent="1" name="vw_MACD_HalfHour_All_out">
+      <comment>VIEW</comment>
+    </view>
+    <view id="38" parent="1" name="vw_SAR_EndingProfits">
+      <comment>VIEW</comment>
+    </view>
+    <column id="39" parent="12" name="id_tb_MACDIndex">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="40" parent="12" name="EMA_long_window">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="41" parent="12" name="EMA_short_window">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="42" parent="12" name="DIF_window">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <key id="43" parent="12" name="PRIMARY">
+      <columns>id_tb_MACDIndex</columns>
+      <primary>1</primary>
+    </key>
+    <column id="44" parent="13" name="id_tb_MACD_Trades">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="45" parent="13" name="id_tb_StockCodes">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="46" parent="13" name="record_date">
+      <data-type>date|0</data-type>
+    </column>
+    <column id="47" parent="13" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="48" parent="13" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="49" parent="13" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="50" parent="13" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="51" parent="13" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="52" parent="13" name="profit_Rate">
+      <data-type>decimal(20,4)|0</data-type>
+    </column>
+    <column id="53" parent="13" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="54" parent="13" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="55" parent="13" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="56" parent="13" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="57" parent="13" name="stock_codes">
+      <data-type>int(6)|0</data-type>
+    </column>
+    <key id="58" parent="13" name="PRIMARY">
+      <columns>id_tb_MACD_Trades</columns>
+      <primary>1</primary>
+    </key>
+    <column id="59" parent="14" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="60" parent="14" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="61" parent="14" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="62" parent="14" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="63" parent="14" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="64" parent="14" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="65" parent="14" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="66" parent="14" name="profit_Rate">
+      <data-type>decimal(20,10)|0</data-type>
+    </column>
+    <column id="67" parent="14" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="68" parent="14" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="69" parent="14" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="70" parent="14" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="71" parent="14" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="72" parent="14" name="close_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <key id="73" parent="14" name="PRIMARY">
+      <columns>id_tb_MACD_Trades_HalfHour</columns>
+      <primary>1</primary>
+    </key>
+    <column id="74" parent="15" name="id_tb_Stock1MinRecords">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="75" parent="15" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="76" parent="15" name="price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+    </column>
+    <column id="77" parent="15" name="trading_volumn">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <column id="78" parent="15" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <key id="79" parent="15" name="PRIMARY">
+      <columns>id_tb_Stock1MinRecords</columns>
+      <primary>1</primary>
+    </key>
+    <column id="80" parent="16" name="idt_tb_StockAsset">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="81" parent="16" name="cash_avaliable">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <column id="82" parent="16" name="stock_value">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <column id="83" parent="16" name="total_asset">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <column id="84" parent="16" name="date_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <key id="85" parent="16" name="PRIMARY">
+      <columns>idt_tb_StockAsset</columns>
+      <primary>1</primary>
+    </key>
+    <column id="86" parent="17" name="id_tb_StockBestPatterns">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="87" parent="17" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(8)|0</data-type>
+    </column>
+    <column id="88" parent="17" name="algorithem_name">
+      <mandatory>1</mandatory>
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <column id="89" parent="17" name="best_pattern">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="90" parent="17" name="pattern_date">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="91" parent="17" name="profit_rate">
+      <mandatory>1</mandatory>
+      <data-type>decimal(10,5)|0</data-type>
+    </column>
+    <column id="92" parent="17" name="Reason">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <key id="93" parent="17" name="PRIMARY">
+      <columns>id_tb_StockBestPatterns</columns>
+      <primary>1</primary>
+    </key>
+    <column id="94" parent="18" name="id_tb_StockCodes">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="95" parent="18" name="stock_code">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <column id="96" parent="18" name="stock_name">
+      <data-type>varchar(40)|0</data-type>
+    </column>
+    <column id="97" parent="18" name="stock_market">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <column id="98" parent="18" name="stock_trad">
+      <data-type>tinyint(1)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <key id="99" parent="18" name="PRIMARY">
+      <columns>id_tb_StockCodes</columns>
+      <primary>1</primary>
+    </key>
+    <column id="100" parent="19" name="id_tb_StockDailyRecords">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="101" parent="19" name="record_date">
+      <mandatory>1</mandatory>
+      <data-type>date|0</data-type>
+    </column>
+    <column id="102" parent="19" name="open_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="103" parent="19" name="high_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="104" parent="19" name="low_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="105" parent="19" name="close_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="106" parent="19" name="adjusted_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="107" parent="19" name="total_volume">
+      <data-type>decimal(30,2)|0</data-type>
+    </column>
+    <column id="108" parent="19" name="total_amount">
+      <data-type>decimal(30,2)|0</data-type>
+    </column>
+    <column id="109" parent="19" name="id_tb_StockCodes">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <index id="110" parent="19" name="fk_id_tb_StockCodes_idx">
+      <columns>id_tb_StockCodes</columns>
+      <desc-columns></desc-columns>
+    </index>
+    <key id="111" parent="19" name="PRIMARY">
+      <columns>id_tb_StockDailyRecords</columns>
+      <primary>1</primary>
+    </key>
+    <foreign-key id="112" parent="19" name="fk_tb_StockDailyRecords_1">
+      <columns>id_tb_StockCodes</columns>
+      <ref-key>~.tb_StockCodes.PRIMARY</ref-key>
+      <cascade-update-rule>no_action</cascade-update-rule>
+      <cascade-delete-rule>no_action</cascade-delete-rule>
+    </foreign-key>
+    <column id="113" parent="20" name="id_tb_StockHalfHourRecords">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="114" parent="20" name="record_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="115" parent="20" name="open_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="116" parent="20" name="high_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="117" parent="20" name="low_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="118" parent="20" name="close_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="119" parent="20" name="adjusted_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="120" parent="20" name="total_volume">
+      <data-type>decimal(30,2)|0</data-type>
+    </column>
+    <column id="121" parent="20" name="total_amount">
+      <data-type>decimal(30,2)|0</data-type>
+    </column>
+    <column id="122" parent="20" name="id_tb_StockCodes">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <index id="123" parent="20" name="fk_id_tb_StockCodes_idx">
+      <columns>id_tb_StockCodes</columns>
+      <desc-columns></desc-columns>
+    </index>
+    <key id="124" parent="20" name="PRIMARY">
+      <columns>id_tb_StockHalfHourRecords</columns>
+      <primary>1</primary>
+    </key>
+    <foreign-key id="125" parent="20" name="fk_tb_StockHalfHourRecords_1">
+      <columns>id_tb_StockCodes</columns>
+      <ref-key>~.tb_StockCodes.PRIMARY</ref-key>
+      <cascade-update-rule>no_action</cascade-update-rule>
+      <cascade-delete-rule>no_action</cascade-delete-rule>
+    </foreign-key>
+    <column id="126" parent="21" name="id_tb_StockIndex_MACD">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="127" parent="21" name="id_tb_StockCodes">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="128" parent="21" name="EMA_short">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="129" parent="21" name="EMA_long">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="130" parent="21" name="DIF">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="131" parent="21" name="DEA">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="132" parent="21" name="MACD">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="133" parent="21" name="record_date">
+      <mandatory>1</mandatory>
+      <data-type>date|0</data-type>
+    </column>
+    <column id="134" parent="21" name="Signal">
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="135" parent="21" name="EMA_short_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="136" parent="21" name="EMA_long_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="137" parent="21" name="DIF_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="138" parent="21" name="MACD_pattern_number">
+      <mandatory>1</mandatory>
+      <data-type>int(5)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="139" parent="21" name="Reason">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <index id="140" parent="21" name="id_tb_StockCodes_idx">
+      <columns>id_tb_StockCodes</columns>
+      <desc-columns></desc-columns>
+    </index>
+    <key id="141" parent="21" name="PRIMARY">
+      <columns>id_tb_StockIndex_MACD</columns>
+      <primary>1</primary>
+    </key>
+    <foreign-key id="142" parent="21" name="fk_id_tb_StockIndex_MACD">
+      <columns>id_tb_StockCodes</columns>
+      <ref-key>~.tb_StockCodes.PRIMARY</ref-key>
+      <cascade-update-rule>update</cascade-update-rule>
+      <cascade-delete-rule>no_action</cascade-delete-rule>
+    </foreign-key>
+    <column id="143" parent="22" name="id_tb_StockIndex_MACD_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="144" parent="22" name="id_tb_StockCodes">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="145" parent="22" name="EMA_short">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="146" parent="22" name="EMA_long">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="147" parent="22" name="DIF">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="148" parent="22" name="DEA">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="149" parent="22" name="MACD">
+      <data-type>decimal(20,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="150" parent="22" name="record_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="151" parent="22" name="Signal">
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="152" parent="22" name="EMA_short_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="153" parent="22" name="EMA_long_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="154" parent="22" name="DIF_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="155" parent="22" name="MACD_pattern_number">
+      <mandatory>1</mandatory>
+      <data-type>int(5)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="156" parent="22" name="Reason">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <index id="157" parent="22" name="id_tb_StockCodes_idx">
+      <columns>id_tb_StockCodes</columns>
+      <desc-columns></desc-columns>
+    </index>
+    <key id="158" parent="22" name="PRIMARY">
+      <columns>id_tb_StockIndex_MACD_HalfHour</columns>
+      <primary>1</primary>
+    </key>
+    <foreign-key id="159" parent="22" name="fk_id_tb_StockIndex_MACD_HalfHour">
+      <columns>id_tb_StockCodes</columns>
+      <ref-key>~.tb_StockCodes.PRIMARY</ref-key>
+      <cascade-update-rule>update</cascade-update-rule>
+      <cascade-delete-rule>no_action</cascade-delete-rule>
+    </foreign-key>
+    <column id="160" parent="23" name="id_tb_StockIndex_MACD_New">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="161" parent="23" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(11)|0</data-type>
+    </column>
+    <column id="162" parent="23" name="period">
+      <mandatory>1</mandatory>
+      <data-type>varchar(4)|0</data-type>
+    </column>
+    <column id="163" parent="23" name="EMA_short">
+      <mandatory>1</mandatory>
+      <data-type>decimal(20,10)|0</data-type>
+    </column>
+    <column id="164" parent="23" name="EMA_long">
+      <mandatory>1</mandatory>
+      <data-type>decimal(20,10)|0</data-type>
+      <default-expression>&apos;0.0000000000&apos;</default-expression>
+    </column>
+    <column id="165" parent="23" name="DIF">
+      <data-type>decimal(20,10)|0</data-type>
+      <default-expression>&apos;0.0000000000&apos;</default-expression>
+    </column>
+    <column id="166" parent="23" name="DEA">
+      <data-type>decimal(20,10)|0</data-type>
+      <default-expression>&apos;0.0000000000&apos;</default-expression>
+    </column>
+    <column id="167" parent="23" name="MACD">
+      <data-type>decimal(20,10)|0</data-type>
+      <default-expression>&apos;0.0000000000&apos;</default-expression>
+    </column>
+    <column id="168" parent="23" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="169" parent="23" name="Signal">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="170" parent="23" name="EMA_short_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="171" parent="23" name="EMA_long_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="172" parent="23" name="DIF_window">
+      <mandatory>1</mandatory>
+      <data-type>tinyint(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="173" parent="23" name="MACD_pattern_number">
+      <mandatory>1</mandatory>
+      <data-type>int(5)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="174" parent="23" name="Reason">
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <key id="175" parent="23" name="PRIMARY">
+      <columns>id_tb_StockIndex_MACD_New</columns>
+      <primary>1</primary>
+    </key>
+    <column id="176" parent="24" name="id_tb_StockIndex_SAR">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="177" parent="24" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(11)|0</data-type>
+    </column>
+    <column id="178" parent="24" name="high_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="179" parent="24" name="low_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="180" parent="24" name="close_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="181" parent="24" name="SAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="182" parent="24" name="EP">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="183" parent="24" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="184" parent="24" name="trading_signal">
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="185" parent="24" name="AF_value">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="186" parent="24" name="AF_limit">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="187" parent="24" name="AF_window">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="188" parent="24" name="EPSAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="189" parent="24" name="pattern_number">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="190" parent="24" name="status">
+      <mandatory>1</mandatory>
+      <data-type>int(1)|0</data-type>
+      <default-expression>&apos;1&apos;</default-expression>
+    </column>
+    <column id="191" parent="24" name="ending_profit">
+      <mandatory>1</mandatory>
+      <data-type>decimal(8,4)|0</data-type>
+      <default-expression>&apos;0.0000&apos;</default-expression>
+    </column>
+    <column id="192" parent="24" name="record_window">
+      <mandatory>1</mandatory>
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;5&apos;</default-expression>
+    </column>
+    <key id="193" parent="24" name="PRIMARY">
+      <columns>id_tb_StockIndex_SAR</columns>
+      <primary>1</primary>
+    </key>
+    <column id="194" parent="25" name="id_tb_StockInhand">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="195" parent="25" name="stockCode">
+      <mandatory>1</mandatory>
+      <data-type>varchar(6)|0</data-type>
+    </column>
+    <column id="196" parent="25" name="stockName">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="197" parent="25" name="stockRemain">
+      <mandatory>1</mandatory>
+      <data-type>int(6)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="198" parent="25" name="stockAvaliable">
+      <mandatory>1</mandatory>
+      <data-type>int(6)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="199" parent="25" name="baseCost">
+      <mandatory>1</mandatory>
+      <data-type>decimal(7,3)|0</data-type>
+      <default-expression>&apos;0.000&apos;</default-expression>
+    </column>
+    <column id="200" parent="25" name="currentCost">
+      <mandatory>1</mandatory>
+      <data-type>decimal(7,3)|0</data-type>
+      <default-expression>&apos;0.000&apos;</default-expression>
+    </column>
+    <column id="201" parent="25" name="currentValue">
+      <mandatory>1</mandatory>
+      <data-type>decimal(20,3)|0</data-type>
+      <default-expression>&apos;0.000&apos;</default-expression>
+    </column>
+    <column id="202" parent="25" name="profit">
+      <mandatory>1</mandatory>
+      <data-type>decimal(20,3)|0</data-type>
+      <default-expression>&apos;0.000&apos;</default-expression>
+    </column>
+    <column id="203" parent="25" name="profitRate">
+      <mandatory>1</mandatory>
+      <data-type>decimal(5,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="204" parent="25" name="stockMarket">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="205" parent="25" name="averageBuyPrice">
+      <mandatory>1</mandatory>
+      <data-type>decimal(7,3)|0</data-type>
+      <default-expression>&apos;0.000&apos;</default-expression>
+    </column>
+    <column id="206" parent="25" name="Datetime">
+      <data-type>datetime|0</data-type>
+    </column>
+    <key id="207" parent="25" name="PRIMARY">
+      <columns>id_tb_StockInhand</columns>
+      <primary>1</primary>
+    </key>
+    <column id="208" parent="26" name="id_tb_StockRealTimeData">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="209" parent="26" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(10)|0</data-type>
+      <default-expression>&apos;SZ000000&apos;</default-expression>
+    </column>
+    <column id="210" parent="26" name="close_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="211" parent="26" name="open_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="212" parent="26" name="current_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="213" parent="26" name="high_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="214" parent="26" name="low_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="215" parent="26" name="current_buy_amount">
+      <mandatory>1</mandatory>
+      <data-type>int(15)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="216" parent="26" name="current_sale_amount">
+      <mandatory>1</mandatory>
+      <data-type>int(15)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="217" parent="26" name="total_volumn">
+      <mandatory>1</mandatory>
+      <data-type>int(15)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="218" parent="26" name="total_amount">
+      <mandatory>1</mandatory>
+      <data-type>float(12,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="219" parent="26" name="buy1_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="220" parent="26" name="buy1_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="221" parent="26" name="buy2_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="222" parent="26" name="buy2_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="223" parent="26" name="buy3_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="224" parent="26" name="buy3_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="225" parent="26" name="buy4_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="226" parent="26" name="buy4_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="227" parent="26" name="buy5_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="228" parent="26" name="buy5_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="229" parent="26" name="sale1_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="230" parent="26" name="sale1_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="231" parent="26" name="sale2_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="232" parent="26" name="sale2_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="233" parent="26" name="sale3_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="234" parent="26" name="sale3_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="235" parent="26" name="sale4_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="236" parent="26" name="sale4_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="237" parent="26" name="sale5_apply">
+      <mandatory>1</mandatory>
+      <data-type>int(10)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="238" parent="26" name="sale5_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="239" parent="26" name="time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="240" parent="26" name="net_chg">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="241" parent="26" name="net_chg_percent">
+      <mandatory>1</mandatory>
+      <data-type>float(5,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="242" parent="26" name="turnover_rate">
+      <mandatory>1</mandatory>
+      <data-type>float(5,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="243" parent="26" name="PE">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="244" parent="26" name="circulation_market_value">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="245" parent="26" name="total_market_value">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="246" parent="26" name="PB">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="247" parent="26" name="limit_up">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="248" parent="26" name="limit_down">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="249" parent="26" name="stock_name">
+      <mandatory>1</mandatory>
+      <data-type>varchar(20)|0</data-type>
+    </column>
+    <key id="250" parent="26" name="PRIMARY">
+      <columns>id_tb_StockRealTimeData</columns>
+      <primary>1</primary>
+    </key>
+    <column id="251" parent="27" name="id_tb_StockTradeHistory">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="252" parent="27" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(8)|0</data-type>
+    </column>
+    <column id="253" parent="27" name="trade_type">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="254" parent="27" name="trade_volumn">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="255" parent="27" name="trade_price">
+      <mandatory>1</mandatory>
+      <data-type>float(6,2)|0</data-type>
+    </column>
+    <column id="256" parent="27" name="trade_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="257" parent="27" name="trade_algorithem_name">
+      <mandatory>1</mandatory>
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <column id="258" parent="27" name="trade_algorithem_method">
+      <mandatory>1</mandatory>
+      <data-type>varchar(45)|0</data-type>
+    </column>
+    <column id="259" parent="27" name="trade_result">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="260" parent="27" name="stock_record_period">
+      <mandatory>1</mandatory>
+      <data-type>varchar(5)|0</data-type>
+    </column>
+    <key id="261" parent="27" name="PRIMARY">
+      <columns>id_tb_StockTradeHistory</columns>
+      <primary>1</primary>
+    </key>
+    <column id="262" parent="28" name="id_tb_StockXMinRecords">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="263" parent="28" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="264" parent="28" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="265" parent="28" name="open_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="266" parent="28" name="high_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="267" parent="28" name="low_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="268" parent="28" name="close_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="269" parent="28" name="period">
+      <mandatory>1</mandatory>
+      <data-type>varchar(6)|0</data-type>
+    </column>
+    <column id="270" parent="28" name="trading_volumn">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <key id="271" parent="28" name="PRIMARY">
+      <columns>id_tb_StockXMinRecords</columns>
+      <primary>1</primary>
+    </key>
+    <column id="272" parent="29" name="id_tb_StockXPeriodRecords">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <sequence-identity>1</sequence-identity>
+    </column>
+    <column id="273" parent="29" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="274" parent="29" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="275" parent="29" name="open_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="276" parent="29" name="high_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="277" parent="29" name="low_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="278" parent="29" name="close_price">
+      <mandatory>1</mandatory>
+      <data-type>float(10,2)|0</data-type>
+    </column>
+    <column id="279" parent="29" name="period">
+      <mandatory>1</mandatory>
+      <data-type>varchar(6)|0</data-type>
+    </column>
+    <column id="280" parent="29" name="trading_volumn">
+      <mandatory>1</mandatory>
+      <data-type>float(15,2)|0</data-type>
+    </column>
+    <key id="281" parent="29" name="PRIMARY">
+      <columns>id_tb_StockXPeriodRecords</columns>
+      <primary>1</primary>
+    </key>
+    <column id="282" parent="30" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="283" parent="30" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="284" parent="30" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="285" parent="30" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="286" parent="30" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="287" parent="30" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="288" parent="30" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="289" parent="30" name="profit_Rate">
+      <data-type>decimal(20,4)|0</data-type>
+    </column>
+    <column id="290" parent="30" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="291" parent="30" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="292" parent="30" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="293" parent="30" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="294" parent="30" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="295" parent="30" name="close_price">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="296" parent="31" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="297" parent="31" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="298" parent="31" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="299" parent="31" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="300" parent="31" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="301" parent="31" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="302" parent="31" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="303" parent="31" name="profit_Rate">
+      <data-type>decimal(20,4)|0</data-type>
+    </column>
+    <column id="304" parent="31" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="305" parent="31" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="306" parent="31" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="307" parent="31" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="308" parent="31" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="309" parent="32" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="310" parent="32" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="311" parent="32" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="312" parent="32" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="313" parent="32" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="314" parent="32" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="315" parent="32" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="316" parent="32" name="profit_Rate">
+      <data-type>decimal(20,4)|0</data-type>
+    </column>
+    <column id="317" parent="32" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="318" parent="32" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="319" parent="32" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="320" parent="32" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="321" parent="32" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="322" parent="33" name="id_tb_StockIndex_SAR">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="323" parent="33" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(11)|0</data-type>
+    </column>
+    <column id="324" parent="33" name="high_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="325" parent="33" name="low_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="326" parent="33" name="close_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="327" parent="33" name="SAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="328" parent="33" name="EP">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="329" parent="33" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="330" parent="33" name="trading_signal">
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="331" parent="33" name="AF_value">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="332" parent="33" name="AF_limit">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="333" parent="33" name="AF_window">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="334" parent="33" name="EPSAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="335" parent="33" name="pattern_number">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="336" parent="33" name="status">
+      <mandatory>1</mandatory>
+      <data-type>int(1)|0</data-type>
+      <default-expression>&apos;1&apos;</default-expression>
+    </column>
+    <column id="337" parent="33" name="ending_profit">
+      <mandatory>1</mandatory>
+      <data-type>decimal(8,4)|0</data-type>
+      <default-expression>&apos;0.0000&apos;</default-expression>
+    </column>
+    <column id="338" parent="33" name="record_window">
+      <mandatory>1</mandatory>
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;5&apos;</default-expression>
+    </column>
+    <column id="339" parent="34" name="id_tb_StockIndex_SAR">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="340" parent="34" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(11)|0</data-type>
+    </column>
+    <column id="341" parent="34" name="high_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="342" parent="34" name="low_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="343" parent="34" name="close_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="344" parent="34" name="SAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="345" parent="34" name="EP">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="346" parent="34" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="347" parent="34" name="trading_signal">
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="348" parent="34" name="AF_value">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="349" parent="34" name="AF_limit">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="350" parent="34" name="AF_window">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="351" parent="34" name="EPSAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="352" parent="34" name="pattern_number">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="353" parent="34" name="status">
+      <mandatory>1</mandatory>
+      <data-type>int(1)|0</data-type>
+      <default-expression>&apos;1&apos;</default-expression>
+    </column>
+    <column id="354" parent="34" name="ending_profit">
+      <mandatory>1</mandatory>
+      <data-type>decimal(8,4)|0</data-type>
+      <default-expression>&apos;0.0000&apos;</default-expression>
+    </column>
+    <column id="355" parent="34" name="record_window">
+      <mandatory>1</mandatory>
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;5&apos;</default-expression>
+    </column>
+    <column id="356" parent="35" name="id_tb_MACD_Trades">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="357" parent="35" name="id_tb_StockCodes">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="358" parent="35" name="record_date">
+      <data-type>date|0</data-type>
+    </column>
+    <column id="359" parent="35" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="360" parent="35" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="361" parent="35" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="362" parent="35" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="363" parent="35" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="364" parent="35" name="profit_Rate">
+      <data-type>decimal(20,4)|0</data-type>
+    </column>
+    <column id="365" parent="35" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="366" parent="35" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="367" parent="35" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="368" parent="35" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="369" parent="35" name="stock_codes">
+      <data-type>int(6)|0</data-type>
+    </column>
+    <column id="370" parent="35" name="pattern_trades">
+      <mandatory>1</mandatory>
+      <data-type>bigint(21)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="371" parent="36" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="372" parent="36" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="373" parent="36" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="374" parent="36" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="375" parent="36" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="376" parent="36" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="377" parent="36" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="378" parent="36" name="profit_Rate">
+      <data-type>decimal(20,10)|0</data-type>
+    </column>
+    <column id="379" parent="36" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="380" parent="36" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="381" parent="36" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="382" parent="36" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="383" parent="36" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="384" parent="36" name="pattern_trades">
+      <mandatory>1</mandatory>
+      <data-type>bigint(21)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="385" parent="37" name="id_tb_MACD_Trades_HalfHour">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="386" parent="37" name="quote_time">
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="387" parent="37" name="tradeVolume">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="388" parent="37" name="tradeCost">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="389" parent="37" name="stockVolume_Current">
+      <data-type>int(15)|0</data-type>
+    </column>
+    <column id="390" parent="37" name="cash_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="391" parent="37" name="totalValue_Current">
+      <data-type>decimal(20,2)|0</data-type>
+    </column>
+    <column id="392" parent="37" name="profit_Rate">
+      <data-type>decimal(20,10)|0</data-type>
+    </column>
+    <column id="393" parent="37" name="EMA_short_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="394" parent="37" name="EMA_long_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="395" parent="37" name="DIF_window">
+      <data-type>int(3)|0</data-type>
+    </column>
+    <column id="396" parent="37" name="MACD_pattern_number">
+      <data-type>int(10)|0</data-type>
+    </column>
+    <column id="397" parent="37" name="stock_code">
+      <data-type>varchar(10)|0</data-type>
+    </column>
+    <column id="398" parent="38" name="id_tb_StockIndex_SAR">
+      <mandatory>1</mandatory>
+      <data-type>int(11)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="399" parent="38" name="stock_code">
+      <mandatory>1</mandatory>
+      <data-type>varchar(11)|0</data-type>
+    </column>
+    <column id="400" parent="38" name="high_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="401" parent="38" name="low_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="402" parent="38" name="close_price">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="403" parent="38" name="SAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="404" parent="38" name="EP">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="405" parent="38" name="quote_time">
+      <mandatory>1</mandatory>
+      <data-type>datetime|0</data-type>
+    </column>
+    <column id="406" parent="38" name="trading_signal">
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;0&apos;</default-expression>
+    </column>
+    <column id="407" parent="38" name="AF_value">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="408" parent="38" name="AF_limit">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="409" parent="38" name="AF_window">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="410" parent="38" name="EPSAR">
+      <data-type>decimal(8,2)|0</data-type>
+      <default-expression>&apos;0.00&apos;</default-expression>
+    </column>
+    <column id="411" parent="38" name="pattern_number">
+      <data-type>int(11)|0</data-type>
+    </column>
+    <column id="412" parent="38" name="status">
+      <mandatory>1</mandatory>
+      <data-type>int(1)|0</data-type>
+      <default-expression>&apos;1&apos;</default-expression>
+    </column>
+    <column id="413" parent="38" name="ending_profit">
+      <mandatory>1</mandatory>
+      <data-type>decimal(8,4)|0</data-type>
+      <default-expression>&apos;0.0000&apos;</default-expression>
+    </column>
+    <column id="414" parent="38" name="record_window">
+      <mandatory>1</mandatory>
+      <data-type>int(2)|0</data-type>
+      <default-expression>&apos;5&apos;</default-expression>
+    </column>
+  </database-model>
+</dataSource>
