@@ -35,6 +35,7 @@ class C_Algorithems_BestPattern(object):
         self._op_log = 'operLog.txt'
         self._my_columns = []
         self._my_DF = pd.DataFrame(columns=self._my_columns)
+        self._processors = 4
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
         self._trading_volume = 3000
@@ -538,7 +539,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_all_signals, df_stock_records, period):
         total_pattern = len(MACD_patterns)
         print total_pattern
-        num_processor = 8
+        num_processor = self._processors
         index_beg = 0
         index_end = total_pattern / num_processor
         pattern_slices = []
@@ -730,7 +731,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         else:
             sql_fetch_records = sql_fetch_min_records
 
-        num_processor = 8
+        num_processor = self._processors
         MACD_pattern_size = df_MACD_index.index.size
         tasks = MACD_pattern_size / (num_processor - 1)
         print "In total: there are %s MACD Patterns" % MACD_pattern_size
