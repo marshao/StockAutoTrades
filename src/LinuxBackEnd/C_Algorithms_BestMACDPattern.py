@@ -11,6 +11,11 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu, db_engine
 from GetRealData import get_data_qq
+import sys
+
+sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
+import C_GlobalVariable
+
 import cProfile
 
 
@@ -21,6 +26,8 @@ class C_Algorithems_BestPattern(object):
             2017-06-22 in _MACD_Singal_calcualtion_cross use MACD_short = 999 to represent real life stock operation and save them in DB.
     '''
     def __init__(self):
+        master_config = C_GlobalVariable()
+
         self._input_dir = '/home/marshao/DataMiningProjects/Input/'
         self._output_dir = '/home/marshao/DataMiningProjects/Output/'
         self._stock_name_file = self._output_dir + 'StockNames.csv'
