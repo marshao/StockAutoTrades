@@ -11,10 +11,8 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu, db_engine
 from GetRealData import get_data_qq
-import sys
+from src import C_GlobalVariable as glb
 
-sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
-import C_GlobalVariable
 
 import cProfile
 
@@ -26,27 +24,29 @@ class C_Algorithems_BestPattern(object):
             2017-06-22 in _MACD_Singal_calcualtion_cross use MACD_short = 999 to represent real life stock operation and save them in DB.
     '''
     def __init__(self):
-        master_config = C_GlobalVariable()
+        gv = glb.C_GlobalVariable()
+        self._master_config = gv.get_master_config()
+        self._calcu_config = gv.get_calcu_config()
 
-        self._input_dir = '/home/marshao/DataMiningProjects/Input/'
-        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
+        self._input_dir = self._master_config['ubuntu_input_dir']
+        self._output_dir = self._master_config['ubuntu_output_dir']
+        self._trading_volume = self._calcu_config['trading_volume']
+        self._stock_inhand_uplimit = self._calcu_config['stock_inhand_uplimit']
+        self._op_log = self._master_config['op_log']
+        self._processors = self._calcu_config['ubuntu_processors']
+        self._engine = self._master_config['dev_db_engine']
+        self._metadata = MetaData(self._engine)
+
         self._stock_name_file = self._output_dir + 'StockNames.csv'
-        # self._stock_codes = ['sz300226', 'sh600887','300146','600221']
         self._SAR_log = self._output_dir + 'SARLog'
         self._stock_codes = ['sz002310']
         self._stock_market = ""
         self._window = '10'
-        self._engine = db_engine()
-        self._metadata = MetaData(self._engine)
         self._log_mesg = ''
-        self._op_log = 'operLog.txt'
         self._my_columns = []
         self._my_DF = pd.DataFrame(columns=self._my_columns)
-        self._processors = 4
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
-        self._trading_volume = 3000
-        self._stock_inhand_uplimit = 3500
         self._trade_history_column = ['stock_code', 'trade_type', 'trade_volumn', 'trade_price', 'trade_time',
                                       'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period',
                                       'trade_result']
@@ -594,9 +594,9 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         for eachPattern in progress(pattern_slices):
             # if loop_breaker==2:break
             # else: loop_breaker += 1
-            stockVolume_Begin = 0
+            stockVolume_Begin = self._calcu_config['stock_volume_begin']
             # cash_Begin = 120000.00
-            cash_Begin = 60000.00
+            cash_Begin = self._calcu_config['cash_begin']
             tradeVolume = self._trading_volume
             cash_Current = cash_Begin
             stockVolume_Current = stockVolume_Begin
@@ -1477,7 +1477,7 @@ def caL_all_pattern():
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
     # beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
     beta = [0.2]
-    quo = [0.7]
+    # quo = [0.7]
     gama = [0.3]
     for each_quo in quo:
         for each_ga in gama:

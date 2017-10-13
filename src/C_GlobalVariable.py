@@ -41,12 +41,12 @@ class C_GlobalVariable(object):
                              'sh600271': [0.9, 0.4, 0.2]
                              }
 
-        self._calcu_config = {'ubuntu_Processors': '4',
+        self._calcu_config = {'ubuntu_processors': 2,
                               'win_port': 32768,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,
-                              'stockVolume_Begin': 0,
+                              'stock_volume_begin': 0,
                               'period': 'm30'
                               }
 
