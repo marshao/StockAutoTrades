@@ -3,7 +3,7 @@
 
 import pandas, urllib, datetime
 from sqlalchemy import create_engine
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 
 
 def get_data_qq(stock_code='sz300226'):

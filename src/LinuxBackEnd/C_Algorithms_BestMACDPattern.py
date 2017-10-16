@@ -141,7 +141,7 @@ class C_Algorithems_BestPattern(object):
         print "Updated Stock Inhand"
         done = False
         sql_select_stock_infor = (
-            "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
+            "select stockCode, stockRemain, stockAvaliable, currentValue, quote_time from tb_StockInhand where stockCode = %s order by quote_time DESC limit 1")
         if receive == '1.1':
             df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
             self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
