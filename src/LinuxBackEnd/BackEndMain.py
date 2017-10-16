@@ -3,6 +3,9 @@
 
 
 from C_GetDataFromWeb import *
+import sys
+
+sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
 
 def main():
     single_stock()
