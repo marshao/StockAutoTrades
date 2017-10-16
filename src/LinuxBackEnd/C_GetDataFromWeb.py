@@ -10,6 +10,10 @@ from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_, delete
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
+import sys
+
+sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
+
 from src import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
 import multiprocessing as mp
@@ -745,7 +749,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sh600271', period='m5', q_count=800)
+    pp.get_data_qq(stock_code='sz002310', period='m30', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
