@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from C_Algorithms_BestMACDPattern import *
-
+from src import C_GlobalVariable as glb
 
 def apply_pattern(period=None, stock_code=None):
 
@@ -25,12 +25,15 @@ def best_pattern_daily_calculate():
 
 
 def apply_multi_patterns(period=None, stock_codes=None):
+    gv = glb.C_GlobalVariable()
+    stock_pars_m30 = gv.get_stock_config()['stock_m30_config']
+    '''
     stock_pars_m30 = {'sz002310': [0.7, 0.3, 0.2],
                       'sh600867': [0.8, 0.6, 0.2],
                       'sz300146': [0.7, 0.3, 0.2],
                       'sh600271': [0.9, 0.4, 0.2]
                       }
-
+    '''
     if period is None:
         period = 'm30'
     if stock_codes is None:

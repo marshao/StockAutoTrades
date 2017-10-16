@@ -3,11 +3,10 @@
 
 __metclass__ = type
 
-from sqlalchemy.sql import select
-from sqlalchemy import create_engine
+
 import pandas as pd
 import datetime, time
-from CommuSocket import db_engine
+from src import C_GlobalVariable as glb
 
 
 class C_Operation_Validation(object):
@@ -17,11 +16,16 @@ class C_Operation_Validation(object):
     '''
 
     def __init__(self):
-        self._input_dir = '/home/marshao/DataMiningProjects/Input/'
-        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
-        self._operation_log = self._output_dir + 'operLog.txt'
+        gv = glb.C_GlobalVariable()
+        self._master_config = gv.get_master_config()
+        self._calcu_config = gv.get_calcu_config()
+
+        self._output_dir = self._master_config['ubuntu_output_dir']
+        self._input_dir = self._master_config['ubuntu_input_dir']
+        self._operation_log = self._output_dir + self._master_config['op_log']
+        self._engine = self._master_config['dev_db_engine']
         self._validation_log = self._output_dir + 'validateLog.txt'
-        self._engine = db_engine()
+
 
     def _time_tag(self):
         time_stamp_local = time.asctime(time.localtime(time.time()))

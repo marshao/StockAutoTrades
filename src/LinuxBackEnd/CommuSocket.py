@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import socket
-from sqlalchemy import create_engine
+from src import C_GlobalVariable as glb
 
 
 def commu(cmd='1'):
@@ -19,8 +19,9 @@ def commu(cmd='1'):
     try:
         s = socket.socket()
         host = socket.gethostname()
-        port = 32768
-        host = '10.175.10.99'
+        gv = glb.C_GlobalVariable()
+        port = gv.get_master_config()['win_port']
+        host = gv.get_master_config()['dev_front_ip']
         l = "Buy 300226 1000 at 50.13 "
         s.connect((host, port))
         s.send(cmd)
@@ -31,7 +32,3 @@ def commu(cmd='1'):
         print "The front end server error"
 
 
-def db_engine():
-    eng1 = create_engine('mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
-    eng2 = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-    return eng1

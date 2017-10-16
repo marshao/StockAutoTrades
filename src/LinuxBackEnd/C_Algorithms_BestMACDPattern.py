@@ -9,7 +9,7 @@ import numpy as np
 from sqlalchemy import create_engine, Table, Column, MetaData
 from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
-from CommuSocket import commu, db_engine
+from CommuSocket import commu
 from GetRealData import get_data_qq
 from src import C_GlobalVariable as glb
 

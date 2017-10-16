@@ -3,12 +3,13 @@
 
 import pandas, urllib, datetime
 from sqlalchemy import create_engine
-from CommuSocket import db_engine
+from src import C_GlobalVariable as glb
 
 
 def get_data_qq(stock_code='sz300226'):
+    gv = glb.C_GlobalVariable()
     data_source = {'qq_realtime': 'http://qt.gtimg.cn/q=%s'}
-    engine = db_engine()
+    engine = gv.get_master_config()['dev_db_engine']
     got = True
     url = data_source['qq_realtime'] % stock_code
     html = urllib.urlopen(url)
