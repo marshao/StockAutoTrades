@@ -6,6 +6,7 @@
 import sys
 print sys.path
 sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
+print "------------------------------------------------------------------------------------------------------"
 print sys.path
 
 from C_GetDataFromWeb import *
