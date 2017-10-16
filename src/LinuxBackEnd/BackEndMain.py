@@ -2,12 +2,14 @@
 # coding: utf-8
 
 
-from C_GetDataFromWeb import *
-import sys
 
+import sys
 print sys.path
 sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
 print sys.path
+
+from C_GetDataFromWeb import *
+
 def main():
     single_stock()
 
