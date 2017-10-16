@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from C_Algorithms_BestMACDPattern import *
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 
 def apply_pattern(period=None, stock_code=None):
 
