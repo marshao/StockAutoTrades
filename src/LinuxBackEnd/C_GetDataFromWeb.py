@@ -11,8 +11,7 @@ from sqlalchemy.sql import select, and_, or_, not_, delete
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 from apscheduler.schedulers.background import BackgroundScheduler
 
-
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
 import multiprocessing as mp
 import logging
