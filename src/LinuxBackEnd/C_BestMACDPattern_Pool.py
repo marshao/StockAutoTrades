@@ -464,7 +464,12 @@ def test_records():
 
     f = open('stock_pool_text.csv', 'wb')
     writer = csv.writer(f)
-
+    writer.writerow(['quote_time', 'stock_code', 'close_price',
+                     asset_pool.keys()[0], asset_pool.keys()[1],
+                     asset_pool.keys()[2], asset_pool.keys()[3],
+                     stock_pool.keys()[0], stock_pool.keys()[1],
+                     stock_pool.keys()[2], stock_pool.keys()[3]])
+    print stock_pool.values()[3][2]
     # Process
     i = 0
     while i < 290:
@@ -476,17 +481,17 @@ def test_records():
             last_row = feed_records.tail(1)
             # Update pool
             stock_pool[stock_code][2] = stock_pool[stock_code][0] * float(last_row['close_price'][0])
-            asset_pool['total_stock_value'] = sum(stock_pool.values()[2])
+            asset_pool['total_stock_value'] = (
+            stock_pool.values()[0][2] + stock_pool.values()[1][2] + stock_pool.values()[2][2] + stock_pool.values()[3][
+                2])
             asset_pool['total_asset'] = asset_pool['cash_avaliable'] + asset_pool['total_stock_value']
 
-            writer.writerow([last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0]])
+            writer.writerow([last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0],
+                             asset_pool.values()[0], asset_pool.values()[1],
+                             asset_pool.values()[2], asset_pool.values()[3],
+                             stock_pool.values()[0], stock_pool.values()[1],
+                             stock_pool.values()[2], stock_pool.values()[3]])
 
-            writer.writerow([asset_pool.keys()[0], asset_pool.values()[0], asset_pool.keys()[1], asset_pool.values()[1],
-                             asset_pool.keys()[2], asset_pool.values()[2], asset_pool.keys()[3],
-                             asset_pool.values()[3]])
-            writer.writerow([stock_pool.keys()[0], stock_pool.values()[0], stock_pool.keys()[1], stock_pool.values()[1],
-                             stock_pool.keys()[2], stock_pool.values()[2], stock_pool.keys()[3],
-                             stock_pool.values()[3]])
             # Send for process
             c.apply_best_MACD_pattern_to_data_test('m30', stock_code, feed_records, stock_pool, asset_pool)
             # print feed_records['close_price'].tail(1)
