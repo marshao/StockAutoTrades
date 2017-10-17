@@ -461,7 +461,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         self._log_mesg = self._log_mesg + "     Stock %s pattern %s did best profit: %s  at %s \r\n" % (
         stock_code, pattern, profit, self._time_tag())
         self._write_log(self._log_mesg)
-        # print pattern
+        # print self._log_mesg
         return pattern
 
     def _save_MACD_best_pattern(self, period):
@@ -630,7 +630,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                 '''
                 The processing order must be from the oldest to the newest
                 '''
-                #print row
+
                 close_price = df_stock_close_prices.loc[row.quote_time, 'close_price']
                 # print close_price
                 trade_cost = close_price * tradeVolume
@@ -639,7 +639,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                 # if df_MACD_signals.Signal[i] == 1:  # Positive Signal, buy more stocks
                 if row.Signal == 1:
                     if (cash_Current >= trade_cost) & (
-                        (stockVolume_Current + tradeVolume) < stockVolume_up_limit):  # Have enough cash in hand
+                                (stockVolume_Current + tradeVolume) < stockVolume_up_limit):  # Have enough cash in hand
                         # tradeVolume = stockVolume_Current * tradePercent
                         stockVolume_Current = tradeVolume + stockVolume_Current
                         cash_Current = cash_Current - trade_cost
@@ -1464,9 +1464,9 @@ def main():
     # MACDPattern._get_best_pattern('sz002310')
     #MACDPattern.apply_best_MACD_pattern_to_data(period='m30', stock_code='sz002310', quo=0.7, ga=0.3, beta=0.2)
     #commu('1')
-    #cal_specific_pattern()
+    cal_specific_pattern()
     # MACDPattern._get_best_pattern('sz002310')
-    caL_all_pattern()
+    #caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock
@@ -1475,7 +1475,7 @@ def caL_all_pattern():
     MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
     MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     #gama = [0.8, 0.7, 0.65, 0.6, 0.4, 0.45, 0.3]
-    quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
+    #quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
     # beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
     beta = [0.2]
     quo = [0.7]
@@ -1498,8 +1498,8 @@ def cal_specific_pattern():
     quo = [0.7]
     #beta = [0.1, 0.15, 0.2, 0.25,  0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
     beta = [0.2]
-    pattern_signal = ["2115", ]
-    pattern_profit = [["2115"]]
+    pattern_signal = ["1757", ]
+    pattern_profit = [["1757"]]
     for each_quo in quo:
         for each_ga in gama:
             for each_beta in beta:
