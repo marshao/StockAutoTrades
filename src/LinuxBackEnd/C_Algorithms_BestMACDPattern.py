@@ -140,14 +140,15 @@ class C_Algorithems_BestPattern(object):
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         print "Updated Stock Inhand"
         done = False
+        now = self._time_tag()
         sql_select_stock_infor = (
-            "select stockCode, stockRemain, stockAvaliable, currentValue, quote_time from tb_StockInhand where stockCode = %s order by quote_time DESC limit 1")
+            "select stockCode, stockRemain, stockAvaliable, currentValue, quote_time from tb_StockInhand where stockCode = %s and Datetime < %s and Datetime > %s - INTERVAL 6 HOUR order by quote_time DESC limit 1")
         if receive == '1.1':
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
             self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
             done = True
         else:
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
+            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
             self._log_mesg = self._log_mesg + "     Could not get current stock in hand information at %s \n" % self._time_tag()
 
         if df_stock_infor.empty:

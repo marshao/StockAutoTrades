@@ -21,14 +21,12 @@ def commu(cmd='1'):
         #host = socket.gethostname()
         gv = glb.C_GlobalVariable()
         port = gv.get_master_config()['win_port']
-        host = gv.get_master_config()['dev_front_ip']
+        host = gv.get_master_config()['pro_front_ip']
         #l = "Buy 300226 1000 at 50.13 "
         s.connect((host, port))
         s.send(cmd)
         receive = s.recv(1024)
-        print receive
         return receive
     except:
         print "The front end server error"
-
-
+        return 'err'

@@ -20,10 +20,10 @@ class C_Email(object):
         # self._pwd = 'New_2014'
         self._pwd = 'New_2013'
 
-    def send_email(self, body):
+    def send_email(self, subject, body):
         message = "\r\n".join(["From: From Guan Hao <guan.hao@inovageo.com>",
                                       "To: To Guan Hao <guan.hao@foxmail.com>",
-                                      "Subject: Stock Notification Email",
+                               "Subject:" + subject,
                                       "",
                                body
                                ])
