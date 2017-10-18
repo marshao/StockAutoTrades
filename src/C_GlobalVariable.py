@@ -138,9 +138,8 @@ class C_GlobalVariable(object):
         return self._calcu_config
 
     def get_emailobj(self):
-        emailobj = C_Email()
+        emailobj = C_Email.C_Email()
         return emailobj
-
 
 def main():
     te = C_GlobalVariable

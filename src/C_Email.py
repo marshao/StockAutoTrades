@@ -3,7 +3,6 @@
 
 __metclass__ = type
 
-from src import C_GlobalVariable as glb
 import smtplib
 
 
@@ -14,7 +13,6 @@ class C_Email(object):
     '''
 
     def __init__(self):
-        gv = glb.C_GlobalVariable()
         self._sender = 'guan.hao@inovageo.com'
         self._receiver = ['guan.hao@inovageo.com']
         # self._username = '1814241918'
@@ -23,14 +21,12 @@ class C_Email(object):
         self._pwd = 'New_2013'
 
     def send_email(self, body):
-        message_header = "\r\n".join(["From: From Guan Hao <guan.hao@inovageo.com>",
+        message = "\r\n".join(["From: From Guan Hao <guan.hao@inovageo.com>",
                                       "To: To Guan Hao <guan.hao@foxmail.com>",
                                       "Subject: Stock Notification Email",
                                       "",
-                                      body
-                                      ])
-
-        message = message_header + body
+                               body
+                               ])
 
         server = smtplib.SMTP('cal1cas01.inovageo.com:25')
         server.ehlo()
@@ -42,7 +38,6 @@ class C_Email(object):
 
 def main():
     email = C_Email()
-    email.send_email(body="The signal is verified")
 
 
 if __name__ == '__main__':
