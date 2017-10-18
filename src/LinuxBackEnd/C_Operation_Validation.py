@@ -3,8 +3,6 @@
 
 __metclass__ = type
 
-
-import pandas as pd
 import datetime, time
 from C_Algorithms_BestMACDPattern import C_MACD_Signal_Calculation, C_BestMACDPattern
 from src import C_GlobalVariable as glb
@@ -18,6 +16,7 @@ class C_Operation_Validation(object):
 
     def __init__(self):
         gv = glb.C_GlobalVariable()
+        self._emailobj = gv.get_emailobj()
         self._master_config = gv.get_master_config()
         self._calcu_config = gv.get_calcu_config()
         self._stock_p_m30 = gv.get_stock_config()['stock_m30_config']
@@ -55,6 +54,11 @@ class C_Operation_Validation(object):
         self._log_mesg = ''
 
     def get_last_signal_from_DB(self, stock_code):
+        '''
+        Retrieve signals from log
+        :param stock_code:
+        :return:
+        '''
         MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
         MACDPattern = C_BestMACDPattern()
         pattern_signal = [MACDPattern._get_best_pattern(stock_code, simplified=False), ]
@@ -68,7 +72,12 @@ class C_Operation_Validation(object):
         return df_signals.tail(1)
 
     def get_last_signal_from_log(self, stock_code, quote_time):
-
+        '''
+        Generate validation signal
+        :param stock_code:
+        :param quote_time:
+        :return:
+        '''
         f = reversed(open(self._operation_log, 'r').readlines())
         # with reversed(open(self._operation_log, 'r').readlines()) as f:
         done = False
@@ -101,14 +110,15 @@ class C_Operation_Validation(object):
         done, inline_signal = self.get_last_signal_from_log(stock_code, quote_time)
         if done:
             if signal == inline_signal:
-                print "The signal is verified, stock %s generate signal %s at %s" % (
+                message = "The signal is verified, stock %s generate signal %s at %s" % (
                 stock_code, inline_signal, quote_time)
             else:
-                print "The signal is not verified, stock %s generate verification signal %s and inline signal %s at %s" % (
+                message = "The signal is not verified, stock %s generate verification signal %s and inline signal %s at %s" % (
                     stock_code, signal, inline_signal, quote_time)
         else:
-            print "The signal is not verified, stock %s could not find corresponding signal time %s in log, the system " \
-                  "verification signal is %s" % (stock_code, quote_time, signal)
+            message = "The signal is not verified, stock %s could not find corresponding signal time %s in log, the system " \
+                      "verification signal is %s" % (stock_code, quote_time, signal)
+        self._emailobj.send_email(body=message)
 
     def transaction_validation(self, stock_code):
         '''

@@ -2,6 +2,7 @@
 # coding: utf-8
 
 from sqlalchemy import create_engine
+import C_Email
 import datetime
 
 
@@ -135,6 +136,10 @@ class C_GlobalVariable(object):
 
     def get_calcu_config(self):
         return self._calcu_config
+
+    def get_emailobj(self):
+        emailobj = C_Email()
+        return emailobj
 
 
 def main():
