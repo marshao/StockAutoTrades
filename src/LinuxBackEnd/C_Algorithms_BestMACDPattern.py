@@ -439,7 +439,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         finish_sign = True
         return finish_sign
 
-    def _get_best_pattern(self, stock_code):
+    def _get_best_pattern(self, stock_code, simplified=True):
         sql_select_best_pattern = (
             "select best_pattern, profit_rate from tb_StockBestPatterns where algorithem_name = 'MACD' and stock_code = %s ORDER by pattern_date DESC limit 1")
         # sql_select_best_pattern_parameters = (
@@ -454,7 +454,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         #    parameters[0][8], stock_code, pattern, parameters[0][14], profit, self._time_tag())
         self._log_mesg = self._log_mesg + "     Stock %s pattern %s did best profit: %s  at %s \r\n" % (
         stock_code, pattern, profit, self._time_tag())
-        self._write_log(self._log_mesg)
+        if simplified:
+            self._write_log(self._log_mesg)
         # print pattern
         return pattern
 
@@ -794,11 +795,14 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         sql_fetch_MACD_index = ("select * from tb_MACDIndex where id_tb_MACDIndex=%s")
         df_MACD_index = pd.read_sql(sql_fetch_MACD_index, con=self._engine, index_col='id_tb_MACDIndex', params=MACD_pattern)
 
-        self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta, simplified)
+        df_signals = self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta,
+                                                         simplified)
 
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
         self._log_mesg = self._log_mesg + "Signal: Single MACD Pattern Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
-        self._write_log(self._log_mesg)
+        if simplified:
+            self._write_log(self._log_mesg)
+        return df_signals
 
     def _MACD_signal_calculation_M30_3(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False, quo=None,
                                        ga=None, beta=None, simplified=True):

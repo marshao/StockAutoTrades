@@ -6,6 +6,7 @@ __metclass__ = type
 
 import pandas as pd
 import datetime, time
+from C_Algorithms_BestMACDPattern import C_MACD_Signal_Calculation, C_BestMACDPattern
 from src import C_GlobalVariable as glb
 
 
@@ -19,12 +20,14 @@ class C_Operation_Validation(object):
         gv = glb.C_GlobalVariable()
         self._master_config = gv.get_master_config()
         self._calcu_config = gv.get_calcu_config()
+        self._stock_p_m30 = gv.get_stock_config()['stock_m30_config']
 
         self._output_dir = self._master_config['ubuntu_output_dir']
         self._input_dir = self._master_config['ubuntu_input_dir']
         self._operation_log = self._output_dir + self._master_config['op_log']
         self._engine = self._master_config['dev_db_engine']
         self._validation_log = self._output_dir + 'validateLog.txt'
+
 
 
     def _time_tag(self):
@@ -52,52 +55,75 @@ class C_Operation_Validation(object):
         self._log_mesg = ''
 
     def get_last_signal_from_DB(self, stock_code):
-        quote_time = self._time_tag_dateonly()
-        sql_select_last = 'select * from tb_StockIndex_MACD_New where stock_code = %s and period = "M30" and ' \
-                          'quote_time < %s order by quote_time DESC'
-        df_signals = pd.read_sql(sql_select_last, con=self._engine, params=(stock_code, quote_time),
-                                 index_col='quote_time')
-        print stock_code, df_signals.index[0], df_signals.Signal[0]
-        return stock_code, df_signals.index[0], df_signals.Signal[0]
+        MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
+        MACDPattern = C_BestMACDPattern()
+        pattern_signal = [MACDPattern._get_best_pattern(stock_code, simplified=False), ]
+        quo = self._stock_p_m30[stock_code][0]
+        ga = self._stock_p_m30[stock_code][1]
+        beta = self._stock_p_m30[stock_code][2]
+        df_signals = MACD_Trading_Signal_Cal._single_pattern_signal_cal(MACD_pattern=pattern_signal, period="m30",
+                                                                        stock_code="sz002310", quo=quo, ga=ga,
+                                                                        beta=beta, simplified=False)
+        # print df_signals.tail(1)
+        return df_signals.tail(1)
 
-    def get_last_signal_from_log(self, stock_code):
-        quote_time = self._time_tag_dateonly()
-        key = ['Step1', 'Signal']
+    def get_last_signal_from_log(self, stock_code, quote_time):
+
         f = reversed(open(self._operation_log, 'r').readlines())
         # with reversed(open(self._operation_log, 'r').readlines()) as f:
+        done = False
+        inline_signal = str(0)
+        curr = f.next()
         for line in f:
             prev, curr = line, f.next()
-            # print line.rstrip()
-            words = line.split()
-            '''
-                            if line.find("Step1:") != -1:
-                    print line.find("Step1:")
-                    print f.next()
-                    break
-                '''
             if curr.startswith("Step1:"):
                 words = prev.split()
-                signal = int(words[15])
-                quote_date = words[19]
-                quote_time = words[20]
-                print stock_code, quote_date + " " + quote_time, signal
-                return stock_code, quote_date, quote_time, signal
+                inline_stock_code = words[13][0:8]
+                inline_quote_time = words[19] + ' ' + words[20][0:5]
+                if (inline_stock_code == stock_code):
+                    if (quote_time == inline_quote_time):
+                        inline_signal = words[15]
+                        # quote_time = words[20]
+                        print 'inline: ' + inline_stock_code + ' at ' + inline_quote_time + ' signal is: ' + inline_signal
+                        done = True
+                        break
+        return done, inline_signal
 
+    def signal_validation(self, stock_code):
+        '''
+        Verify whether the signals in log match the signal from validation.
+        :param stock_code:
+        :return:
+        '''
+        df_last_compute_signal = self.get_last_signal_from_DB(stock_code)
+        quote_time = str(df_last_compute_signal.index[0])[0:15] + '3'
+        signal = str(df_last_compute_signal['Signal'][0])
+        done, inline_signal = self.get_last_signal_from_log(stock_code, quote_time)
+        if done:
+            if signal == inline_signal:
+                print "The signal is verified, stock %s generate signal %s at %s" % (
+                stock_code, inline_signal, quote_time)
+            else:
+                print "The signal is not verified, stock %s generate verification signal %s and inline signal %s at %s" % (
+                    stock_code, signal, inline_signal, quote_time)
+        else:
+            print "The signal is not verified, stock %s could not find corresponding signal time %s in log, the system " \
+                  "verification signal is %s" % (stock_code, quote_time, signal)
 
-    def get_daily_signals_from_DB(self):
-        pass
-
-    def get_daily_signals_from_log(self):
-        pass
-
-    def signal_validation(self):
+    def transaction_validation(self, stock_code):
+        '''
+        Verify whether the buy or sale command is processed successfully or not.
+        :param stock_code:
+        :return:
+        '''
         pass
 
 
 def main():
     ov = C_Operation_Validation()
-    ov.get_last_signal_from_DB('sz002310')
-    ov.get_last_signal_from_log('sz002310')
+    ov.signal_validation('sh600867')
+    # ov.get_last_signal_from_DB('sz002310')
+    #ov.get_last_signal_from_log('sz002310')
 
 
 if __name__ == '__main__':
