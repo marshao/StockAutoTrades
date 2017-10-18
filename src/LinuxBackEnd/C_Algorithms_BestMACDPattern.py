@@ -776,7 +776,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         self._log_mesg = self._log_mesg + "Signal: MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
 
-    def _single_pattern_signal_cal(self, MACD_pattern, period, stock_code, quo, ga, beta):
+    def _single_pattern_signal_cal(self, MACD_pattern, period, stock_code, quo, ga, beta, simplified=True):
         self._clean_table('tb_StockIndex_MACD_New')
 
         sql_fetch_min_records = (
@@ -794,14 +794,14 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         sql_fetch_MACD_index = ("select * from tb_MACDIndex where id_tb_MACDIndex=%s")
         df_MACD_index = pd.read_sql(sql_fetch_MACD_index, con=self._engine, index_col='id_tb_MACDIndex', params=MACD_pattern)
 
-        self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta)
+        self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta, simplified)
 
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
         self._log_mesg = self._log_mesg + "Signal: Single MACD Pattern Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
 
     def _MACD_signal_calculation_M30_3(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False, quo=None,
-                                       ga=None, beta=None):
+                                       ga=None, beta=None, simplified=True):
         '''
         Calculate trading signals for stock operation.
         :param df_MACD_index:
@@ -952,9 +952,11 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
             engine = self._engine
             # print df[df.Signal == -1].count()
-            #df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df_save[df_save.Signal != -9]
+            if simplified:
+                df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+                df_save = df_save[df_save.Signal != -9]
+            else:
+                df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
 
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
                 if for_real:

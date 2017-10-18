@@ -417,10 +417,12 @@ def main():
     test_records()
 
 
+
 def test_records():
     c = C_BestMACDPattern_PoolValidation()
-    stock_codes = ['sz002310', 'sh600867', 'sz300146', 'sh600271']
-
+    # stock_codes = ['sz002310', 'sh600867', 'sz300146', 'sh600271']
+    stock_codes = ['sz002310', 'sh600867', 'sz300146']
+    stock_records_dict = {}
     # Prepare the stock pool using
     # Values Meaning: stock_avaliable, stock_remain, stock_value
     stock_pool = {'sz002310': [0, 0, 0.0],
@@ -440,6 +442,10 @@ def test_records():
     sql_fetch_min_records = (
         "select * from (select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC) as tbl order by quote_time ASC")
 
+    for each_stock in stock_codes:
+        stock_records_dict[each_stock] = pd.read_sql(sql_fetch_min_records, con=c._engine, params=('m30', each_stock),
+                                                     index_col='quote_time')
+    '''
     stock_records_dict = {
         stock_codes[0]: pd.read_sql(sql_fetch_min_records, con=c._engine, params=('m30', stock_codes[0]),
                                     index_col='quote_time'),
@@ -450,7 +456,7 @@ def test_records():
         stock_codes[3]: pd.read_sql(sql_fetch_min_records, con=c._engine, params=('m30', stock_codes[3]),
                                     index_col='quote_time')
     }
-
+    '''
     # Prepare processing order data
     sql_select_quote_time = (
     "select quote_time from tb_StockXMinRecords where period = 'm30' and stock_code = 'sz002310' order by quote_time DESC")
@@ -464,11 +470,13 @@ def test_records():
 
     f = open('stock_pool_text.csv', 'wb')
     writer = csv.writer(f)
-    writer.writerow(['quote_time', 'stock_code', 'close_price',
-                     asset_pool.keys()[0], asset_pool.keys()[1],
-                     asset_pool.keys()[2], asset_pool.keys()[3],
-                     stock_pool.keys()[0], stock_pool.keys()[1],
-                     stock_pool.keys()[2], stock_pool.keys()[3]])
+    header = ['quote_time', 'stock_code', 'close_price', asset_pool.keys()[0], asset_pool.keys()[1],
+              asset_pool.keys()[2], asset_pool.keys()[3]]
+
+    for each_stock in stock_codes:
+        header.append(each_stock)
+    writer.writerow(header)
+
     print stock_pool.values()[3][2]
     # Process
     i = 0
@@ -486,12 +494,13 @@ def test_records():
                 2])
             asset_pool['total_asset'] = asset_pool['cash_avaliable'] + asset_pool['total_stock_value']
 
-            writer.writerow([last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0],
+            content = [last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0],
                              asset_pool.values()[0], asset_pool.values()[1],
-                             asset_pool.values()[2], asset_pool.values()[3],
-                             stock_pool.values()[0], stock_pool.values()[1],
-                             stock_pool.values()[2], stock_pool.values()[3]])
+                       asset_pool.values()[2], asset_pool.values()[3]]
+            for each_stock in stock_codes:
+                content.append(stock_pool[each_stock])
 
+            writer.writerow(content)
             # Send for process
             c.apply_best_MACD_pattern_to_data_test('m30', stock_code, feed_records, stock_pool, asset_pool)
             # print feed_records['close_price'].tail(1)
@@ -501,6 +510,7 @@ def test_records():
         start_pos -= 1
         end_time = df_quote_time.iloc[end_pos][0]
         start_time = df_quote_time.iloc[start_pos][0]
+    f.close()
     print "Asset Pool is: ", asset_pool
     print "Stock Pool is: ", stock_pool
     #print asset_pool, stock_pool
