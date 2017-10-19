@@ -9,8 +9,8 @@ sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBa
 import multiprocessing as mp
 from apscheduler.schedulers.background import BackgroundScheduler
 from PatternApply import apply_pattern, best_pattern_daily_calculate, update_stock_inhand
-
 from C_GetDataFromWeb import C_GettingData
+import C_GlobalVariable as glb
 
 def main():
     single_stock()
@@ -30,7 +30,7 @@ def multi_stocks():
     job_schedule(period, stock_code)
 
 
-def job_schedule(self, period=None, stock_code=None):
+def job_schedule(period=None, stock_code=None):
     # job_stores = {'default': MemoryJobStore()}
     # executor = {'processpool': ThreadPoolExecutor(8)}
     # job_default = {'coalesce': False, 'max_instances': 12}
@@ -62,14 +62,14 @@ def job_schedule(self, period=None, stock_code=None):
 
     # The switch of scheduler_1
     while True:
-        self._scheduler_switch(scheduler_1, scheduler_2)
+        scheduler_switch(scheduler_1, scheduler_2)
 
 
-def _scheduler_switch(self, scheduler_1, scheduler_2):
+def scheduler_switch(scheduler_1, scheduler_2):
     current_time = datetime.datetime.now().time()
-
-    if (current_time > self._start_morning and current_time < self._end_morning) or (
-                    current_time > self._start_afternoon and current_time < self._end_afternoon):
+    master_config = glb.C_GlobalVariable().get_master_config()
+    if (current_time > master_config['start_morning'] and current_time < master_config['end_morning']) or (
+                    current_time > master_config['start_afternoon'] and current_time < master_config['end_afternoon']):
         scheduler_2.pause()
         scheduler_1.resume()
         scheduler_1.print_jobs()
@@ -85,10 +85,12 @@ def _scheduler_switch(self, scheduler_1, scheduler_2):
     time.sleep(60)
 
 
-def data_service(self, period):
+def data_service(period):
     gd = C_GettingData()
+    stock_config = glb.C_GlobalVariable().get_stock_config()
+    stock_codes = stock_config['stock_codes']
     processes = []
-    for stock in self._stock_code:
+    for stock in stock_codes:
         p = mp.Process(target=gd.get_data_qq, args=(stock, period, 'qfq',))
         processes.append(p)
 
