@@ -13,6 +13,18 @@ class C_GlobalVariable(object):
     '''
 
     def __init__(self):
+        self._calcu_config = {'ubuntu_processors': 8,
+                              'trading_volume': 3000,
+                              'stock_inhand_uplimit': 3500,
+                              'cash_begin': 60000.0,
+                              'stock_volume_begin': 0,
+                              'period': 'm30',
+                              'pro_db_engine': create_engine(
+                                  'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest'),
+                              'dev_db_engine': create_engine(
+                                  'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
+                              }
+
         self._master_config = {'ubuntu_input_dir': '/home/marshao/DataMiningProjects/Input/',
                                'ubuntu_output_dir': '/home/marshao/DataMiningProjects/Output/',
                                'win_input_dir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\',
@@ -55,18 +67,6 @@ class C_GlobalVariable(object):
                                 'sh600271': [0.9, 0.4, 0.2]}
 
                              }
-
-        self._calcu_config = {'ubuntu_processors': 8,
-                              'trading_volume': 3000,
-                              'stock_inhand_uplimit': 3500,
-                              'cash_begin': 60000.0,
-                              'stock_volume_begin': 0,
-                              'period': 'm30',
-                              'pro_db_engine': create_engine(
-                                  'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest'),
-                              'dev_db_engine': create_engine(
-                                  'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
-                              }
 
         '''
                 self._data_source = {'sina': 'http://hq.sinajs.cn/list=', 'qq_realtime': 'http://qt.gtimg.cn/q=%s',
