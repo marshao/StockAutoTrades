@@ -1506,10 +1506,10 @@ def cal_specific_pattern():
                 MACD_Trading_Signal_Cal._single_pattern_signal_cal(MACD_pattern=pattern_signal, period="m30",
                                                                    stock_code="sz002310", quo=each_quo, ga=each_ga,
                                                                    beta=each_beta)
-                MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30',
-                                                                         stock_code='sz002310')
+                #MACD_Ending_Profit_Cal._single_pattern_ending_profit_cal(MACD_pattern=pattern_profit, period='m30',
+                #                                                         stock_code='sz002310')
                 # MACDPattern._save_MACD_best_pattern(period='m30')
-                MACDPattern._get_best_pattern('sz002310')
+                #MACDPattern._get_best_pattern('sz002310')
 
 
 if __name__ == '__main__':
