@@ -117,7 +117,7 @@ class C_Operation_Validation(object):
                 subject = "Validated Signal"
                 message = "The signal is verified, stock %s generate signal %s at %s" % (
                 stock_code, inline_signal, quote_time)
-                send = False
+                # send = False
             else:
                 subject = "Invalid Signal"
                 message = "The signal is not verified, stock %s generate verification signal %s and inline signal %s at %s" % (
