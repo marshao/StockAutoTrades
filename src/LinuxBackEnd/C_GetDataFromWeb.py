@@ -4,16 +4,16 @@
 __metclass__ = type
 
 
-import os, time, pandas, urllib, re
+import time, pandas, urllib, re
 import datetime
-from sqlalchemy import create_engine, Table, Column, MetaData
-from sqlalchemy.sql import select, and_, or_, not_, delete
+from sqlalchemy import Table,  MetaData
+from sqlalchemy.sql import select, and_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
-from apscheduler.schedulers.background import BackgroundScheduler
+
 
 import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
-import multiprocessing as mp
+#import multiprocessing as mp
 import logging
 
 class C_GettingData:
@@ -669,6 +669,7 @@ class C_GettingData:
     def _empty_fun(self, period):
         pass
 
+    '''
     def job_schedule(self, period=None, stock_code=None):
         # job_stores = {'default': MemoryJobStore()}
         # executor = {'processpool': ThreadPoolExecutor(8)}
@@ -692,6 +693,8 @@ class C_GettingData:
                             args=['m60'])
         scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
                             args=[period, stock_code])
+        scheduler_1.add_job(update_stock_inhand, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30')
+
         scheduler_2.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='22')
 
         scheduler_1.start()
@@ -733,7 +736,7 @@ class C_GettingData:
 
         for p in processes:
             p.join()
-
+    '''
 
 
 def main():

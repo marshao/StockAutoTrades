@@ -27,6 +27,7 @@ class C_Algorithems_BestPattern(object):
         gv = glb.C_GlobalVariable()
         self._master_config = gv.get_master_config()
         self._calcu_config = gv.get_calcu_config()
+        self._emailobj = gv.get_emailobj()
 
         self._input_dir = self._master_config['ubuntu_input_dir']
         self._output_dir = self._master_config['ubuntu_output_dir']
@@ -132,24 +133,29 @@ class C_Algorithems_BestPattern(object):
                     time.sleep(1)
             i += 1
 
-    def _checking_stock_in_hand(self, stock_code):
-        # Need to udpate stock_in_hand Information first
-        # This will request to send a code to frontend, and wait for response from confirmation from front end.
-
+    def _update_stock_inhand(self):
         receive = commu('1')  # update stock in hand information
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         print "Updated Stock Inhand"
-        done = False
+        if receive != 'err':
+            self._log_mesg = self._log_mesg + "     Update stock inhand information successfully at %s \n" % self._time_tag()
+        else:
+            self._log_mesg = self._log_mesg + "     Error: Cannot update stock inhand information successfully at %s \n" % self._time_tag()
+            subject = "Front End Server Communication Error"
+            message = 'Front end server error, failed to upate stock inhand information'
+            self._emailobj.send_email(subject=subject, body=message)
+        self._write_log(self._log_mesg)
+
+    def _checking_stock_in_hand(self, stock_code):
+        # Need to udpate stock_in_hand Information first
+        # This will request to send a code to frontend, and wait for response from confirmation from front end.
+        done = True
         now = self._time_tag()
         sql_select_stock_infor = (
             "select stockCode, stockRemain, stockAvaliable, currentValue, quote_time from tb_StockInhand where stockCode = %s and Datetime < %s and Datetime > %s - INTERVAL 6 HOUR order by quote_time DESC limit 1")
-        if receive == '1.1':
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
-            self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
-            done = True
-        else:
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
-            self._log_mesg = self._log_mesg + "     Could not get current stock in hand information at %s \n" % self._time_tag()
+
+        df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
+        self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
 
         if df_stock_infor.empty:
             self._log_mesg = self._log_mesg + "     There is currently no stock %s in hand at %s \n." % (
@@ -158,7 +164,7 @@ class C_Algorithems_BestPattern(object):
             df_stock_infor.set_value(0, 'stockAvaliable', 0)
             df_stock_infor.set_value(0, 'currentValue', 0.0)
             done = True
-        # self._write_log(self._log_mesg
+        self._write_log(self._log_mesg)
         # print df_stock_infor
         return done, df_stock_infor
 

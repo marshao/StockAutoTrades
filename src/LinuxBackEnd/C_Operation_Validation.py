@@ -128,7 +128,7 @@ class C_Operation_Validation(object):
                       "verification signal is %s" % (stock_code, quote_time, signal)
         if send: self._emailobj.send_email(subject=subject, body=message)
 
-    def transaction_validation(self, stock_code=None):
+    def transaction_validation(self, ):
         '''
         Verify whether the buy or sale command is processed successfully or not.
         Transaction validaiton must be on the same day.
@@ -148,49 +148,57 @@ class C_Operation_Validation(object):
         message = "Good"
         send = True
         select_transaction_command = (
-        "select * from tb_StockTradeHistory where trade_time < %s and trade_time > %s - INTERVAL 40 DAY")
+            "select * from tb_StockTradeHistory where trade_time < %s and trade_time > %s - INTERVAL 35 MINUTE ")
         select_stock_change = (
-        "select * from tb_StockInhand where stockCode = %s and Datetime < %s and Datetime > %s - INTERVAL 40 DAY order by Datetime DESC limit 2")
+            "select * from tb_StockInhand where stockCode = %s and Datetime < %s and Datetime > %s - INTERVAL 28 MINUTE order by Datetime DESC limit 2")
         df_transactions = pd.read_sql(select_transaction_command, params=(now, now), con=self._engine)
+
         if df_transactions.empty:
             print "There is no transaction happen in last pattern apply"
+            subject = "No Transaction happened"
+            message = '%s There is no transactions happen in last 30 min.' % (self._time_tag())
+
         else:
             stock_code = df_transactions['stock_code'][0]
             trade_volumn = df_transactions['trade_volumn'][0]
             trade_price = df_transactions['trade_price'][0]
             trade_type = df_transactions['trade_type'][0]
 
-            # Update stock in hand
-            receive = commu('1')
-            if receive == 'err':
-                subject = "Front End Server Communication Error"
-                message = 'Cannot contact front end server.'
-            else:
-                df_stock_inhand = pd.read_sql(select_stock_change, params=(stock_code, now, now),
-                                              con=self._master_config['pro_db_engine'])
-                if trade_type == 2:  # Valide buy command:
-                    if df_stock_inhand.empty:
-                        subject = "Buy Failed or Pending"
-                        message = "The buying command of stock %s with price %s and volumn %s is not processed successfully yet" % (
-                        stock_code, trade_price, trade_volumn)
-                    else:
-                        base_price = df_stock_inhand['baseCost'][0]
-                        subject = "Buy Successed"
-                        message = "The buying is successed. \n"
-                        message = message + "Stock %s with command price %s and volumn %s is successefully " \
-                                            "buyed with base_price %s" % (
-                                            stock_code, trade_price, trade_volumn, base_price)
+            df_stock_inhand = pd.read_sql(select_stock_change, params=(stock_code, now, now),
+                                          con=self._master_config['pro_db_engine'])
+            if trade_type == 2:  # Valide buy command:
+                if df_stock_inhand.empty:
+                    subject = "Buy Failed or Pending"
+                    message = "%s: The buying command of stock %s with price %s and volumn %s is not processed successfully yet" % (
+                        self._time_tag(), stock_code, trade_price, trade_volumn)
+                elif len(df_stock_inhand) == 1:
+                    base_price = df_stock_inhand['baseCost'][0]
+                    subject = "Buy Successed"
+                    message = "%s The buying is successed. \n" % self._time_tag()
+                    message = message + "Stock %s with command price %s and volumn %s is successefully " \
+                                        "buyed with base_price %s" % (stock_code, trade_price, trade_volumn, base_price)
                 else:
-                    if trade_type == 3:  # Valid for Sales command
-                        if len(df_stock_inhand) == 2:
-                            subject = "Sale Failed or Pending"
-                            message = "The saleing command of stock %s with price %s and volumn %s is not processed successfully yet" % (
-                                stock_code, trade_price, trade_volumn)
-                        elif len(df_stock_inhand) == 1:
-                            subject = "Sale Successed"
-                            message = "The saleing is successed. \n"
-                            message = message + "Stock %s with command price %s and volumn %s is successefully " \
-                                                "sold" % (stock_code, trade_price, trade_volumn)
+                    subject = "Buy Failed with unknown error"
+                    message = "%s The buying command of stock %s with price %s and volumn %s is not processed successfully yet. " \
+                              "There are more than 1 records in the system with unknown reason" % (
+                                  self._time_tag(), stock_code, trade_price, trade_volumn)
+            else:
+                if trade_type == 3:  # Valid for Sales command
+                    if df_stock_inhand.empty:
+                        subject = "Sale Successed"
+                        message = "%s The saleing is successed. \n" % self._time_tag()
+                        message = message + "Stock %s with command price %s and volumn %s is successefully " \
+                                            "sold" % (stock_code, trade_price, trade_volumn)
+                    elif len(df_stock_inhand) == 1:
+                        subject = "Sale Failed or Pending"
+                        message = "%s The saleing command of stock %s with price %s and volumn %s is not processed successfully yet" % (
+                            self._time_tag(), stock_code, trade_price, trade_volumn)
+                    else:
+                        subject = "Sale Failed with unknown error"
+                        message = "%s The saleing command of stock %s with price %s and volumn %s is not processed successfully yet. " \
+                                  "There are more than 1 records in the system with unknown reason" % (
+                                      self._time_tag(), stock_code, trade_price, trade_volumn)
+
         if send: self._emailobj.send_email(subject=subject, body=message)
 
 def main():
