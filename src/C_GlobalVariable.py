@@ -59,7 +59,7 @@ class C_GlobalVariable(object):
 
                              }
 
-        self._calcu_config = {'ubuntu_processors': 2,
+        self._calcu_config = {'ubuntu_processors': 8,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,
