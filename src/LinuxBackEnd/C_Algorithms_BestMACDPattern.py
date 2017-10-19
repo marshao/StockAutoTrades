@@ -11,22 +11,11 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
+import C_GlobalVariable as glb
+
+
 import cProfile
 
-
-# import logging
-# logging.basicConfig()
-
-
-
-
-# from C_GetDataFromWeb  *
-
-
-def call_it(instance, name, args=(), kwargs=None):
-    if kwargs == None:
-        kwargs = {}
-    return getattr(instance, name)(*args, **kwargs)
 
 
 class C_Algorithems_BestPattern(object):
@@ -35,24 +24,30 @@ class C_Algorithems_BestPattern(object):
             2017-06-22 in _MACD_Singal_calcualtion_cross use MACD_short = 999 to represent real life stock operation and save them in DB.
     '''
     def __init__(self):
-        self._input_dir = '/home/marshao/DataMiningProjects/Input/'
-        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
+        gv = glb.C_GlobalVariable()
+        self._master_config = gv.get_master_config()
+        self._calcu_config = gv.get_calcu_config()
+        self._emailobj = gv.get_emailobj()
+
+        self._input_dir = self._master_config['ubuntu_input_dir']
+        self._output_dir = self._master_config['ubuntu_output_dir']
+        self._trading_volume = self._calcu_config['trading_volume']
+        self._stock_inhand_uplimit = self._calcu_config['stock_inhand_uplimit']
+        self._op_log = self._master_config['op_log']
+        self._processors = self._calcu_config['ubuntu_processors']
+        self._engine = self._master_config['dev_db_engine']
+        self._metadata = MetaData(self._engine)
+
         self._stock_name_file = self._output_dir + 'StockNames.csv'
-        # self._stock_codes = ['sz300226', 'sh600887','300146','600221']
         self._SAR_log = self._output_dir + 'SARLog'
         self._stock_codes = ['sz002310']
         self._stock_market = ""
         self._window = '10'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
-        self._metadata = MetaData(self._engine)
         self._log_mesg = ''
-        self._op_log = 'operLog.txt'
         self._my_columns = []
         self._my_DF = pd.DataFrame(columns=self._my_columns)
         self._x_min = ['m5', 'm15', 'm30', 'm60']
         self._x_period = ['day', 'week']
-        self._trading_volume = 3000
-        self._stock_inhand_uplimit = 3500
         self._trade_history_column = ['stock_code', 'trade_type', 'trade_volumn', 'trade_price', 'trade_time',
                                       'trade_algorithem_name', 'trade_algorithem_method', 'stock_record_period',
                                       'trade_result']
@@ -138,23 +133,29 @@ class C_Algorithems_BestPattern(object):
                     time.sleep(1)
             i += 1
 
-    def _checking_stock_in_hand(self, stock_code):
-        # Need to udpate stock_in_hand Information first
-        # This will request to send a code to frontend, and wait for response from confirmation from front end.
-
+    def _update_stock_inhand(self):
         receive = commu('1')  # update stock in hand information
         # 1.1 means remote getting stock in hand information runs correctly, program can be continue.
         print "Updated Stock Inhand"
-        done = False
-        sql_select_stock_infor = (
-            "select stockCode, stockRemain, stockAvaliable, currentValue, Datetime from tb_StockInhand where stockCode = %s order by Datetime DESC limit 1")
-        if receive == '1.1':
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
-            self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
-            done = True
+        if receive != 'err':
+            self._log_mesg = self._log_mesg + "     Update stock inhand information successfully at %s \n" % self._time_tag()
         else:
-            df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code,), con=self._engine)
-            self._log_mesg = self._log_mesg + "     Could not get current stock in hand information at %s \n" % self._time_tag()
+            self._log_mesg = self._log_mesg + "     Error: Cannot update stock inhand information successfully at %s \n" % self._time_tag()
+            subject = "Front End Server Communication Error"
+            message = 'Front end server error, failed to upate stock inhand information'
+            self._emailobj.send_email(subject=subject, body=message)
+        self._write_log(self._log_mesg)
+
+    def _checking_stock_in_hand(self, stock_code):
+        # Need to udpate stock_in_hand Information first
+        # This will request to send a code to frontend, and wait for response from confirmation from front end.
+        done = True
+        now = self._time_tag()
+        sql_select_stock_infor = (
+            "select stockCode, stockRemain, stockAvaliable, currentValue, quote_time from tb_StockInhand where stockCode = %s and Datetime < %s and Datetime > %s - INTERVAL 6 HOUR order by quote_time DESC limit 1")
+
+        df_stock_infor = pd.read_sql(sql_select_stock_infor, params=(stock_code, now, now), con=self._engine)
+        self._log_mesg = self._log_mesg + "     Get df_stock_infor %s at %s \n" % (df_stock_infor, self._time_tag())
 
         if df_stock_infor.empty:
             self._log_mesg = self._log_mesg + "     There is currently no stock %s in hand at %s \n." % (
@@ -163,7 +164,7 @@ class C_Algorithems_BestPattern(object):
             df_stock_infor.set_value(0, 'stockAvaliable', 0)
             df_stock_infor.set_value(0, 'currentValue', 0.0)
             done = True
-        # self._write_log(self._log_mesg
+        self._write_log(self._log_mesg)
         # print df_stock_infor
         return done, df_stock_infor
 
@@ -445,7 +446,7 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         finish_sign = True
         return finish_sign
 
-    def _get_best_pattern(self, stock_code):
+    def _get_best_pattern(self, stock_code, simplified=True):
         sql_select_best_pattern = (
             "select best_pattern, profit_rate from tb_StockBestPatterns where algorithem_name = 'MACD' and stock_code = %s ORDER by pattern_date DESC limit 1")
         # sql_select_best_pattern_parameters = (
@@ -460,7 +461,8 @@ class C_BestMACDPattern(C_Algorithems_BestPattern):
         #    parameters[0][8], stock_code, pattern, parameters[0][14], profit, self._time_tag())
         self._log_mesg = self._log_mesg + "     Stock %s pattern %s did best profit: %s  at %s \r\n" % (
         stock_code, pattern, profit, self._time_tag())
-        self._write_log(self._log_mesg)
+        if simplified:
+            self._write_log(self._log_mesg)
         # print pattern
         return pattern
 
@@ -552,7 +554,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
     def _multi_processors_cal_MACD_ending_profits(self, MACD_patterns, df_all_signals, df_stock_records, period):
         total_pattern = len(MACD_patterns)
         print total_pattern
-        num_processor = 8
+        num_processor = self._processors
         index_beg = 0
         index_end = total_pattern / num_processor
         pattern_slices = []
@@ -585,7 +587,9 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         MACD_trade_column_names = ['stock_code', 'quote_time', 'close_price', 'tradeVolume', 'tradeCost',
                                    'stockVolume_Current', 'cash_Current', 'totalValue_Current', 'profit_Rate',
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
-        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+        engine = self._engine
+
 
         widgets = ['MACD_Pattern_BackTest: ',
                    progressbar.Percentage(), ' ',
@@ -598,9 +602,9 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         for eachPattern in progress(pattern_slices):
             # if loop_breaker==2:break
             # else: loop_breaker += 1
-            stockVolume_Begin = 0
+            stockVolume_Begin = self._calcu_config['stock_volume_begin']
             # cash_Begin = 120000.00
-            cash_Begin = 60000.00
+            cash_Begin = self._calcu_config['cash_begin']
             tradeVolume = self._trading_volume
             cash_Current = cash_Begin
             stockVolume_Current = stockVolume_Begin
@@ -742,7 +746,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         else:
             sql_fetch_records = sql_fetch_min_records
 
-        num_processor = 8
+        num_processor = self._processors
         MACD_pattern_size = df_MACD_index.index.size
         tasks = MACD_pattern_size / (num_processor - 1)
         print "In total: there are %s MACD Patterns" % MACD_pattern_size
@@ -780,7 +784,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         self._log_mesg = self._log_mesg + "Signal: MuiltiProcess MACD Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
         self._write_log(self._log_mesg)
 
-    def _single_pattern_signal_cal(self, MACD_pattern, period, stock_code, quo, ga, beta):
+    def _single_pattern_signal_cal(self, MACD_pattern, period, stock_code, quo, ga, beta, simplified=True):
         self._clean_table('tb_StockIndex_MACD_New')
 
         sql_fetch_min_records = (
@@ -798,14 +802,17 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         sql_fetch_MACD_index = ("select * from tb_MACDIndex where id_tb_MACDIndex=%s")
         df_MACD_index = pd.read_sql(sql_fetch_MACD_index, con=self._engine, index_col='id_tb_MACDIndex', params=MACD_pattern)
 
-        self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta)
+        df_signals = self._MACD_signal_calculation_M30_3(df_MACD_index, df_stock_records, True, False, quo, ga, beta,
+                                                         simplified)
 
         self._log_mesg = self._log_mesg + "-----------------------------------------------------\n"
         self._log_mesg = self._log_mesg + "Signal: Single MACD Pattern Signal Calculation with Method MACD_Signal_Calculation_MACD has been called at %s \n" % self._time_tag()
-        self._write_log(self._log_mesg)
+        if simplified:
+            self._write_log(self._log_mesg)
+        return df_signals
 
     def _MACD_signal_calculation_M30_3(self, df_MACD_index, df_stock_records, to_DB=True, for_real=False, quo=None,
-                                       ga=None, beta=None):
+                                       ga=None, beta=None, simplified=True):
         '''
         Calculate trading signals for stock operation.
         :param df_MACD_index:
@@ -953,11 +960,14 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 last = row
                 # last_idx = idxdf_save.EMA_short[-1] = 999
             # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+            engine = self._engine
             # print df[df.Signal == -1].count()
-            #df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
-            df_save = df_save[df_save.Signal != -9]
+            if simplified:
+                df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
+                df_save = df_save[df_save.Signal != -9]
+            else:
+                df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
 
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
                 if for_real:
@@ -1038,7 +1048,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 last_idx = idx
 
             # Remove the no transaction record from the DB.
-            engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+            #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+            engine = self._engine
             df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             # df_save = df.drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
             if to_DB:  # to_DB == True if function call from data saving, to_DB ==False function call from apply, not need to save to db
@@ -1055,7 +1066,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                    progressbar.ETA()]
         progress = progressbar.ProgressBar(widgets=widgets)
 
-        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
+        engine = self._engine
 
         # loop breaker
         loop_breaker = 0
@@ -1478,7 +1490,7 @@ def caL_all_pattern():
     quo = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9]
     # beta = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
     beta = [0.2]
-    quo = [0.7]
+    # quo = [0.7]
     gama = [0.3]
     for each_quo in quo:
         for each_ga in gama:

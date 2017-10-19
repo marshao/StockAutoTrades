@@ -4,6 +4,7 @@
 import socket, time
 from C_StockWindowControl import *
 import logging
+from src import C_GlobalVariable as glb
 
 class C_FrontEndSockets:
     def __init__(self):
@@ -17,10 +18,13 @@ class C_FrontEndSockets:
         This is the port listening function, once it goes into listen mode, it will not exit unless meet a exception
         :return:
         '''
+        gv = glb.C_GlobalVariable()
         alive = True
         s = socket.socket()
-        host = 'Bei1Python'
-        port = 32768
+        host = gv.get_master_config()['pro_front_name']
+        # host = 'Bei1Python'
+        port = gv.get_master_config()['win_port']
+        # port = 32768
         s.bind((host, port))
         s.listen(5)
         print "Start Listening"

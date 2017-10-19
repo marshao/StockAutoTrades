@@ -4,6 +4,7 @@
 import os, time, pandas, shutil
 from datetime import datetime
 from sqlalchemy import create_engine
+from src import C_GlobalVariable as glb
 
 
 __metclass__ = type
@@ -24,17 +25,19 @@ class C_StockFileManagement:
 
     '''
     def __init__(self):
-        self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
-        self._input_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
-        self._install_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
+        gv = glb.C_GlobalVariable()
+        self._master_config = gv.get_master_config()
+        self._output_dir = self._master_config['win_output_dir']
+        self._input_dir = self._master_config['win_input_dir']
+        self._install_dir = self._master_config['win_install_dir']
         self._stock_record_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
         self._processed_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\processed\\'
         self._stock_inhand_file = 'stockInhand.csv'
         self._stock_asset = 'stockAsset.txt'
         self._log_mesg = ''
-        self._op_log = 'operLog.txt'
+        self._op_log = self._master_config['op_log']
         self._stock_code = ''
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._engine = self._master_config['dev_db_engine']
 
     def __del__(self):
         pass

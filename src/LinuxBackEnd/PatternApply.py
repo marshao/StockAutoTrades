@@ -2,7 +2,8 @@
 # coding: utf-8
 
 from C_Algorithms_BestMACDPattern import *
-
+from C_Operation_Validation import *
+import C_GlobalVariable as glb
 
 def apply_pattern(period=None, stock_code=None):
 
@@ -12,9 +13,10 @@ def apply_pattern(period=None, stock_code=None):
         stock_code = 'sz002310'
 
     bMACD = C_BestMACDPattern()
+    signal_validation = C_Operation_Validation()
     # for each_stock_code in stock_codes:
     bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=stock_code, quo=0.7, ga=0.3, beta=0.2)
-
+    signal_validation.signal_validation(stock_code)
 
 def best_pattern_daily_calculate():
     bMACD = C_BestMACDPattern()
@@ -24,13 +26,24 @@ def best_pattern_daily_calculate():
     bSAR.SAR_ending_profit_all_patterns('sz300226')
 
 
+def update_stock_inhand():
+    algorithem = C_Algorithems_BestPattern()
+    algorithem._update_stock_inhand()
+    trans_validation = C_Operation_Validation()
+    trans_validation.transaction_validation()
+
+
 def apply_multi_patterns(period=None, stock_codes=None):
+    gv = glb.C_GlobalVariable()
+    signal_validation = C_Operation_Validation()
+    stock_pars_m30 = gv.get_stock_config()['stock_m30_config']
+    '''
     stock_pars_m30 = {'sz002310': [0.7, 0.3, 0.2],
                       'sh600867': [0.8, 0.6, 0.2],
                       'sz300146': [0.7, 0.3, 0.2],
                       'sh600271': [0.9, 0.4, 0.2]
                       }
-
+    '''
     if period is None:
         period = 'm30'
     if stock_codes is None:
@@ -41,6 +54,7 @@ def apply_multi_patterns(period=None, stock_codes=None):
     for each_stock in stock_codes:
         bMACD.apply_best_MACD_pattern_to_data(period=period, stock_code=each_stock, quo=stock_pars_m30[each_stock][0],
                                               ga=stock_pars_m30[each_stock][1], beta=stock_pars_m30[each_stock][2])
+        signal_validation.signal_validation(each_stock)
 
 def best_multi_patterns_daily_calculate(stock_codes=None):
     if stock_codes is None:

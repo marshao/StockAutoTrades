@@ -4,14 +4,16 @@
 __metclass__ = type
 
 
-import os, time, pandas, urllib, re
+import time, pandas, urllib, re
 import datetime
-from sqlalchemy import create_engine, Table, Column, MetaData
-from sqlalchemy.sql import select, and_, or_, not_, delete
+from sqlalchemy import Table,  MetaData
+from sqlalchemy.sql import select, and_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
-from apscheduler.schedulers.background import BackgroundScheduler
+
+
+import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
-import multiprocessing as mp
+#import multiprocessing as mp
 import logging
 
 class C_GettingData:
@@ -26,26 +28,33 @@ class C_GettingData:
     '''
 
     def __init__(self):
-        # self._output_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\'
-        self._output_dir = '/home/marshao/DataMiningProjects/Output/'
-        self._input_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\'
-        self._install_dir = 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\\'
+        gv = glb.C_GlobalVariable()
+        self._master_config = gv.get_master_config()
+        self._calcu_config = gv.get_calcu_config()
+        self._stock_config = gv.get_stock_config()
 
-        self._data_source={'sina':'http://hq.sinajs.cn/list=','qq_realtime':'http://qt.gtimg.cn/q=%s',
-                           'qq_1_min':'http://web.ifzq.gtimg.cn/appstock/app/minute/query?_var=min_data_%s&code=%s',
-                           'qq_x_min':'http://ifzq.gtimg.cn/appstock/app/kline/mkline?param=%s,%s,,%s',
-                           'qq_x_period': 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=%s,%s,,,%s,%s'}
-        self._x_min = ['m1','m5','m15','m30','m60']
-        self._x_period = ['day', 'week']
-        self._q_count = ['320', '50', '16', '16', '4']
-        self._fq = ['qfq', 'hfq','bfq']
+        self._output_dir = self._master_config['ubuntu_output_dir']
+        self._input_dir = self._master_config['win_input_dir']
+        self._install_dir = self._master_config['win_install_dir']
+
         # self._stock_code = ['sz300226', 'sh600887', 'sz300146', 'sh600221']
         # self._stock_code = ['sz300146', 'sh600867', 'sz002310', 'sh600221']
-        self._stock_code = ['sz002310', 'sh600867', 'sz300146','sh600271']
-        self._log_mesg = ''
-        self._op_log = 'operLog.txt'
-        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        self._stock_code = self._stock_config['stock_codes']
+
+        self._op_log = self._master_config['op_log']
+        self._engine = self._master_config['dev_db_engine']
         self._metadata = MetaData(self._engine)
+        self._x_min = self._master_config['x_min']
+        self._x_period = self._master_config['x_period']
+        self._q_count = self._master_config['q_count']
+        self._fq = self._master_config['fq']
+        self._data_source = self._master_config['data_source']
+        self._start_morning = self._master_config['start_morning']
+        self._end_morning = self._master_config['end_morning']
+        self._start_afternoon = self._master_config['start_afternoon']
+        self._end_afternoon = self._master_config['end_afternoon']
+
+        self._log_mesg = ''
         self._my_real_time_DF_columns_sina = ['stock_code', 'close_price', 'open_price', 'current_price', 'high_price', 'low_price', 'buy_price', 'sale_price', 'trading_volumn', 'trading_amount',
                    'buy1_apply','buy1_price','buy2_apply','buy2_price','buy3_apply','buy3_price','buy4_apply','buy4_price','buy5_apply','buy5_price',
                    'sale1_apply','sale1_price','sale2_apply','sale2_price','sale3_apply','sale3_price','sale4_apply','sale4_price','sale5_apply','sale5_price',
@@ -64,10 +73,7 @@ class C_GettingData:
         self._x_min_data_DF = pandas.DataFrame(columns = self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns = self._1_min_columns)
         self._real_time_data_DF = pandas.DataFrame(columns = self._real_time_DF_columns_qq)
-        self._start_morning = datetime.time(9, 20, 0)
-        self._end_morning = datetime.time(11, 32, 0)
-        self._start_afternoon = datetime.time(12, 50, 0)
-        self._end_afternoon = datetime.time(15, 10, 0)
+
         self._fun = self._empty_fun
 
 
@@ -663,6 +669,7 @@ class C_GettingData:
     def _empty_fun(self, period):
         pass
 
+    '''
     def job_schedule(self, period=None, stock_code=None):
         # job_stores = {'default': MemoryJobStore()}
         # executor = {'processpool': ThreadPoolExecutor(8)}
@@ -686,6 +693,8 @@ class C_GettingData:
                             args=['m60'])
         scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
                             args=[period, stock_code])
+        scheduler_1.add_job(update_stock_inhand, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30')
+
         scheduler_2.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='22')
 
         scheduler_1.start()
@@ -727,7 +736,7 @@ class C_GettingData:
 
         for p in processes:
             p.join()
-
+    '''
 
 
 def main():
@@ -740,7 +749,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sh600271', period='m5', q_count=800)
+    pp.get_data_qq(stock_code='sz002310', period='m30', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
