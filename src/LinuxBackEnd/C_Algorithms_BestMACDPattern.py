@@ -35,9 +35,9 @@ class C_Algorithems_BestPattern(object):
         self._stock_inhand_uplimit = self._calcu_config['stock_inhand_uplimit']
         self._op_log = self._master_config['op_log']
         self._processors = self._calcu_config['ubuntu_processors']
+
         self._engine = self._master_config['db_engine']
         self._metadata = MetaData(self._engine)
-
         self._stock_name_file = self._output_dir + 'StockNames.csv'
         self._SAR_log = self._output_dir + 'SARLog'
         self._stock_codes = ['sz002310']

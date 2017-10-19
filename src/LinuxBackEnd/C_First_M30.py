@@ -5,7 +5,7 @@ __metclass__ = type
 
 import pandas as pd
 import datetime, time
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 
 
 class C_First_M30(object):
@@ -23,6 +23,7 @@ class C_First_M30(object):
         self._operation_log = self._output_dir + self._master_config['op_log']
         self._validation_log = self._output_dir + 'validateLog.txt'
         self._engine = self._master_config['db_engine']
+
 
 
 
