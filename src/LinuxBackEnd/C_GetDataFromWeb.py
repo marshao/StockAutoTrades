@@ -10,7 +10,7 @@ from sqlalchemy import Table,  MetaData
 from sqlalchemy.sql import select, and_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
 #import multiprocessing as mp
 import logging
@@ -41,7 +41,7 @@ class C_GettingData:
         self._stock_code = self._stock_config['stock_codes']
 
         self._op_log = self._master_config['op_log']
-        self._engine = self._master_config['dev_db_engine']
+        self._engine = self._master_config['pro_db_engine']
         self._metadata = MetaData(self._engine)
         self._x_min = self._master_config['x_min']
         self._x_period = self._master_config['x_period']

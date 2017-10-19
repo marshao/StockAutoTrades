@@ -11,7 +11,7 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
-from src import C_GlobalVariable as glb
+import C_GlobalVariable as glb
 
 
 import cProfile
@@ -35,7 +35,7 @@ class C_Algorithems_BestPattern(object):
         self._stock_inhand_uplimit = self._calcu_config['stock_inhand_uplimit']
         self._op_log = self._master_config['op_log']
         self._processors = self._calcu_config['ubuntu_processors']
-        self._engine = self._master_config['dev_db_engine']
+        self._engine = self._master_config['pro_db_engine']
         self._metadata = MetaData(self._engine)
 
         self._stock_name_file = self._output_dir + 'StockNames.csv'

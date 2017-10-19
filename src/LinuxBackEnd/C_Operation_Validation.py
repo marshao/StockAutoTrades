@@ -6,8 +6,8 @@ __metclass__ = type
 import datetime, time
 import pandas as pd
 from C_Algorithms_BestMACDPattern import C_MACD_Signal_Calculation, C_BestMACDPattern
-from CommuSocket import commu
-from src import C_GlobalVariable as glb
+# from CommuSocket import commu
+import C_GlobalVariable as glb
 
 
 class C_Operation_Validation(object):
@@ -26,7 +26,7 @@ class C_Operation_Validation(object):
         self._output_dir = self._master_config['ubuntu_output_dir']
         self._input_dir = self._master_config['ubuntu_input_dir']
         self._operation_log = self._output_dir + self._master_config['op_log']
-        self._engine = self._master_config['dev_db_engine']
+        self._engine = self._master_config['pro_db_engine']
         self._validation_log = self._output_dir + 'validateLog.txt'
 
 
