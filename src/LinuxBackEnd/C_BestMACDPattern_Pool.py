@@ -5,7 +5,7 @@ __metclass__ = type
 
 import pandas as pd
 import csv
-from sqlalchemy import create_engine, Table, Column, MetaData
+from sqlalchemy import Table
 
 from C_Algorithms_BestMACDPattern import C_Algorithems_BestPattern, C_MACD_Ending_Profit_Calculation, \
     C_MACD_Signal_Calculation
@@ -421,7 +421,7 @@ def main():
 def test_records():
     c = C_BestMACDPattern_PoolValidation()
     # stock_codes = ['sz002310', 'sh600867', 'sz300146', 'sh600271']
-    stock_codes = ['sz002310', 'sh600867', 'sz300146']
+    stock_codes = ['sz002310', 'sh600867', 'sh600271']
     stock_records_dict = {}
     # Prepare the stock pool using
     # Values Meaning: stock_avaliable, stock_remain, stock_value
@@ -429,7 +429,6 @@ def test_records():
                   'sh600867': [0, 0, 0.0],
                   'sz300146': [0, 0, 0.0],
                   'sh600271': [0, 0, 0.0],
-
                   }
     asset_pool = {'cash_begin': 100000.00,
                   'cash_avaliable': 100000.00,
@@ -477,7 +476,7 @@ def test_records():
         header.append(each_stock)
     writer.writerow(header)
 
-    print stock_pool.values()[3][2]
+    # print stock_pool.values()[3][2]
     # Process
     i = 0
     while i < 290:
@@ -489,10 +488,14 @@ def test_records():
             last_row = feed_records.tail(1)
             # Update pool
             stock_pool[stock_code][2] = stock_pool[stock_code][0] * float(last_row['close_price'][0])
-            asset_pool['total_stock_value'] = (
-            stock_pool.values()[0][2] + stock_pool.values()[1][2] + stock_pool.values()[2][2] + stock_pool.values()[3][
-                2])
-            asset_pool['total_asset'] = asset_pool['cash_avaliable'] + asset_pool['total_stock_value']
+            # asset_pool['total_stock_value'] = (
+            # stock_pool.values()[0][2] + stock_pool.values()[1][2] + stock_pool.values()[2][2] + stock_pool.values()[3][
+            #    2])
+            total_stock_value = 0.0
+            for each_stock in stock_codes:
+                total_stock_value += stock_pool[each_stock][2]
+            asset_pool['total_stock_value'] = total_stock_value
+            asset_pool['total_asset'] = asset_pool['cash_avaliable'] + total_stock_value
 
             content = [last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0],
                              asset_pool.values()[0], asset_pool.values()[1],
