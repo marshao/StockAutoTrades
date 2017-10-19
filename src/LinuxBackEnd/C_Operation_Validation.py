@@ -6,8 +6,8 @@ __metclass__ = type
 import datetime, time
 import pandas as pd
 from C_Algorithms_BestMACDPattern import C_MACD_Signal_Calculation, C_BestMACDPattern
-from CommuSocket import commu
-from src import C_GlobalVariable as glb
+# from CommuSocket import commu
+import C_GlobalVariable as glb
 
 
 class C_Operation_Validation(object):
