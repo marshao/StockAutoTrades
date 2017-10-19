@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import socket
-import C_GlobalVariable as glb
+from src import C_GlobalVariable as glb
 
 
 def commu(cmd='1'):

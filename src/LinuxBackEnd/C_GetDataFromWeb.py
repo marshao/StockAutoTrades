@@ -10,8 +10,7 @@ from sqlalchemy import Table,  MetaData
 from sqlalchemy.sql import select, and_
 from PatternApply import apply_pattern, best_pattern_daily_calculate
 
-
-import C_GlobalVariable as glb
+from src import C_GlobalVariable as glb
 # from apscheduler.schedulers import Scheduler
 #import multiprocessing as mp
 import logging

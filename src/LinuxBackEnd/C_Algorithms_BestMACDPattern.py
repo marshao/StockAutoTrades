@@ -11,7 +11,7 @@ from sqlalchemy.sql import select, and_, or_, not_
 import multiprocessing as mp
 from CommuSocket import commu
 from GetRealData import get_data_qq
-import C_GlobalVariable as glb
+from src import C_GlobalVariable as glb
 
 
 import cProfile
