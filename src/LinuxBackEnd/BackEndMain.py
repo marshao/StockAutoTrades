@@ -4,10 +4,11 @@
 
 
 import sys, datetime, time
+
+sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
 import multiprocessing as mp
 from apscheduler.schedulers.background import BackgroundScheduler
 from PatternApply import apply_pattern, best_pattern_daily_calculate, update_stock_inhand
-sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
 
 from C_GetDataFromWeb import C_GettingData
 
