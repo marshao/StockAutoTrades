@@ -41,7 +41,7 @@ class C_GettingData:
         self._stock_code = self._stock_config['stock_codes']
 
         self._op_log = self._master_config['op_log']
-        self._engine = self._master_config['pro_db_engine']
+        self._engine = self._master_config['db_engine']
         self._metadata = MetaData(self._engine)
         self._x_min = self._master_config['x_min']
         self._x_period = self._master_config['x_period']
@@ -78,9 +78,9 @@ class C_GettingData:
 
 
     def __get_real_time_data_sina(self, data_source, stock_code):
-        # ´Ëº¯Êı¸ºÔğÊ°È¡Ã¿60ÃëµÄÊı¾İ¸üĞÂ
+        # æ­¤å‡½æ•°è´Ÿè´£æ‹¾å–æ¯60ç§’çš„æ•°æ®æ›´æ–°
         per_real_data = self.__price_monitoring_sina(data_source, stock_code)
-        # ½«·µ»ØµÄper_real_data Ôö¼Óµ½DF stock_real_dataÖĞ
+        # å°†è¿”å›çš„per_real_data å¢åŠ åˆ°DF stock_real_dataä¸­
         print "new data found at ",self._time_tag()
         for row in per_real_data:
             self._stock_minitue_data_DF.loc[len(self._stock_minitue_data_DF)] = row
@@ -454,9 +454,9 @@ class C_GettingData:
 
     def _remove_overlaied_rows(self, period, stock_code):
         '''
-        Step 1: ´ÓÊı¾İ¿âÖĞÈ¡³öÏàÓ¦¹ÉÆ±×îºóÒ»¸ö¼ÇÂ¼µÄÊ±¼ä´Á
-        Step 2£º´Ódata É¾³ıÔçÓÚÕâ¸öÊ±¼ä´ÁµÄ¼ÇÂ¼
-        Step 3: ·µ»ØÇåÀíºóµÄDataFrame
+        Step 1: ä»æ•°æ®åº“ä¸­å–å‡ºç›¸åº”è‚¡ç¥¨æœ€åä¸€ä¸ªè®°å½•çš„æ—¶é—´æˆ³
+        Step 2ï¼šä»data åˆ é™¤æ—©äºè¿™ä¸ªæ—¶é—´æˆ³çš„è®°å½•
+        Step 3: è¿”å›æ¸…ç†åçš„DataFrame
         :param df:
         :return:
         '''
@@ -613,8 +613,8 @@ class C_GettingData:
 
 
     def _timer(self, func):
-        # ¶¨ÒåÒ»¸ö¼ÆÊ±Æ÷º¯Êı£¬ÈÃget_real_time_data Ã¿60ÃëÏòÊı¾İ¿â´«ËÍÒ»´Î¸üĞÂµÄÊı¾İ¡£
-        #¶¨ÒåÒ»¸öÄÚÇ¶µÄ°ü×°º¯Êı£¬¸ø´«ÈëµÄº¯Êı¼ÓÉÏ¼ÆÊ±¹¦ÄÜµÄ°ü×°
+        # å®šä¹‰ä¸€ä¸ªè®¡æ—¶å™¨å‡½æ•°ï¼Œè®©get_real_time_data æ¯60ç§’å‘æ•°æ®åº“ä¼ é€ä¸€æ¬¡æ›´æ–°çš„æ•°æ®ã€‚
+        #å®šä¹‰ä¸€ä¸ªå†…åµŒçš„åŒ…è£…å‡½æ•°ï¼Œç»™ä¼ å…¥çš„å‡½æ•°åŠ ä¸Šè®¡æ—¶åŠŸèƒ½çš„åŒ…è£…
         def wrapper():
             start = time.time()
             while (time.time() - start) < 900: # call function at every 15 min

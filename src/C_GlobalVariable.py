@@ -31,10 +31,7 @@ class C_GlobalVariable(object):
                                'dev_front_name': 'bei2python',
                                'win_port': 32768,
                                'db_name': 'DB_StockDataBackTest',
-                               'pro_db_engine': create_engine(
-                                   'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest'),
-                               'dev_db_engine': create_engine(
-                                   'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest'),
+                               'db_engine': self._calcu_config['dev_db_engine'],
                                'x_min':['m1', 'm5', 'm15', 'm30', 'm60'],
                                'x_period': ['day', 'week'],
                                'q_count': ['320', '50', '16', '16', '4'],
@@ -64,7 +61,11 @@ class C_GlobalVariable(object):
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,
                               'stock_volume_begin': 0,
-                              'period': 'm30'
+                              'period': 'm30',
+                              'pro_db_engine': create_engine(
+                                  'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest'),
+                              'dev_db_engine': create_engine(
+                                  'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
                               }
 
         '''

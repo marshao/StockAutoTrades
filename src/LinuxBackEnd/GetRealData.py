@@ -9,7 +9,7 @@ import C_GlobalVariable as glb
 def get_data_qq(stock_code='sz300226'):
     gv = glb.C_GlobalVariable()
     data_source = {'qq_realtime': 'http://qt.gtimg.cn/q=%s'}
-    engine = gv.get_master_config()['pro_db_engine']
+    engine = gv.get_master_config()['db_engine']
     got = True
     url = data_source['qq_realtime'] % stock_code
     html = urllib.urlopen(url)
