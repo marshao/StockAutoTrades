@@ -129,6 +129,7 @@ class C_Operation_Validation(object):
                       "verification signal is %s" % (stock_code, quote_time, signal)
         self._log_mesg = self._log_mesg + message
         self._write_log(self._log_mesg, self._operation_log)
+        print self._log_mesg
         if send: self._emailobj.send_email(subject=subject, body=message)
 
     def transaction_validation(self, ):
