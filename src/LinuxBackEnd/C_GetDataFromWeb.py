@@ -78,9 +78,7 @@ class C_GettingData:
 
 
     def __get_real_time_data_sina(self, data_source, stock_code):
-        # 此函数负责拾取每60秒的数据更新
         per_real_data = self.__price_monitoring_sina(data_source, stock_code)
-        # 将返回的per_real_data 增加到DF stock_real_data�?
         print "new data found at ",self._time_tag()
         for row in per_real_data:
             self._stock_minitue_data_DF.loc[len(self._stock_minitue_data_DF)] = row

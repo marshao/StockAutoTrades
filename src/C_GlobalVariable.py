@@ -27,6 +27,7 @@ class C_GlobalVariable(object):
 
 
         self._master_config = {'ubuntu_input_dir': '/home/marshao/DataMiningProjects/Input/',
+                               'ubuntu_file_input_dir': '/home/marshao/UWShare/hist-data',
                                'ubuntu_output_dir': '/home/marshao/DataMiningProjects/Output/',
                                'win_input_dir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\input\\',
                                'win_output_dir': 'D:\Personal\DataMining\\31_Projects\\01.Finance\\03.StockAutoTrades\output\\',
