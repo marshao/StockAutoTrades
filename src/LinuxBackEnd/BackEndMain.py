@@ -13,6 +13,7 @@ from C_GetDataFromWeb import C_GettingData
 import C_GlobalVariable as glb
 
 def main():
+    print "This is the production enviroment!!!"
     single_stock()
 
 def single_stock():
