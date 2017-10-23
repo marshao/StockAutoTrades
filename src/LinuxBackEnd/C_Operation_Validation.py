@@ -28,6 +28,7 @@ class C_Operation_Validation(object):
         self._operation_log = self._output_dir + self._master_config['op_log']
         self._engine = self._master_config['db_engine']
         self._validation_log = self._output_dir + 'validateLog.txt'
+        self._log_mesg = '      '
 
 
 
@@ -126,6 +127,9 @@ class C_Operation_Validation(object):
             subject = "Invalid Signal"
             message = "The signal is not verified, stock %s could not find corresponding signal time %s in log, the system " \
                       "verification signal is %s" % (stock_code, quote_time, signal)
+        self._log_mesg = self._log_mesg + message
+        self._write_log(self._log_mesg, self._operation_log)
+        print self._log_mesg
         if send: self._emailobj.send_email(subject=subject, body=message)
 
     def transaction_validation(self, ):
@@ -157,7 +161,7 @@ class C_Operation_Validation(object):
             print "There is no transaction happen in last pattern apply"
             subject = "No Transaction happened"
             message = '%s There is no transactions happen in last 30 min.' % (self._time_tag())
-
+            send = False
         else:
             stock_code = df_transactions['stock_code'][0]
             trade_volumn = df_transactions['trade_volumn'][0]
@@ -199,6 +203,8 @@ class C_Operation_Validation(object):
                                   "There are more than 1 records in the system with unknown reason" % (
                                       self._time_tag(), stock_code, trade_price, trade_volumn)
 
+        self._log_mesg = self._log_mesg + message
+        self._write_log(self._log_mesg, self._operation_log)
         if send: self._emailobj.send_email(subject=subject, body=message)
 
 def main():

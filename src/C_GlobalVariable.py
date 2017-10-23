@@ -25,7 +25,6 @@ class C_GlobalVariable(object):
                                   'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
                               }
 
-
         self._master_config = {'ubuntu_input_dir': '/home/marshao/DataMiningProjects/Input/',
                                'ubuntu_file_input_dir': '/home/marshao/UWShare/hist-data',
                                'ubuntu_output_dir': '/home/marshao/DataMiningProjects/Output/',
@@ -45,7 +44,7 @@ class C_GlobalVariable(object):
                                'dev_front_name': 'bei2python',
                                'win_port': 32768,
                                'db_name': 'DB_StockDataBackTest',
-                               'db_engine': self._calcu_config['dev_db_engine'],
+                               'db_engine': self._calcu_config['pro_db_engine'],
                                'x_min':['m1', 'm5', 'm15', 'm30', 'm60'],
                                'x_period': ['day', 'week'],
                                'q_count': ['320', '50', '16', '16', '4'],
@@ -69,7 +68,6 @@ class C_GlobalVariable(object):
                                 'sh600271': [0.9, 0.4, 0.2]}
 
                              }
-
 
         '''
                 self._data_source = {'sina': 'http://hq.sinajs.cn/list=', 'qq_realtime': 'http://qt.gtimg.cn/q=%s',
@@ -144,6 +142,13 @@ class C_GlobalVariable(object):
     def get_emailobj(self):
         emailobj = C_Email.C_Email()
         return emailobj
+
+    def get_con(self, type='pro'):
+        if type == 'pro':
+            con = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        else:
+            con = create_engine('mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
+        return con
 
 def main():
     te = C_GlobalVariable
