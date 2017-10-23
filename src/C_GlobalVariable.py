@@ -142,6 +142,13 @@ class C_GlobalVariable(object):
         emailobj = C_Email.C_Email()
         return emailobj
 
+    def get_con(self, type='pro'):
+        if type == 'pro':
+            con = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        else:
+            con = create_engine('mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
+        return con
+
 def main():
     te = C_GlobalVariable
 

@@ -24,10 +24,10 @@ class C_Algorithems_BestPattern(object):
             2017-06-22 in _MACD_Singal_calcualtion_cross use MACD_short = 999 to represent real life stock operation and save them in DB.
     '''
     def __init__(self):
-        gv = glb.C_GlobalVariable()
-        self._master_config = gv.get_master_config()
-        self._calcu_config = gv.get_calcu_config()
-        self._emailobj = gv.get_emailobj()
+        self._gv = glb.C_GlobalVariable()
+        self._master_config = self._gv.get_master_config()
+        self._calcu_config = self._gv.get_calcu_config()
+        self._emailobj = self._gv.get_emailobj()
 
         self._input_dir = self._master_config['ubuntu_input_dir']
         self._output_dir = self._master_config['ubuntu_output_dir']
@@ -36,7 +36,8 @@ class C_Algorithems_BestPattern(object):
         self._op_log = self._master_config['op_log']
         self._processors = self._calcu_config['ubuntu_processors']
 
-        self._engine = self._master_config['db_engine']
+        # self._engine = self._master_config['db_engine']
+        self._engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
         self._metadata = MetaData(self._engine)
         self._stock_name_file = self._output_dir + 'StockNames.csv'
         self._SAR_log = self._output_dir + 'SARLog'
@@ -311,7 +312,6 @@ class C_Algorithems_BestPattern(object):
 
         #self._write_log(self._log_mesg)
         return done
-
 
 class C_BestMACDPattern(C_Algorithems_BestPattern):
     '''
@@ -719,11 +719,14 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
             ga = 0.3
         if beta is None:
             beta = 0.2
-        df_MACD_index = pd.read_sql('tb_MACDIndex', con=self._engine, index_col='id_tb_MACDIndex')
+
+        engine = self._gv.get_con('pro')
+        df_MACD_index = pd.read_sql('tb_MACDIndex', con=engine, index_col='id_tb_MACDIndex')
         # self._MACD_signal_calculation_cross(df_MACD_index, df_stock_records)
         self._clean_table('tb_StockIndex_MACD_New')
         self._multi_processors_cal_MACD_signals(df_MACD_index, stock_code, period, quo, ga, beta)
         # print df_MACD_index, df_stock_records, df_stock_records.index[0].date()
+        engine.dispose()
 
     def _multi_processors_cal_MACD_signals(self, df_MACD_index, stock_code, period, quo=None, ga=None, beta=None):
         if quo is None:
@@ -736,6 +739,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         # Initialize Signal Calculation
         C_MACD_Signal_Calculator = C_MACD_Signal_Calculation()
         # print period
+        engine = self._gv.get_con()
         sql_fetch_min_records = (
             # "select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 550")
             "select * from (select * from tb_StockXMinRecords where period = %s and stock_code = %s order by quote_time DESC limit 555) as tbl order by quote_time ASC")
@@ -757,7 +761,7 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
         while p <= num_processor:
             print "For %s part, index begin is %s, index end is %s" % (p, index_begin, index_end)
             df_index = df_MACD_index[index_begin:index_end]
-            df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, index_col='quote_time',
+            df_stock_records = pd.read_sql(sql_fetch_records, con=engine, index_col='quote_time',
                                            params=(period, stock_code))
             task_args.append((df_index, df_stock_records), )
 
@@ -961,7 +965,8 @@ class C_MACD_Signal_Calculation(C_BestMACDPattern):
                 # last_idx = idxdf_save.EMA_short[-1] = 999
             # Remove the no transaction record from the DB.
             #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
-            engine = self._engine
+            engine = self._gv.get_con('pro')
+            #engine = self._engine
             # print df[df.Signal == -1].count()
             if simplified:
                 df_save = df[df.Signal != 0].drop(df.columns[[0, 2, 3, 4, 5, 7]], axis=1)
