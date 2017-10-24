@@ -13,7 +13,7 @@ class C_GlobalVariable(object):
     '''
 
     def __init__(self):
-        self._calcu_config = {'ubuntu_processors': 8,
+        self._calcu_config = {'ubuntu_processors': 3,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,
@@ -44,7 +44,7 @@ class C_GlobalVariable(object):
                                'dev_front_name': 'bei2python',
                                'win_port': 32768,
                                'db_name': 'DB_StockDataBackTest',
-                               'db_engine': self._calcu_config['pro_db_engine'],
+                               'db_engine': self._calcu_config['dev_db_engine'],
                                'x_min':['m1', 'm5', 'm15', 'm30', 'm60'],
                                'x_period': ['day', 'week'],
                                'q_count': ['320', '50', '16', '16', '4'],
