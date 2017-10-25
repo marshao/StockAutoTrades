@@ -421,7 +421,12 @@ def main():
 def test_records():
     c = C_BestMACDPattern_PoolValidation()
     # stock_codes = ['sz002310', 'sh600867', 'sz300146', 'sh600271']
-    stock_codes = ['sz002310', 'sh600867', 'sh600271']
+    stock_codes = ['sz002310', 'sz300146', 'sh600271']
+    stock_codes = ['sh600867', 'sz300146', 'sh600271']
+    stock_codes = ['sz002310', 'sh600867']
+    stock_codes = ['sz300146', 'sh600867']
+    stock_codes = ['sz002310', 'sz300146']
+    stock_codes = ['sh600271', 'sz300146']
     stock_records_dict = {}
     # Prepare the stock pool using
     # Values Meaning: stock_avaliable, stock_remain, stock_value

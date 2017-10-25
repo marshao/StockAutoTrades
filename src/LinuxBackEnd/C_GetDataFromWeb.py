@@ -79,6 +79,7 @@ class C_GettingData:
 
     def __get_real_time_data_sina(self, data_source, stock_code):
         per_real_data = self.__price_monitoring_sina(data_source, stock_code)
+
         print "new data found at ",self._time_tag()
         for row in per_real_data:
             self._stock_minitue_data_DF.loc[len(self._stock_minitue_data_DF)] = row
@@ -608,7 +609,6 @@ class C_GettingData:
 
 
     def _timer(self, func):
-
         def wrapper():
             start = time.time()
             while (time.time() - start) < 900: # call function at every 15 min
@@ -742,7 +742,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sz002310', period='m30', q_count=800)
+    pp.get_data_qq(stock_code='sh600271', period='m30', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
