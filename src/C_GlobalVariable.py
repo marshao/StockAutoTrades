@@ -35,7 +35,7 @@ class C_GlobalVariable(object):
                                'validate_log': 'validateLog.txt',
                                'pro_back_ip': '10.175.10.231',
                                'pro_back_name': 'bei1ubt81',
-                               'pro_front_ip': '10.175.10.99',
+                               'pro_front_ip': '10.175.10.98',
                                'pro_front_name': 'bei1python',
                                'dev_back_ip': '10.176.50.233',
                                'dev_back_name': 'bei2ubt-dev',

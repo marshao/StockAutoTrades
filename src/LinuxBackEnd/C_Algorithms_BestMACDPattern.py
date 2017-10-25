@@ -1472,7 +1472,9 @@ def main():
     # SARPattern.SAR_ending_profit_all_patterns('sz300226')
 
 
-    MACDPattern = C_BestMACDPattern()
+    MACDPattern = C_Algorithems_BestPattern()
+    MACDPattern._update_stock_inhand()
+
     #MACD_Trading_Signal_Cal = C_MACD_Signal_Calculation()
     #MACD_Ending_Profit_Cal = C_MACD_Ending_Profit_Calculation()
     #MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=0.7, ga=0.3)
@@ -1483,7 +1485,7 @@ def main():
     #commu('1')
     #cal_specific_pattern()
     # MACDPattern._get_best_pattern('sz002310')
-    caL_all_pattern()
+    # caL_all_pattern()
 
 def caL_all_pattern():
     # gama is parameter to MACD(MAX-P) when saleing stock

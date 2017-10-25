@@ -28,9 +28,9 @@ def caL_all_pattern():
             for each_beta in beta:
                 MACD_Trading_Signal_Cal._MACD_trading_signals(period="m30", stock_code="sz002310", quo=each_quo,
                                                               ga=each_ga, beta=each_beta)
-                #MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
+                MACD_Ending_Profit_Cal._MACD_ending_profits(period='m30', stock_code='sz002310')
                 # MACDPattern._save_MACD_best_pattern(period='m30')
-                #MACDPattern._get_best_pattern('sz002310')
+                MACDPattern._get_best_pattern('sz002310')
 
 
 def cal_specific_pattern():
