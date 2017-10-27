@@ -427,6 +427,7 @@ def test_records():
     stock_codes = ['sz300146', 'sh600867']
     stock_codes = ['sz002310', 'sz300146']
     stock_codes = ['sh600271', 'sz300146']
+    stock_codes = ['sz002310', 'sz300383']
     stock_records_dict = {}
     # Prepare the stock pool using
     # Values Meaning: stock_avaliable, stock_remain, stock_value
@@ -434,6 +435,9 @@ def test_records():
                   'sh600867': [0, 0, 0.0],
                   'sz300146': [0, 0, 0.0],
                   'sh600271': [0, 0, 0.0],
+                  'sz300383': [0, 0, 0.0],
+                  'sz002180': [0, 0, 0.0],
+                  'sh603658': [0, 0, 0.0]
                   }
     asset_pool = {'cash_begin': 100000.00,
                   'cash_avaliable': 100000.00,
@@ -474,7 +478,7 @@ def test_records():
 
     f = open('stock_pool_text.csv', 'wb')
     writer = csv.writer(f)
-    header = ['quote_time', 'stock_code', 'close_price', asset_pool.keys()[0], asset_pool.keys()[1],
+    header = ['quote_time', asset_pool.keys()[0], asset_pool.keys()[1],
               asset_pool.keys()[2], asset_pool.keys()[3]]
 
     for each_stock in stock_codes:
@@ -485,34 +489,31 @@ def test_records():
     # Process
     i = 0
     while i < 290:
+        content = []
+        common = []
+        total_stock_value = 0.0
         for stock_code in stock_codes:
-
             df = stock_records_dict[stock_code]
             df = df[df.index >= start_time]
             feed_records = df[df.index <= end_time]
             last_row = feed_records.tail(1)
             # Update pool
             stock_pool[stock_code][2] = stock_pool[stock_code][0] * float(last_row['close_price'][0])
-            # asset_pool['total_stock_value'] = (
-            # stock_pool.values()[0][2] + stock_pool.values()[1][2] + stock_pool.values()[2][2] + stock_pool.values()[3][
-            #    2])
-            total_stock_value = 0.0
-            for each_stock in stock_codes:
-                total_stock_value += stock_pool[each_stock][2]
+            total_stock_value += stock_pool[stock_code][2]
             asset_pool['total_stock_value'] = total_stock_value
             asset_pool['total_asset'] = asset_pool['cash_avaliable'] + total_stock_value
 
-            content = [last_row.index[0], last_row['stock_code'][0], last_row['close_price'][0],
-                             asset_pool.values()[0], asset_pool.values()[1],
-                       asset_pool.values()[2], asset_pool.values()[3]]
-            for each_stock in stock_codes:
-                content.append(stock_pool[each_stock])
+            common = [last_row.index[0], asset_pool.values()[0], asset_pool.values()[1],
+                      asset_pool.values()[2], asset_pool.values()[3]]
 
-            writer.writerow(content)
+            content.extend([last_row['stock_code'][0], last_row['close_price'][0], stock_pool[stock_code]])
+            # content.extend(stock_pool[stock_code])
+
             # Send for process
             c.apply_best_MACD_pattern_to_data_test('m30', stock_code, feed_records, stock_pool, asset_pool)
-            # print feed_records['close_price'].tail(1)
 
+        content = common + content
+        writer.writerow(content)
         i += 1
         end_pos -= 1
         start_pos -= 1

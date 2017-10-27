@@ -59,7 +59,7 @@ class C_GlobalVariable(object):
                                'end_afternoon':datetime.time(15, 10, 0)
                                }
 
-
+        '''
         self._stock_config = {'stock_codes': ['sz002310', 'sh600867', 'sz300146', 'sh600271'],
                              'stock_m30_config':{
                                 'sz002310': [0.7, 0.3, 0.2],
@@ -68,6 +68,16 @@ class C_GlobalVariable(object):
                                 'sh600271': [0.9, 0.4, 0.2]}
 
                              }
+        '''
+        # ga, quo, beta
+        self._stock_config = {'stock_codes': ['sz002310', 'sh603658', 'sz300383', 'sz002180'],
+                              'stock_m30_config': {
+                                  'sz002310': [0.7, 0.3, 0.2],
+                                  'sh603658': [0.8, 0.8, 0.2],
+                                  'sz300383': [0.8, 0.3, 0.2],
+                                  'sz002180': [0.8, 0.3, 0.2]}
+
+                              }
 
         '''
                 self._data_source = {'sina': 'http://hq.sinajs.cn/list=', 'qq_realtime': 'http://qt.gtimg.cn/q=%s',
