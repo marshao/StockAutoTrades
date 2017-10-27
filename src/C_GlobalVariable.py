@@ -16,7 +16,7 @@ class C_GlobalVariable(object):
         self._calcu_config = {'ubuntu_processors': 8,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
-                              'cash_begin': 60000.0,
+                              'cash_begin': 200000.0,
                               'stock_volume_begin': 0,
                               'period': 'm30',
                               'pro_db_engine': create_engine(

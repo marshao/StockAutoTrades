@@ -490,6 +490,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
     def _MACD_ending_profits(self, period, stock_code):
         # Fetch out Signal, EMA_short_window, EMA_long_window, DIF_window, quote_time, MACD_pattern_number from tb_StockIndex_MACD_New into a Pandas DF
         # Fetch out pattern_list from DB into MACD_patterns
+        # engine =
         conn = self._engine.connect()
         s = select([self._tb_TradeSignal.c.MACD_pattern_number]).distinct()
         MACD_patterns = conn.execute(s).fetchall()
@@ -505,6 +506,8 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         sql_fetch_all_MACD_signals = ('select * from tb_StockIndex_MACD_New')
         df_all_signals = pd.read_sql(sql_fetch_all_MACD_signals, con=self._engine)
 
+        #print df_all_signals.shape
+
         if period == 'day' or period == 'week':
             sql_fetch_records = sql_fetch_period_records
         else:
@@ -512,6 +515,9 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
 
         df_stock_records = pd.read_sql(sql_fetch_records, con=self._engine, params=(period, stock_code),
                                        index_col='quote_time')
+        #print df_stock_records.shape
+
+
         self._clean_table('tb_MACD_Trades_HalfHour')
         self._clean_table('tb_MACD_Trades')
         self._multi_processors_cal_MACD_ending_profits(MACD_patterns, df_all_signals, df_stock_records, period)
@@ -587,8 +593,8 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
         MACD_trade_column_names = ['stock_code', 'quote_time', 'close_price', 'tradeVolume', 'tradeCost',
                                    'stockVolume_Current', 'cash_Current', 'totalValue_Current', 'profit_Rate',
                                    'EMA_short_window', 'EMA_long_window', 'DIF_window', 'MACD_pattern_number']
-        #engine = create_engine('mysql+mysqldb://marshao:123@10.0.2.15/DB_StockDataBackTest')
-        engine = self._engine
+        engine = create_engine('mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest')
+        #engine = self._engine
 
 
         widgets = ['MACD_Pattern_BackTest: ',
@@ -630,6 +636,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
 
             # print "\n ------------------------------------------------------"
             #print "\n Pattern number is : %s"%eachPattern
+
             for idx, row in df_MACD_signals.iterrows():
                 '''
                 The processing order must be from the oldest to the newest
@@ -657,7 +664,6 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                                        profit_Rate, EMA_short_windows,
                                        EMA_long_windows, DIF_windows, pattern]
                         MACD_trades.loc[len(MACD_trades)] = transaction
-                        #print MACD_trades
                     else:
                         pass
                 # elif df_MACD_signals.Signal[i] == (-1):  # NEgative Signal, sell stocks
@@ -679,7 +685,6 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                                        profit_Rate, EMA_short_windows,
                                        EMA_long_windows, DIF_windows, pattern]
                         MACD_trades.loc[len(MACD_trades)] = transaction
-                        #print MACD_trades
                     else:
                         pass
                 else:
@@ -705,6 +710,7 @@ class C_MACD_Ending_Profit_Calculation(C_BestMACDPattern):
                 else:
                     MACD_trades.to_sql('tb_MACD_Trades', con=engine, if_exists='append', index=False)
                     #MACD_trades.drop(MACD_trades.index, inplace=True)
+            engine.dispose()
 
 class C_MACD_Signal_Calculation(C_BestMACDPattern):
     def __init__(self):
