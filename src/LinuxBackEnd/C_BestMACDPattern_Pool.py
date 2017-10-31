@@ -428,6 +428,7 @@ def test_records():
     stock_codes = ['sz002310', 'sz300146']
     stock_codes = ['sh600271', 'sz300146']
     stock_codes = ['sz002310', 'sz300383']
+    stock_codes = ['sz002310', 'sz300383', 'sz300146']
     stock_records_dict = {}
     # Prepare the stock pool using
     # Values Meaning: stock_avaliable, stock_remain, stock_value
@@ -497,6 +498,10 @@ def test_records():
             df = df[df.index >= start_time]
             feed_records = df[df.index <= end_time]
             last_row = feed_records.tail(1)
+
+            # Send for process
+            c.apply_best_MACD_pattern_to_data_test('m30', stock_code, feed_records, stock_pool, asset_pool)
+
             # Update pool
             stock_pool[stock_code][2] = stock_pool[stock_code][0] * float(last_row['close_price'][0])
             total_stock_value += stock_pool[stock_code][2]
@@ -506,11 +511,9 @@ def test_records():
             common = [last_row.index[0], asset_pool.values()[0], asset_pool.values()[1],
                       asset_pool.values()[2], asset_pool.values()[3]]
 
-            content.extend([last_row['stock_code'][0], last_row['close_price'][0], stock_pool[stock_code]])
+            content.extend([last_row['stock_code'][0], last_row['close_price'][0], stock_pool[stock_code][0],
+                            stock_pool[stock_code][1], stock_pool[stock_code][2]])
             # content.extend(stock_pool[stock_code])
-
-            # Send for process
-            c.apply_best_MACD_pattern_to_data_test('m30', stock_code, feed_records, stock_pool, asset_pool)
 
         content = common + content
         writer.writerow(content)
