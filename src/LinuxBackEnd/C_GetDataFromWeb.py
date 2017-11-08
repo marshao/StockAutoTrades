@@ -228,7 +228,8 @@ class C_GettingData:
             fq = 'qfq'
         if q_count is None:
             q_count = '320'
-
+        self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data start to download.\n" % (
+            self._time_tag(), stock_code, period)
         self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
         self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
         self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
@@ -260,6 +261,8 @@ class C_GettingData:
                     if q_count is None:
                         q_count = self._q_count[3]
                     url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
+                    self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data got URL.\n" % (
+                        self._time_tag(), stock_code, period)
                     print "Get URL"
                 elif period == 'm60':
                     q_count = self._q_count[3]
@@ -270,6 +273,8 @@ class C_GettingData:
                 print url
                 html = urllib.urlopen(url)
                 data = html.read()
+                self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data readed data.\n" % (
+                    self._time_tag(), stock_code, period)
                 self._process_x_min_data_qq(data, period, stock_code)
                 #self._save_data_to_db_qq(period, stock_code)
         else:  # process real time data
@@ -417,6 +422,9 @@ class C_GettingData:
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
         print "processed %s data of stock %s" % (x_min, stock_code)
+        self._log_mesg = self._log_mesg + "At %s Getting: Stock %s data is processed.\n" % (
+            self._time_tag(), stock_code)
+        self._write_log(self._log_mesg)
         #print self._x_min_data_DF
         return self._x_min_data_DF
 
