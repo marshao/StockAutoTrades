@@ -44,17 +44,17 @@ def job_schedule(period=None, stock_code=None):
     scheduler_1 = BackgroundScheduler()
     scheduler_2 = BackgroundScheduler()
 
-    scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
-                        args=['m1'])
-    scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
-                        args=['m15'])
-    scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30',
+    # scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='5/15',
+    #                    args=['m1'])
+    # scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='7/15',
+    #                    args=['m15'])
+    scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30', sec='5',
                         args=['m30'])
-    scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
-                        args=['m60'])
-    scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30',
+    # scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
+    #                    args=['m60'])
+    scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='3/30', sec='5',
                         args=[period, stock_code])
-    scheduler_1.add_job(update_stock_inhand, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30')
+    scheduler_1.add_job(update_stock_inhand, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30', sec='30')
 
     scheduler_2.add_job(best_pattern_daily_calculate, 'cron', day_of_week='fri', hour='22')
 
