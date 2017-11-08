@@ -421,7 +421,7 @@ class C_GettingData:
             self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
             #print self._x_min_data_DF['quote_time']
         self._x_min_data_DF.set_index('quote_time', inplace=True)
-        print "processed %s data of stock %s" % (x_min, stock_code)
+        # print "processed %s data of stock %s" % (x_min, stock_code)
         self._log_mesg = self._log_mesg + "At %s Getting: Stock %s data is processed.\n" % (
             self._time_tag(), stock_code)
         self._write_log(self._log_mesg)
