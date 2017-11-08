@@ -52,7 +52,7 @@ def job_schedule(period=None, stock_code=None):
                         args=['m30'])
     # scheduler_1.add_job(data_service, 'cron', day_of_week='mon-fri', hour='9-15', minute='10/30',
     #                    args=['m60'])
-    scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='15',
+    scheduler_1.add_job(apply_pattern, 'cron', day_of_week='mon-fri', hour='9-15', minute='2/30', second='30',
                         args=[period, stock_code])
     scheduler_1.add_job(update_stock_inhand, 'cron', day_of_week='mon-fri', hour='9-15', minute='1/30', second='45')
 
