@@ -437,8 +437,12 @@ class C_GettingData:
         if period in self._x_min:
             # save x min data into DB
             data = self._remove_overlaied_rows(period, stock_code)
+            self._log_mesg = self._log_mesg + "Removed OverLaid rows"
+            self._log_mesg = self._log_mesg + data
             if period != 'm1':
                 data = self._remove_unwant_min_rows(data, stock_code)
+                self._log_mesg = self._log_mesg + "Removed unwanted rows"
+                self._log_mesg = self._log_mesg + data
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
                 self._remove_zero_trading_volumn_rows(period, stock_code)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
