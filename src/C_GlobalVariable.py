@@ -20,9 +20,11 @@ class C_GlobalVariable(object):
                               'stock_volume_begin': 0,
                               'period': 'm30',
                               'pro_db_engine': create_engine(
-                                  'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest'),
+                                  'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest?charset=utf8',
+                                  encoding='utf-8'),
                               'dev_db_engine': create_engine(
-                                  'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
+                                  'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest?charset=utf8',
+                                  encoding='utf-8')
                               }
 
         self._master_config = {'ubuntu_input_dir': '/home/marshao/DataMiningProjects/Input/',

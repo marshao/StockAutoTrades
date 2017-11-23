@@ -3,12 +3,15 @@
 
 __metclass__ = type
 
-import time, pandas, urllib, re, chardet, codecs
+import time, urllib, re, chardet
+import pandas as pd
 import datetime
 from sqlalchemy import Table, MetaData
 from sqlalchemy.sql import select, and_
+from sqlalchemy.orm import sessionmaker
 import C_GlobalVariable as glb
 import logging
+
 
 
 class C_GetFundamentalData:
@@ -73,17 +76,19 @@ class C_GetFundamentalData:
         self._x_min_columns = ['quote_time', 'open_price', 'high_price', 'low_price', 'close_price', 'trading_volumn',
                                'stock_code', 'period']
         self._1_min_columns = ['quote_time', 'price', 'trading_volumn', 'stock_code']
-        self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
-        self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
-        self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
-        self._real_time_data_DF = pandas.DataFrame(columns=self._real_time_DF_columns_qq)
+        self._stock_minitue_data_DF = pd.DataFrame(columns=self._my_real_time_DF_columns_sina)
+        self._x_min_data_DF = pd.DataFrame(columns=self._x_min_columns)
+        self._1_min_data_DF = pd.DataFrame(columns=self._1_min_columns)
+        self._real_time_data_DF = pd.DataFrame(columns=self._real_time_DF_columns_qq)
 
         self._fun = self._empty_fun
 
-    def get_single_stock_fundamental_data(self, stock_code=None):
-        if stock_code is None:
-            stock_code = '300226'
+    def get_single_stock_main_financail_indicators(self, stock_code_m=None):
+        if stock_code_m is None:
+            stock_code_m = 'sz300226'
+        stock_code = stock_code_m[2:]
 
+        # Read data from Web
         url_principle_financial_index = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report' % stock_code
         html = urllib.urlopen(url_principle_financial_index)
         data = html.read()
@@ -92,408 +97,161 @@ class C_GetFundamentalData:
         ul1 = re.compile('\n')
         data = ul1.sub('', data)
 
-        columns = []
+        # Process Web data into a DF
         rows = []
         endata = data.decode('GB2312').encode('utf-8').split('\r')[0:20]
         for line in endata:
             line = line.split(',')
             rows.append(line)
-            columns.append(line[0])
-        df = pandas.DataFrame(rows).T
+            # columns.append(line[0])
+        df = pd.DataFrame(rows).T
         df.columns = df.iloc[0]
         df = df.iloc[1:, :]
         df['报告日期'] = df['报告日期'].astype('datetime64[ns]')
-        df['基本每股收益(元)'] = df['基本每股收益(元)'].apply('float')
-        print type(df['报告日期'].iloc[1])
-        # df.reindex(columns='报告日期')
 
-        # df = df.iloc[:,2:].apply(float)
+        for column in df.columns:
+            if column != '报告日期':
+                df[column] = pd.to_numeric(df[column], errors='raise')
+
+        df = df.dropna()
+        df['stock_code'] = stock_code_m
+
+        # Prepare DB Sessions
+        DBSession = sessionmaker(bind=self._engine)
+        session = DBSession()
+        meta = MetaData(self._engine)
+
+        # Delare Table
+        main_financail_indicators = Table('tb_StockMainFinancialIndicators', meta, autoload=True)
+        # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
+
+        fc = ['stock_code', 'stock_name', '报告日期'.decode('utf-8'), '基本每股收益(元)'.decode('utf-8'),
+              '每股净资产(元)'.decode('utf-8'), '每股经营活动产生的现金流量净额(元)'.decode('utf-8'),
+              '主营业务收入(万元)'.decode('utf-8'), '主营业务利润(万元)'.decode('utf-8'), '营业利润(万元)'.decode('utf-8'),
+              '投资收益(万元)'.decode('utf-8'), '营业外收支净额(万元)'.decode('utf-8'), '利润总额(万元)'.decode('utf-8'),
+              '净利润(万元)'.decode('utf-8'), '净利润(扣除非经常性损益后)(万元)'.decode('utf-8'),
+              '经营活动产生的现金流量净额(万元)'.decode('utf-8'), '现金及现金等价物净增加额(万元)'.decode('utf-8'),
+              '总资产(万元)'.decode('utf-8'), '流动资产(万元)'.decode('utf-8'), '总负债(万元)'.decode('utf-8'),
+              '流动负债(万元)'.decode('utf-8'), '股东权益不含少数股东权益(万元)'.decode('utf-8'), '净资产收益率加权'.decode('utf-8')]
+
+        session.execute(
+            main_financail_indicators.insert(),
+            [{fc[0]: stock_code_m,
+              fc[1]: '',
+              fc[2]: row['报告日期'],
+              fc[3]: row['基本每股收益(元)'],
+              fc[4]: row['每股净资产(元)'],
+              fc[5]: row['每股经营活动产生的现金流量净额(元)'],
+              fc[6]: row['主营业务收入(万元)'],
+              fc[7]: row['主营业务利润(万元)'],
+              fc[8]: row['营业利润(万元)'],
+              fc[9]: row['投资收益(万元)'],
+              fc[10]: row['营业外收支净额(万元)'],
+              fc[11]: row['利润总额(万元)'],
+              fc[12]: row['净利润(万元)'],
+              fc[13]: row['净利润(扣除非经常性损益后)(万元)'],
+              fc[14]: row['经营活动产生的现金流量净额(万元)'],
+              fc[15]: row['现金及现金等价物净增加额(万元)'],
+              fc[16]: row['总资产(万元)'],
+              fc[17]: row['流动资产(万元)'],
+              fc[18]: row['总负债(万元)'],
+              fc[19]: row['流动负债(万元)'],
+              fc[20]: row['股东权益不含少数股东权益(万元)'],
+              fc[21]: row['净资产收益率加权(%)']
+              } for idx, row in df.iterrows()]
+        )
+        session.commit()
+        session.close()
+
+    def get_stock_running_indicators(self, stock_code_m=None):
+        if stock_code_m is None:
+            stock_code_m = 'sz300226'
+        stock_code = stock_code_m[2:]
+
+        # Read data from Web
+        url_ylnl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=ylnl' % stock_code
+        url_chnl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=chnl' % stock_code
+        url_cznl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=cznl' % stock_code
+        url_yynl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=yynl' % stock_code
+
+        html = urllib.urlopen(url_ylnl_indicators)
+        ylnl = html.read()
+        empty = re.compile('--')
+        ylnl = empty.sub('0', ylnl)
+        ul1 = re.compile('\n')
+        data = ul1.sub('', ylnl)
+
+        # Process Web data into a DF
+        rows = []
+        endata = data.decode('GB2312').encode('utf-8').split('\r')[0:20]
+        # print endata
+        for line in endata:
+            line = line.split(',')
+            rows.append(line)
+            # columns.append(line[0])
+        df = pd.DataFrame(rows).T
+        df.columns = df.iloc[0]
+        df = df.iloc[1:, :]
+        df['报告日期'] = df['报告日期'].astype('datetime64[ns]')
         print df
-
-    def get_data_qq(self, stock_code=None, period=None, fq=None, q_count=None):
-        logging.debug('Starting')
-        if stock_code is None:
-            stock_code = 'sz300226'
-        if period is None:
-            period = 'day'
-        if fq is None:
-            fq = 'qfq'
-        if q_count is None:
-            q_count = '320'
-
-        self._stock_minitue_data_DF = pandas.DataFrame(columns=self._my_real_time_DF_columns_sina)
-        self._x_min_data_DF = pandas.DataFrame(columns=self._x_min_columns)
-        self._1_min_data_DF = pandas.DataFrame(columns=self._1_min_columns)
-        got = True
-        # try:
-        if period in self._x_period:  # precess day/week data
-            fq = ('qfq' if fq not in (self._fq) else fq)
-            url = self._data_source['qq_x_period'] % (stock_code, period, q_count, fq)
-            html = urllib.urlopen(url)
-            data = html.read()
-            self._process_x_period_data_qq(data, period, fq, stock_code)
-            # self._save_data_to_db_qq(period, stock_code)
-        elif period in (self._x_min):
-            if period == 'm1':  # process 1 min data
-                url = self._data_source['qq_1_min'] % (stock_code, stock_code)
-                print url
-                html = urllib.urlopen(url)
-                data = html.read()
-                self._process_1_min_data_qq(data, stock_code)
-                # self._save_data_to_db_qq(period, stock_code)
-            else:  # process X min data
-                if period == 'm5':
-                    q_count = self._q_count[1]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                elif period == 'm15':
-                    q_count = self._q_count[2]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                elif period == 'm30':
-                    if q_count is None:
-                        q_count = self._q_count[3]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                    print "Get URL"
-                elif period == 'm60':
-                    q_count = self._q_count[3]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                else:
-                    q_count = self._q_count[4]
-                    url = self._data_source['qq_x_min'] % (stock_code, period, q_count)
-                print url
-                html = urllib.urlopen(url)
-                data = html.read()
-                self._process_x_min_data_qq(data, period, stock_code)
-                # self._save_data_to_db_qq(period, stock_code)
-        else:  # process real time data
-            url = self._data_source['qq_realtime'] % stock_code
-            html = urllib.urlopen(url)
-            data = html.read()
-            self._process_real_time_data_qq(data)
-        self._log_mesg = self._log_mesg + "At %s Getting: Stock %s period %s data has been download.\n" % (
-            self._time_tag(), stock_code, period)
-        self._save_data_to_db_qq(period, stock_code)
-        # except:
-        #    got = False
-        #    print "Can not load data for %s with Period %s"%(stock_code, period)
-        logging.debug('Finished')
-        self._write_log(self._log_mesg)
-        return got
-
-    def _process_x_period_data_qq(self, data, period, fq, stock_code):
-        self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
-        sPos = data.find(fq + period) + len(fq + period) + 4
-        ePos = data.find('"qt"')
-        data = data[sPos:(ePos - 3)].split('],[')
-        p = re.compile(r'\d+.\d+.\d+')
-        for item in data:
-            if item.find('{"nd"') != -1:
-                item = item[:item.find('{"nd"')]
-            tmp_l = p.findall(item)
-            # tmp_l[0] = re.sub(r'[^\d]', '', tmp_l[0])
-            tmp_l[0] = datetime.datetime.strptime(tmp_l[0], '%Y-%m-%d')
-            i = 1
-            while i < 6:
-                try:
-                    if tmp_l[i] != '':
-                        tmp_l[i] = float(tmp_l[i])
-                except:  # the except in here is to deal with the today's value, which is missing high, low, close
-                    tmp_v = tmp_l[i - 1]
-                    tmp_l[i - 1] = 0.00
-                    tmp_l.append(tmp_v)
-                i += 1
-            tmp_l.append(stock_code)
-            tmp_l.append(period)
-            # print tmp_l
-            self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
-        # print self._x_min_data_DF
-        self._x_min_data_DF.set_index('quote_time', inplace=True)
-        # print self._x_min_data_DF
-        print "processed %s data" % period
-        return self._x_min_data_DF
-
-    def _process_real_time_data_qq(self, data):
-        self._real_time_data_DF.drop(self._real_time_data_DF.index[:], inplace=True)
-        sPos = data.find('=')
-        data = data[sPos + 2:-3].split('~')
-        tmp_l = []
-        tmp_l.append(data[1])  # stock_name
-        tmp_l.append(data[2])  # stock_code
-        tmp_l.append(float(data[3]))  # current_price
-        tmp_l.append(float(data[4]))  # close_price
-        tmp_l.append(float(data[5]))  # open_price
-        tmp_l.append(int(data[7]))  # buying_amount
-        tmp_l.append(int(data[8]))  # saling_amount
-        tmp_l.append(float(data[9]))  # buy1_price
-        tmp_l.append(int(data[10]))  # buy1_amount
-        tmp_l.append(float(data[11]))  # buy2_price
-        tmp_l.append(int(data[12]))  # buy2_amount
-        tmp_l.append(float(data[13]))  # buy3_price
-        tmp_l.append(int(data[14]))  # buy3_amount
-        tmp_l.append(float(data[15]))  # buy4_price
-        tmp_l.append(int(data[16]))  # buy4_amount
-        tmp_l.append(float(data[17]))  # buy5_price
-        tmp_l.append(int(data[18]))  # buy5_amount
-        tmp_l.append(float(data[19]))  # sale1_price
-        tmp_l.append(int(data[20]))  # sale1_amount
-        tmp_l.append(float(data[21]))  # sale2_price
-        tmp_l.append(int(data[22]))  # sale2_amount
-        tmp_l.append(float(data[23]))  # sale3_price
-        tmp_l.append(int(data[24]))  # sale3_amount
-        tmp_l.append(float(data[25]))  # sale4_price
-        tmp_l.append(int(data[26]))  # sale4_amount
-        tmp_l.append(float(data[27]))  # sale5_price
-        tmp_l.append(int(data[28]))  # sale5_amount
-        tmp_l.append(datetime.datetime.strptime(data[30], '%Y%m%d%H%M%S'))  # trade_time
-        tmp_l.append(float(data[31]))  # net_chg
-        tmp_l.append(float(data[32]))  # net_chg_percent
-        tmp_l.append(float(data[33]))  # high_price
-        tmp_l.append(float(data[34]))  # low_price
-        tmp_l.append(int(data[36]))  # trading_volumn
-        tmp_l.append(int(data[37]))  # trading_amount
-        tmp_l.append(float(data[38]))  # turnover_rate
-        if data[39] != '':
-            tmp_l.append(float(data[39]))  # PE
-        else:
-            tmp_l.append(0.00)  # PE
-        tmp_l.append(float(data[44]))  # circulate_market_value
-        tmp_l.append(float(data[45]))  # total_market_value
-        tmp_l.append(float(data[46]))  # PB
-        tmp_l.append(float(data[47]))  # limit_up
-        tmp_l.append(float(data[48]))  # limit_down
-        self._real_time_data_DF.loc[len(self._real_time_data_DF)] = tmp_l
-        print "processed real time data"
-        return self._real_time_data_DF
-
-    def _process_1_min_data_qq(self, data, stock_code):
-        self._1_min_data_DF.drop(self._1_min_data_DF.index[:], inplace=True)
-        today = datetime.date.today().strftime('%Y-%m-%d')
-        sPos = data.find('{"data":[')
-        ePos = data.find('"date":')
-        data = data[(sPos + 9):(ePos - 2)].split(',')
-        p = re.compile(r'\d+\.*\d+')
-        for item in data:
-            tmp_l = p.findall(item)
-            tmp_l[0] = today + ' ' + tmp_l[0]
-            tmp_l[0] = datetime.datetime.strptime(tmp_l[0], '%Y-%m-%d %H%M')
-            tmp_l[1] = float(tmp_l[1])
-            tmp_l[2] = float(tmp_l[2])
-            tmp_l.append(stock_code)
-            self._1_min_data_DF.loc[len(self._1_min_data_DF)] = tmp_l
-        self._1_min_data_DF.set_index('quote_time', inplace=True)
-        print "processed 1 min data of %s" % stock_code
-        return self._1_min_data_DF
-
-    def _process_x_min_data_qq(self, data, x_min, stock_code):
-        self._x_min_data_DF.drop(self._x_min_data_DF.index[:], inplace=True)
-        # print self._x_min_data_DF
-
-        nPos = data.find(x_min)
-        ePos = data.find("prec")
-        data = data[(nPos + 7):(ePos - 4)].split('],[')
-        p = re.compile(r'\d+.\d+')
-
-        for item in data:
-            tmp_l = p.findall(item)
-            tmp_l[0] = datetime.datetime.strptime(tmp_l[0], '%Y%m%d%H%M')
-            i = 1
-            while i < 6:
-                tmp_l[i] = float(tmp_l[i])
-                i += 1
-            tmp_l.append(stock_code)
-            tmp_l.append(x_min)
-            # print len(self._x_min_data_DF)
-            self._x_min_data_DF.loc[len(self._x_min_data_DF)] = tmp_l
-            # print self._x_min_data_DF['quote_time']
-        self._x_min_data_DF.set_index('quote_time', inplace=True)
-        print "processed %s data of stock %s" % (x_min, stock_code)
-        # print self._x_min_data_DF
-        return self._x_min_data_DF
-
-    def _save_data_to_db_qq(self, period, stock_code):
-        # save today's data (1min, 5min, 30min), min data will be downloaded and saved into DB in every 30 min from 9:30
-        # Data will be exanmed to avoid inserting duplicate rows into DB.
-        # Columns: stock_code, period, quote_time will be used to exanmed the duplicated row.
-        data = self._x_min_data_DF
-        if period in self._x_min:
-            # save x min data into DB
-            data = self._remove_overlaied_rows(period, stock_code)
-            if period != 'm1':
-                data = self._remove_unwant_min_rows(data, stock_code)
-                data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
-                self._remove_zero_trading_volumn_rows(period, stock_code)
-                print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
-            else:
-                data.to_sql('tb_Stock1MinRecords', self._engine, if_exists='append', index=True)
-                print "saved m1 data of stock code %s at %s" % (stock_code, self._time_tag())
-        elif period in self._x_period:
-            # save historical data (day, week), historical data will be downloaded and saved into DB when it is required.
-            data = self._remove_overlaied_rows(period, stock_code)
-            data.to_sql('tb_StockXPeriodRecords', self._engine, if_exists='append', index=True)
-            print "saved %s period data of stock code %s at %s" % (period, stock_code, self._time_tag())
-        else:
-            # save real_time data, real time data will be downloaded and saved into DB in every 2 sec.
-            data = self._real_time_data_DF
-            data.to_sql('tb_StockRealTimeRecords', self._engine, if_exists='append', index=False)
-
-        self._log_mesg = self._log_mesg + "At %s Data Saving: Stock %s period %s data has been saved. \n" % (
-            self._time_tag(), stock_code, period)
-        self._write_log(self._log_mesg)
-
-    def _remove_overlaied_rows(self, period, stock_code):
-        '''
-        :param df:
-        :return:
-        '''
-        # print "Jump into remove duplication"
-        conn = self._engine.connect()
-        if period in self._x_min:  # process X min data
-            if period != 'm1':
-                tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
-                s = select([tb.c.quote_time]). \
-                    where(
-                    and_(tb.c.period == period,
-                         tb.c.stock_code == stock_code)). \
-                    order_by(tb.c.quote_time.desc()).limit(1)
-                data = self._x_min_data_DF
-                # Insert opening prices for x_min data except m1
-                # data = self._insert_opening_record(data)
-            else:  # Process 1 min data
-                tb = Table('tb_Stock1MinRecords', self._metadata, autoload=True)
-                s = select([tb.c.quote_time]). \
-                    where(tb.c.stock_code == stock_code). \
-                    order_by(tb.c.quote_time.desc()).limit(1)
-                data = self._1_min_data_DF
-        else:  # process day / week data
-            tb = Table('tb_StockXPeriodRecords', self._metadata, autoload=True)
-            s = select([tb.c.quote_time]). \
-                where(
-                and_(tb.c.period == period,
-                     tb.c.stock_code == stock_code)). \
-                order_by(tb.c.quote_time.desc()).limit(1)
-            data = self._x_min_data_DF
-
-        result = conn.execute(s).fetchall()
-        if len(result) != 0:
-            last_record_time = result[0][0]
-            data = data[data.index > last_record_time]
-            print "Overlaied rows has been removed."
-        else:
-            print "Overlaied rows has been removed."
-
-        self._log_mesg = self._log_mesg + "At %s Overlaied: Overlaied rows for Stock %s period %s data has been removed. \n" % (
-            self._time_tag(), stock_code, period)
-        self._write_log(self._log_mesg)
-        conn.close()
-        return data
-
-    def _remove_zero_trading_volumn_rows(self, period, stock_code):
-        '''
-        Some time in ShangHai stocks m30 records, duplicated M30 rows with 0 trading_volumns shows in DB, these rows
-        need to be deleted.
-        :param period:
-        :param stock_code:
-        :return:
-        '''
-        conn = self._engine.connect()
-        tb = Table('tb_StockXMinRecords', self._metadata, autoload=True)
-        d = tb.delete(and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))
-
-        # s = select(tb.c.id_tb_StockXMinRecords where (and_(tb.c.stock_code == stock_code, tb.c.period == period, tb.c.trading_volumn == 0))))
-        # d1 = tb.delete(tb.c.id_tb_StockXMinRecords == s.id_tb_StockXMinRecords)
-        # s = delete FROM tb where tb.c.id_tb_StockXMinRecords = (select a.id_tb_StockXMinRecords from (SELECT id_tb_StockXMinRecords FROM DB_StockDataBackTest.tb_StockXMinRecords where stock_code = 'sh600867' and period='m30' and trading_volumn = 0) as a);
-        conn.execute(d)
-        conn.close()
-        print "Zero_trading_volumn_rows be removed"
-        self._log_mesg = self._log_mesg + "At %s Zero_trading_volumn_rows: zero_trading_volumn rows for Stock %s period %s data has been removed. \n" % (
-            self._time_tag(), stock_code, period)
-        self._write_log(self._log_mesg)
-
-    def _remove_unwant_min_rows(self, df, stock_code):
-        '''
-        As the getting data process cannot be runned at exact minitue, the system will download some unwanted data.
-        Ex: want the getting m30 data was runned at 10:39:00, then beside 10:30:00 record, another 10:39:00 m30 records
-        will also be downloaded and saved.
-        This function is to remove stock records which are not exactly at exactly want minitues stamps.
-        :param df: DF fram which has been processed by remove_duplicate_rows
-        :return: a cleaner DF
-        '''
-        if len(df['open_price']) == 0:
-            return df
-
-        for idx, row in df.iterrows():
-            # period = df.period[0]
-            # download_min = df.index[0].minute
-            # download_sec = df.index[0].second
-
-            period = row.period
-            # print row.name
-            download_min = row.name.minute
-            # print download_min
-            download_sec = row.name.second
-
-            if period == 'm5':
-                if (int(download_min) % 5 != 0) or (int(download_sec) != 0):
-                    df.drop(idx, inplace=True)
-            elif period == 'm15':
-                if (int(download_min) % 15 != 0) or (int(download_sec) != 0):
-                    df.drop(idx, inplace=True)
-            elif period == 'm30':
-                if (int(download_min) % 30 != 0) or (int(download_sec) != 0):
-                    df.drop(idx, inplace=True)
-            elif period == 'm60':
-                if (int(download_min) != 0) or (int(download_sec) != 0):
-                    df.drop(idx, inplace=True)
-            else:
+        for column in df.columns:
+            if column != '报告日期':
                 pass
+                # df[column] = pd.to_numeric(df[column], errors='raise')
 
-        self._log_mesg = self._log_mesg + "At %s Unwanted: Unwanted rows for Stock %s period %s data has been removed. \n" % (
-            self._time_tag(), stock_code, period)
-        self._write_log(self._log_mesg)
-        print "Unwanted Min Records have been removed."
-        return df
+        df = df.dropna()
+        df['stock_code'] = stock_code_m
+        # print df
 
-    def _insert_opening_record(self, df):
+        # Prepare DB Sessions
+        DBSession = sessionmaker(bind=self._engine)
+        session = DBSession()
+        meta = MetaData(self._engine)
+
+        # Delare Table
+        main_financail_indicators = Table('tb_StockMainFinancialIndicators', meta, autoload=True)
+        # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
+
+        fc = ['stock_code', 'stock_name', '报告日期'.decode('utf-8'), '基本每股收益(元)'.decode('utf-8'),
+              '每股净资产(元)'.decode('utf-8'), '每股经营活动产生的现金流量净额(元)'.decode('utf-8'),
+              '主营业务收入(万元)'.decode('utf-8'), '主营业务利润(万元)'.decode('utf-8'), '营业利润(万元)'.decode('utf-8'),
+              '投资收益(万元)'.decode('utf-8'), '营业外收支净额(万元)'.decode('utf-8'), '利润总额(万元)'.decode('utf-8'),
+              '净利润(万元)'.decode('utf-8'), '净利润(扣除非经常性损益后)(万元)'.decode('utf-8'),
+              '经营活动产生的现金流量净额(万元)'.decode('utf-8'), '现金及现金等价物净增加额(万元)'.decode('utf-8'),
+              '总资产(万元)'.decode('utf-8'), '流动资产(万元)'.decode('utf-8'), '总负债(万元)'.decode('utf-8'),
+              '流动负债(万元)'.decode('utf-8'), '股东权益不含少数股东权益(万元)'.decode('utf-8'), '净资产收益率加权'.decode('utf-8')]
+
         '''
-        By observing the data records, I found there is no 9:30 opening records for each day. This missing records will
-        casue the first caulation between 9:30 and 10:00 is the actually the compare of 10:00 today and 15:00 yesterday.
-         The program will not be able to consider the difference of today's opening and yesterday's closing.
-         So: A opening records is inserted by this function with all prices = today's opening and volumn = 0
-         This function affect m5, m15, m30 and m60 records
-        :param df:
-        :return:
+        session.execute(
+            main_financail_indicators.insert(),
+            [{fc[0]: stock_code_m,
+              fc[1]: '',
+              fc[2]: row['报告日期'],
+              fc[3]: row['基本每股收益(元)'],
+              fc[4]: row['每股净资产(元)'],
+              fc[5]: row['每股经营活动产生的现金流量净额(元)'],
+              fc[6]: row['主营业务收入(万元)'],
+              fc[7]: row['主营业务利润(万元)'],
+              fc[8]: row['营业利润(万元)'],
+              fc[9]: row['投资收益(万元)'],
+              fc[10]: row['营业外收支净额(万元)'],
+              fc[11]: row['利润总额(万元)'],
+              fc[12]: row['净利润(万元)'],
+              fc[13]: row['净利润(扣除非经常性损益后)(万元)'],
+              fc[14]: row['经营活动产生的现金流量净额(万元)'],
+              fc[15]: row['现金及现金等价物净增加额(万元)'],
+              fc[16]: row['总资产(万元)'],
+              fc[17]: row['流动资产(万元)'],
+              fc[18]: row['总负债(万元)'],
+              fc[19]: row['流动负债(万元)'],
+              fc[20]: row['股东权益不含少数股东权益(万元)'],
+              fc[21]: row['净资产收益率加权(%)']
+              } for idx, row in df.iterrows()]
+        )
+        session.commit()
+        session.close()
         '''
-        if len(df['open_price']) == 0:
-            return df
 
-        # This part is to select different trading dates
-        dates = df.ix[:, 0:0].reset_index()
-        dates['date'] = 0
-        for idx, row in dates.iterrows():
-            dates.set_value(idx, 'date', row['quote_time'].date())
-        dates.drop_duplicates('date', keep='first', inplace=True)
-
-        # For each trading days, insert opening row
-        for idx, row in dates.iterrows():
-            # tday = datetime.datetime.today()
-            year = row['date'].year
-            month = row['date'].month
-            day = row['date'].day
-            open_stamp = datetime.datetime(year, month, day, 9, 30, 0, 0)
-
-            # From the 10:00 record to retrieve open_price
-            first_stamp = datetime.datetime(year, month, day, 10, 0, 0, 0)
-
-            if first_stamp in df.index:
-                first_stamp_open = df.get_value(first_stamp, 'open_price')
-                stock_code = df.get_value(first_stamp, 'stock_code')
-                period = df.get_value(first_stamp, 'period')
-                # Insert 9:30 record for each day
-                df.ix[open_stamp] = [first_stamp_open, first_stamp_open, first_stamp_open, first_stamp_open, 0,
-                                     stock_code, period]
-        df = df.sort_index()
-        df.index.names = ['quote_time']
-        print "Opening Record has been inserted."
-        return df
 
     def _timer(self, func):
         def wrapper():
@@ -548,8 +306,8 @@ class C_GetFundamentalData:
 
 def main():
     pp = C_GetFundamentalData()
-    pp.get_single_stock_fundamental_data()
-
+    # pp.get_single_stock_main_financail_indicators()
+    pp.get_stock_running_indicators()
 
 if __name__ == '__main__':
     main()
