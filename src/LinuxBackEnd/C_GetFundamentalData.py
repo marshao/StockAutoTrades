@@ -197,9 +197,8 @@ class C_GetFundamentalData:
                     rows.append(line)
                     if line[0] != '报告日期':
                         # create column name list
-                        percent = re.compile('(%)')
+                        percent = re.compile('\(%\)')
                         col_name = percent.sub('', line[0]).decode('utf-8')
-                        col_name = percent.sub('', line[0])
                         columns.append(col_name)
 
             df = pd.DataFrame(rows).T
@@ -228,6 +227,7 @@ class C_GetFundamentalData:
         main_financail_indicators = Table('tb_StockOperateIndicators', meta, autoload=True)
         # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
 
+        # print indicator_data.iloc[6:10,10:20]
         session.execute(
             main_financail_indicators.insert(),
             [{'stock_code': stock_code_m,
