@@ -10,7 +10,7 @@ from sqlalchemy import Table, MetaData
 from sqlalchemy.sql import select, and_
 from sqlalchemy.orm import sessionmaker
 import C_GlobalVariable as glb
-import logging
+
 
 
 
@@ -168,40 +168,56 @@ class C_GetFundamentalData:
             stock_code_m = 'sz300226'
         stock_code = stock_code_m[2:]
 
-        # Read data from Web
+        # Defining Web URL
         url_ylnl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=ylnl' % stock_code
         url_chnl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=chnl' % stock_code
         url_cznl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=cznl' % stock_code
         url_yynl_indicators = 'http://quotes.money.163.com/service/zycwzb_%s.html?type=report&part=yynl' % stock_code
+        url = [url_ylnl_indicators, url_chnl_indicators, url_cznl_indicators, url_yynl_indicators]
+        columns = ['报告日期'.decode('utf-8'), ]
+        indicator_data = pd.DataFrame()
 
-        html = urllib.urlopen(url_ylnl_indicators)
-        ylnl = html.read()
-        empty = re.compile('--')
-        ylnl = empty.sub('0', ylnl)
-        ul1 = re.compile('\n')
-        data = ul1.sub('', ylnl)
+        # Getting web data
+        for each_url in url:
+            html = urllib.urlopen(each_url)
+            data = html.read()
+            no_value = re.compile('--')
+            data = no_value.sub('0', data)
+            ul1 = re.compile('\n')
+            data = ul1.sub('', data)
 
-        # Process Web data into a DF
-        rows = []
-        endata = data.decode('GB2312').encode('utf-8').split('\r')[0:20]
-        # print endata
-        for line in endata:
-            line = line.split(',')
-            rows.append(line)
-            # columns.append(line[0])
-        df = pd.DataFrame(rows).T
-        df.columns = df.iloc[0]
-        df = df.iloc[1:, :]
-        df['报告日期'] = df['报告日期'].astype('datetime64[ns]')
-        print df
-        for column in df.columns:
-            if column != '报告日期':
-                pass
-                # df[column] = pd.to_numeric(df[column], errors='raise')
+            # Process Web data into a DF
+            rows = []
+            endata = data.decode('GB2312').encode('utf-8').split('\r')[0:20]
 
-        df = df.dropna()
-        df['stock_code'] = stock_code_m
-        # print df
+            # print endata
+            for line in endata:
+                line = line.split(',')
+                if (line[0] != '\t\t') & (line[0] != ''):
+                    rows.append(line)
+                    if line[0] != '报告日期':
+                        # create column name list
+                        percent = re.compile('(%)')
+                        col_name = percent.sub('', line[0]).decode('utf-8')
+                        col_name = percent.sub('', line[0])
+                        columns.append(col_name)
+
+            df = pd.DataFrame(rows).T
+            df.columns = df.iloc[0]
+            df = df.iloc[1:, :]
+            df['报告日期'] = df['报告日期'].astype('datetime64[ns]')
+            df.set_index('报告日期', inplace=True)
+            for column in df.columns:
+                if column != '报告日期':
+                    df = df.dropna()
+                    df[column] = pd.to_numeric(df[column], errors='raise')
+
+            if indicator_data.shape[1] == 0:
+                indicator_data = df
+            else:
+                indicator_data = pd.concat([indicator_data, df], axis=1, join_axes=[indicator_data.index])
+
+        indicator_data['stock_code'] = stock_code_m
 
         # Prepare DB Sessions
         DBSession = sessionmaker(bind=self._engine)
@@ -209,49 +225,67 @@ class C_GetFundamentalData:
         meta = MetaData(self._engine)
 
         # Delare Table
-        main_financail_indicators = Table('tb_StockMainFinancialIndicators', meta, autoload=True)
+        main_financail_indicators = Table('tb_StockOperateIndicators', meta, autoload=True)
         # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
 
-        fc = ['stock_code', 'stock_name', '报告日期'.decode('utf-8'), '基本每股收益(元)'.decode('utf-8'),
-              '每股净资产(元)'.decode('utf-8'), '每股经营活动产生的现金流量净额(元)'.decode('utf-8'),
-              '主营业务收入(万元)'.decode('utf-8'), '主营业务利润(万元)'.decode('utf-8'), '营业利润(万元)'.decode('utf-8'),
-              '投资收益(万元)'.decode('utf-8'), '营业外收支净额(万元)'.decode('utf-8'), '利润总额(万元)'.decode('utf-8'),
-              '净利润(万元)'.decode('utf-8'), '净利润(扣除非经常性损益后)(万元)'.decode('utf-8'),
-              '经营活动产生的现金流量净额(万元)'.decode('utf-8'), '现金及现金等价物净增加额(万元)'.decode('utf-8'),
-              '总资产(万元)'.decode('utf-8'), '流动资产(万元)'.decode('utf-8'), '总负债(万元)'.decode('utf-8'),
-              '流动负债(万元)'.decode('utf-8'), '股东权益不含少数股东权益(万元)'.decode('utf-8'), '净资产收益率加权'.decode('utf-8')]
-
-        '''
         session.execute(
             main_financail_indicators.insert(),
-            [{fc[0]: stock_code_m,
-              fc[1]: '',
-              fc[2]: row['报告日期'],
-              fc[3]: row['基本每股收益(元)'],
-              fc[4]: row['每股净资产(元)'],
-              fc[5]: row['每股经营活动产生的现金流量净额(元)'],
-              fc[6]: row['主营业务收入(万元)'],
-              fc[7]: row['主营业务利润(万元)'],
-              fc[8]: row['营业利润(万元)'],
-              fc[9]: row['投资收益(万元)'],
-              fc[10]: row['营业外收支净额(万元)'],
-              fc[11]: row['利润总额(万元)'],
-              fc[12]: row['净利润(万元)'],
-              fc[13]: row['净利润(扣除非经常性损益后)(万元)'],
-              fc[14]: row['经营活动产生的现金流量净额(万元)'],
-              fc[15]: row['现金及现金等价物净增加额(万元)'],
-              fc[16]: row['总资产(万元)'],
-              fc[17]: row['流动资产(万元)'],
-              fc[18]: row['总负债(万元)'],
-              fc[19]: row['流动负债(万元)'],
-              fc[20]: row['股东权益不含少数股东权益(万元)'],
-              fc[21]: row['净资产收益率加权(%)']
-              } for idx, row in df.iterrows()]
+            [{'stock_code': stock_code_m,
+              columns[0]: idx,
+              columns[1]: row['总资产利润率(%)'],
+              columns[2]: row['主营业务利润率(%)'],
+              columns[3]: row['总资产净利润率(%)'],
+              columns[4]: row['成本费用利润率(%)'],
+              columns[5]: row['营业利润率(%)'],
+              columns[6]: row['主营业务成本率(%)'],
+              columns[7]: row['销售净利率(%)'],
+              columns[8]: row['净资产收益率(%)'],
+              columns[9]: row['股本报酬率(%)'],
+              columns[10]: row['净资产报酬率(%)'],
+              columns[11]: row['资产报酬率(%)'],
+              columns[12]: row['销售毛利率(%)'],
+              columns[13]: row['三项费用比重(%)'],
+              columns[14]: row['非主营比重(%)'],
+              columns[15]: row['主营利润比重(%)'],
+              columns[16]: row['流动比率(%)'],
+              columns[17]: row['速动比率(%)'],
+              columns[18]: row['现金比率(%)'],
+              columns[19]: row['利息支付倍数(%)'],
+              columns[20]: row['资产负债率(%)'],
+              columns[21]: row['长期债务与营运资金比率(%)'],
+              columns[22]: row['股东权益比率(%)'],
+              columns[23]: row['长期负债比率(%)'],
+              columns[24]: row['股东权益与固定资产比率(%)'],
+              columns[25]: row['负债与所有者权益比率(%)'],
+              columns[26]: row['长期资产与长期资金比率(%)'],
+              columns[27]: row['资本化比率(%)'],
+              columns[28]: row['固定资产净值率(%)'],
+              columns[29]: row['资本固定化比率(%)'],
+              columns[30]: row['产权比率(%)'],
+              columns[31]: row['清算价值比率(%)'],
+              columns[32]: row['固定资产比重(%)'],
+              columns[33]: row['主营业务收入增长率(%)'],
+              columns[34]: row['净利润增长率(%)'],
+              columns[35]: row['净资产增长率(%)'],
+              columns[36]: row['总资产增长率(%)'],
+              columns[37]: row['应收账款周转率(次)'],
+              columns[38]: row['应收账款周转天数(天)'],
+              columns[39]: row['存货周转率(次)'],
+              columns[40]: row['固定资产周转率(次)'],
+              columns[41]: row['总资产周转率(次)'],
+              columns[42]: row['存货周转天数(天)'],
+              columns[43]: row['总资产周转天数(天)'],
+              columns[44]: row['流动资产周转率(次)'],
+              columns[45]: row['流动资产周转天数(天)'],
+              columns[46]: row['经营现金净流量对销售收入比率(%)'],
+              columns[47]: row['资产的经营现金流量回报率(%)'],
+              columns[48]: row['经营现金净流量与净利润的比率(%)'],
+              columns[49]: row['经营现金净流量对负债比率(%)'],
+              columns[50]: row['现金流量比率(%)']
+              } for idx, row in indicator_data.iterrows()]
         )
         session.commit()
         session.close()
-        '''
-
 
     def _timer(self, func):
         def wrapper():
