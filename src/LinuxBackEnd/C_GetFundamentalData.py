@@ -3,11 +3,14 @@
 
 __metclass__ = type
 
+import sys
+
+sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
+
 import time, urllib, re, chardet
 import pandas as pd
 import datetime
 from sqlalchemy import Table, MetaData
-from sqlalchemy.sql import select, and_
 from sqlalchemy.orm import sessionmaker
 import C_GlobalVariable as glb
 
