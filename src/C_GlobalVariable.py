@@ -162,6 +162,7 @@ class C_GlobalVariable(object):
             con = create_engine('mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest')
         return con
 
+
 def main():
     te = C_GlobalVariable
 

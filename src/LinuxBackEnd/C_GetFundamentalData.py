@@ -83,7 +83,7 @@ class C_GetFundamentalData:
 
         self._fun = self._empty_fun
 
-    def get_single_stock_main_financail_indicators(self, stock_code_m=None):
+    def get_stock_main_financail_indicators(self, stock_code_m=None):
         if stock_code_m is None:
             stock_code_m = 'sz300226'
         stock_code = stock_code_m[2:]
@@ -163,7 +163,7 @@ class C_GetFundamentalData:
         session.commit()
         session.close()
 
-    def get_stock_running_indicators(self, stock_code_m=None):
+    def get_stock_operation_indicators(self, stock_code_m=None):
         if stock_code_m is None:
             stock_code_m = 'sz300226'
         stock_code = stock_code_m[2:]
@@ -188,7 +188,7 @@ class C_GetFundamentalData:
 
             # Process Web data into a DF
             rows = []
-            endata = data.decode('GB2312').encode('utf-8').split('\r')[0:20]
+            endata = data.decode('GB2312').encode('utf-8').split('\r')
 
             # print endata
             for line in endata:
@@ -226,8 +226,7 @@ class C_GetFundamentalData:
         # Delare Table
         main_financail_indicators = Table('tb_StockOperateIndicators', meta, autoload=True)
         # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
-
-        # print indicator_data.iloc[6:10,10:20]
+        # print indicator_data.iloc[25:33, 5:11]
         session.execute(
             main_financail_indicators.insert(),
             [{'stock_code': stock_code_m,
@@ -287,6 +286,133 @@ class C_GetFundamentalData:
         session.commit()
         session.close()
 
+    def get_stock_financial_report(self, stock_code_m=None):
+        if stock_code_m is None:
+            stock_code_m = 'sz300227'
+        stock_code = stock_code_m[2:]
+
+        # Defining Web URL
+        url_zcfzb = 'http://quotes.money.163.com/service/zcfzb_%s.html' % stock_code
+        url_lrb = 'http://quotes.money.163.com/service/lrb_%s.html' % stock_code
+        url_xjllb = 'http://quotes.money.163.com/service/xjllb_%s.html' % stock_code
+        url = [url_zcfzb, url_lrb, url_xjllb]
+        columns = ['报告日期'.decode('utf-8'), ]
+        report_data = pd.DataFrame()
+
+        # Getting web data
+        for each_url in url:
+            html = urllib.urlopen(each_url)
+            data = html.read()
+            # Remove --
+            no_value = re.compile('--')
+            data = no_value.sub('0', data)
+            # Remove \n
+            ul1 = re.compile('\n')
+            data = ul1.sub('', data)
+            # Remove Space
+            space = re.compile(' ')
+            data = space.sub('', data)
+            '''
+            # Remove 、
+            dunhao = re.compile('、')
+            data = dunhao.sub('', data)
+            # Remove :
+            maohao = re.compile('：')
+            data = maohao.sub('', data)
+            '''
+            # Process Web data into a DF
+            rows = []
+            endata = data.decode('GB2312').encode('utf-8').split('\r')
+            # print endata
+            # Prepare column name list and data row list
+            for line in endata:
+                line = line.split(',')
+                if (line[0] != '\t\t') & (line[0] != ''):
+                    rows.append(line)
+                    if line[0] != '报告日期':
+                        # create column name list
+                        percent = re.compile('\(%\)')
+                        col_name = percent.sub('', line[0])
+                        if each_url == url_xjllb:
+                            col_name = col_name.decode('utf-8')
+                            if col_name in columns:
+                                col_name = '现金表'.decode('utf-8') + col_name
+                        else:
+                            col_name = col_name.decode('utf-8')
+                        columns.append(col_name)
+
+            df = pd.DataFrame(rows).T
+            df.columns = df.iloc[0]
+            df = df.iloc[1:, :]
+            df['报告日期'] = df['报告日期'].astype('datetime64[ns]')
+            df.set_index('报告日期', inplace=True)
+            for column in df.columns:
+                if column != '报告日期':
+                    df = df.dropna()
+                    df[column] = pd.to_numeric(df[column], errors='raise')
+
+            if report_data.shape[1] == 0:
+                report_data = df
+            else:
+                report_data = pd.concat([report_data, df], axis=1, join_axes=[report_data.index])
+        report_data = report_data.dropna()
+        report_data['stock_code'] = stock_code_m
+        # Prepare DB Sessions
+        DBSession = sessionmaker(bind=self._engine)
+        session = DBSession()
+        meta = MetaData(self._engine)
+
+        # Delare Table
+        financail_reports = Table('tb_StockFinancialReports', meta, autoload=True)
+        # As the SQLAlchemy reading the table columns as unicode, so have to decode the columns names of DF
+
+        # Save Table
+        records = []
+        for idx, row in report_data.iterrows():
+            rd = {
+                'stock_code': stock_code_m,
+                columns[0]: idx, }
+            for i in range(0, 242):
+                rd.update({columns[i + 1]: row[i]})
+            records.append(dict(rd))
+
+        session.execute(financail_reports.insert(), records)
+        session.commit()
+        session.close()
+
+    def get_stock_base_data(self):
+        sql_select_stock_codes = 'select stock_code from tb_StockCodeList'
+        self._clean_table('tb_StockMainFinancialIndicators')
+        self._clean_table('tb_StockOperateIndicators')
+        self._clean_table('tb_StockFinancialReports')
+        df_stock_codes = pd.read_sql(sql_select_stock_codes, con=self._engine)
+        for idx, row in df_stock_codes.iterrows():
+            try:
+                print '------------------------------------------------'
+                print "Start to get stock %s datas" % row[0]
+                self.get_stock_main_financail_indicators(row[0])
+                self.get_stock_operation_indicators(row[0])
+                self.get_stock_financial_report(row[0])
+                print "Finished to get stock %s datas" % row[0]
+            except:
+                print row[0]
+                self._log_mesg = self._log_mesg + row[0] + '\n'
+                self._write_log(self._log_mesg, logPath='BaseDataErrorLog.txt')
+
+    def get_single_stock_base_data(self, stock_code):
+        print "Getting main financail indicators"
+        self.get_stock_main_financail_indicators(stock_code)
+        print "Getting operational indicators"
+        self.get_stock_operation_indicators(stock_code)
+        print "Getting  financial report"
+        self.get_stock_financial_report(stock_code)
+        print "Finished to get stock %s datas" % stock_code
+
+    def _clean_table(self, table_name):
+        conn = self._engine.connect()
+        conn.execute("truncate %s" % table_name)
+        print "Table %s is cleaned" % table_name
+
     def _timer(self, func):
         def wrapper():
             start = time.time()
@@ -340,8 +466,9 @@ class C_GetFundamentalData:
 
 def main():
     pp = C_GetFundamentalData()
-    # pp.get_single_stock_main_financail_indicators()
-    pp.get_stock_running_indicators()
+    # pp.get_stock_main_financail_indicators()
+    # pp.get_single_stock_base_data('sh600057')
+    pp.get_stock_base_data()
 
 if __name__ == '__main__':
     main()
