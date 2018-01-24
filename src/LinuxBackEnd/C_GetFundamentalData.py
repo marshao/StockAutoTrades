@@ -87,6 +87,11 @@ class C_GetFundamentalData:
         self._fun = self._empty_fun
 
     def get_stock_main_financail_indicators(self, stock_code_m=None):
+        '''
+        This function is to get the financial indicators of specific stock from web
+        :param stock_code_m:
+        :return:
+        '''
         if stock_code_m is None:
             stock_code_m = 'sz300226'
         stock_code = stock_code_m[2:]
@@ -403,10 +408,10 @@ class C_GetFundamentalData:
                 self._write_log(self._log_mesg, logPath='BaseDataErrorLog.txt')
 
     def get_single_stock_base_data(self, stock_code):
-        print "Getting main financail indicators"
-        self.get_stock_main_financail_indicators(stock_code)
-        print "Getting operational indicators"
-        self.get_stock_operation_indicators(stock_code)
+        # print "Getting main financail indicators"
+        # self.get_stock_main_financail_indicators(stock_code)
+        # print "Getting operational indicators"
+        # self.get_stock_operation_indicators(stock_code)
         print "Getting  financial report"
         self.get_stock_financial_report(stock_code)
         print "Finished to get stock %s datas" % stock_code
@@ -470,8 +475,8 @@ class C_GetFundamentalData:
 def main():
     pp = C_GetFundamentalData()
     # pp.get_stock_main_financail_indicators()
-    # pp.get_single_stock_base_data('sh600057')
-    pp.get_stock_base_data()
+    pp.get_single_stock_base_data('sh603727')
+    #pp.get_stock_base_data()
 
 if __name__ == '__main__':
     main()
