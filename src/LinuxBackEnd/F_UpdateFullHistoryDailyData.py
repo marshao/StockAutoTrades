@@ -10,7 +10,7 @@ sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBa
 import time, urllib, re, os
 import pandas as pd
 import datetime
-from sqlalchemy import Table, MetaData
+from sqlalchemy import Table, MetaData, exists
 from sqlalchemy import update
 from sqlalchemy.orm import sessionmaker
 import C_GlobalVariable as glb
@@ -152,7 +152,8 @@ class C_Update_Full_History_Daily_Data(object):
         meta = MetaData(self._engine)
 
         # Delare Table
-        full_history_daily = Table('tb_StockFullHistoryDailyRecords', meta, autoload=True)
+        SZHisDaily = Table('tb_StockSZHisDaily', meta, autoload=True)
+        SHHisDaily = Table('tb_StockSHHisDaily', meta, autoload=True)
 
         for idx, row in df_new_infor.iterrows():
             stock_code_num = row['stock_code']
@@ -164,10 +165,14 @@ class C_Update_Full_History_Daily_Data(object):
             L3_industry_code = row['L3_industry_code']
             L3_industry_name = row['L3_industry_name']
 
-            stock_code = 'sh' + stock_code_num
-            print stock_code
-            # Read data from DB
-
+            sh_stock_code = 'sh' + stock_code_num
+            sz_stock_code = 'sz' + stock_code_num
+            # sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == sz_stock_code)).scalar()
+            # print (sz_stock_code, sz_ret)
+            if session.query(SZHisDaily).filter(SZHisDaily.columns['stock_code'] == sz_stock_code).count():
+                print "code %s is here" % (sz_stock_code)
+            else:
+                print "code %s is not here" % (sz_stock_code)
             # print stock
             # session.execute(full_history_daily.update(), records)
             # session.commit()
