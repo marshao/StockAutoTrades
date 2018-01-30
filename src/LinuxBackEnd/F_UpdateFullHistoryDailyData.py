@@ -10,8 +10,8 @@ sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBa
 import time, urllib, re, os
 import pandas as pd
 import datetime
-from sqlalchemy import Table, MetaData, exists
-from sqlalchemy import update
+import multiprocessing as mp
+from sqlalchemy import Table, MetaData, exists, update
 from sqlalchemy.orm import sessionmaker
 import C_GlobalVariable as glb
 
@@ -25,8 +25,52 @@ class C_Update_Full_History_Daily_Data(object):
         gv = glb.C_GlobalVariable()
         self._emailobj = gv.get_emailobj()
         self._master_config = gv.get_master_config()
+        self._calcu_config = gv.get_calcu_config()
+
         self._input_path = self._master_config['ubuntu_file_input_dir']
         self._engine = self._master_config['db_engine']
+        self._processors = self._calcu_config['ubuntu_processors']
+
+    def processes_pool(self, tasks, processors):
+        # This is a self made Multiprocess pool
+        task_total = len(tasks)
+        loop_total = task_total / processors
+        print "task total is %s, processors is %s, loop_total is %s" % (task_total, processors, loop_total)
+        alive = True
+        task_finished = 0
+        # task_alive = 0
+        # task_remain = task_total - task_finished
+        # count = 0
+        i = 0
+        while i < loop_total:
+            # print "This is the %s round" % i
+            for j in range(processors):
+                k = j + processors * i
+                print "executing task %s" % k
+                if k == task_total:
+                    break
+                tasks[k].start()
+                j += 1
+
+            for j in range(processors):
+                k = j + processors * i
+                if k == task_total:
+                    break
+                tasks[k].join()
+                j += 1
+
+            while alive == True:
+                n = 0
+                alive = False
+                for j in range(processors):
+                    k = j + processors * i
+                    if k == task_total:
+                        # print "This is the %s round of loop"%i
+                        break
+                    if tasks[k].is_alive():
+                        alive = True
+                    time.sleep(1)
+            i += 1
 
     def get_stock_financial_report(self, stock_code_m=None):
         if stock_code_m is None:
@@ -122,7 +166,7 @@ class C_Update_Full_History_Daily_Data(object):
         session.commit()
         session.close()
 
-    def update_industry_classes(self):
+    def load_industry_classes(self):
         '''
         This is the function to update industry classed information in the Table 'tb_StockFullHistoryDailyRecords'.
         :param self:
@@ -144,9 +188,10 @@ class C_Update_Full_History_Daily_Data(object):
                 pr = '/home/marshao/UWShare/processed'
                 df_new_infor = pd.read_csv(os.path.join(rt, file), dtype=str, sep=',')
                 df_new_infor.columns = [columns]
+        return df_new_infor
 
+    def update_industry_classes(self, df_new_infor):
 
-                # Prepare DB Sessions
         DBSession = sessionmaker(bind=self._engine)
         session = DBSession()
         meta = MetaData(self._engine)
@@ -167,20 +212,65 @@ class C_Update_Full_History_Daily_Data(object):
 
             sh_stock_code = 'sh' + stock_code_num
             sz_stock_code = 'sz' + stock_code_num
-            # sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == sz_stock_code)).scalar()
-            # print (sz_stock_code, sz_ret)
-            if session.query(SZHisDaily).filter(SZHisDaily.columns['stock_code'] == sz_stock_code).count():
-                print "code %s is here" % (sz_stock_code)
-            else:
-                print "code %s is not here" % (sz_stock_code)
-            # print stock
-            # session.execute(full_history_daily.update(), records)
-            # session.commit()
+            sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == sz_stock_code)).scalar()
+            if sz_ret:
+                stat = SZHisDaily.update(). \
+                    where(SZHisDaily.columns['stock_code'] == sz_stock_code). \
+                    values(L1_industry_code=L1_industry_code,
+                           stock_name=stock_name,
+                           L1_industry_name=L1_industry_name,
+                           L2_industry_code=L2_industry_code,
+                           L2_industry_name=L2_industry_name,
+                           L3_industry_code=L3_industry_code,
+                           L3_industry_name=L3_industry_name
+                           )
+                session.execute(stat)
+                print 'updated stock %s' % sz_stock_code
+            elif session.query(exists().where(SHHisDaily.columns['stock_code'] == sh_stock_code)).scalar():
+                stat = SHHisDaily.update(). \
+                    where(SHHisDaily.columns['stock_code'] == sh_stock_code). \
+                    values(L1_industry_code=L1_industry_code,
+                           stock_name=stock_name,
+                           L1_industry_name=L1_industry_name,
+                           L2_industry_code=L2_industry_code,
+                           L2_industry_name=L2_industry_name,
+                           L3_industry_code=L3_industry_code,
+                           L3_industry_name=L3_industry_name
+                           )
+                session.execute(stat)
+                print 'updated stock %s' % sh_stock_code
+            session.commit()
         session.close()
+
+    def multi_processors_update(self):
+        df_new_infor = self.load_industry_classes()
+        infor_length = df_new_infor.count()[0]
+        print infor_length
+
+        # wait = input("Please")
+        # print wait
+
+        num_processor = self._processors
+        index_beg = 0
+        index_end = infor_length / num_processor
+
+        processes = []
+        for i in range(num_processor + 1):
+            if i != num_processor:
+                print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
+                p = mp.Process(target=self.update_industry_classes,
+                               args=(df_new_infor[index_beg:index_end],))
+                processes.append(p)
+
+                index_beg = index_end
+                index_end = index_end + infor_length / num_processor
+
+        self.processes_pool(tasks=processes, processors=num_processor)
+
 
 def main():
     upd = C_Update_Full_History_Daily_Data()
-    upd.update_industry_classes()
+    upd.multi_processors_update()
 
 
 if __name__ == '__main__':
