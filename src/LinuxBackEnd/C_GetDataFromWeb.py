@@ -438,11 +438,13 @@ class C_GettingData:
             # save x min data into DB
             data = self._remove_overlaied_rows(period, stock_code)
             self._log_mesg = self._log_mesg + "Removed OverLaid rows"
-            self._log_mesg = self._log_mesg + data
+            print "Removed Overlaid Rows"
+            print data
             if period != 'm1':
                 data = self._remove_unwant_min_rows(data, stock_code)
                 self._log_mesg = self._log_mesg + "Removed unwanted rows"
-                self._log_mesg = self._log_mesg + data
+                print "Removed Unwantedd Rwos"
+                print data
                 data.to_sql('tb_StockXMinRecords', self._engine, if_exists='append', index=True)
                 self._remove_zero_trading_volumn_rows(period, stock_code)
                 print "saved %s period data of stock code %s at time %s" % (period, stock_code, self._time_tag())
@@ -754,7 +756,7 @@ def main():
     # pp.get_data_qq(stock_code='sz002310', period='day')
     #pp.get_data_qq(stock_code='sz002310',period='m1')
     #pp.get_data_qq(period='real')
-    pp.get_data_qq(stock_code='sz300146', period='m30', q_count=800)
+    pp.get_data_qq(stock_code='sz002310', period='m30', q_count=800)
     #pp._data_service('m30')
     # pp.get_data_qq(stock_code='sh600221', period='day')
     #pp.get_data_qq(stock_code='sh600221',period='week')
