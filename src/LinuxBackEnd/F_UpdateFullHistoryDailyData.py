@@ -201,16 +201,16 @@ class C_Update_Full_History_Daily_Data(object):
         # df_src['EP_TTM'] = np.where(df_src['PE_TTM']==0, 1/df_src['PE_TTM'], 0)
         # df_src.loc[df_src['EP_TTM'] != 0, 'EP_TTM'] = 1/df_src['PE_TTM']
 
-        tmp = Table('tmp', meta, autoload=True)
+        t = Table('tmp', meta, autoload=True)
 
         stat = des_table.update(). \
-            values(EP_TTM=select([tmp.c.EP_TTM]).where(tmp.c.quote_time == des_table.c.quote_time)). \
+            values(EP_TTM=select([t.c.EP_TTM]).where(t.c.quote_time == des_table.c.quote_time)). \
             where(des_table.c.stock_code == stock_code)
 
-        stock_code = "'sh600000'"
-        stat = 'UPDATE %s d ' % d_tb + \
-               'SET d.EP_TTM = (SELECT t.EP_TTM from tmp t where t.quote_time = d.quote_time) ' + \
-               'WHERE d.stock_code = %s;' % stock_code
+        # stock_code = "'sh600000'"
+        # stat = 'UPDATE %s d ' % d_tb + \
+        #       'SET d.EP_TTM = (SELECT t.EP_TTM from tmp t where t.quote_time = d.quote_time) ' + \
+        #       'WHERE d.stock_code = %s;' % stock_code
 
 
         return stat
