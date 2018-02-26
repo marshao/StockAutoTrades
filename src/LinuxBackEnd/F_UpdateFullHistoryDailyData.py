@@ -159,7 +159,7 @@ class C_Update_Full_History_Daily_Data(object):
         df_stock_codes = pd.read_sql(con=self._engine, sql=sql_select_codes)
         return df_stock_codes
 
-    def update_direct_factors(self, df_stock_codes):
+    def update_direct_factors(self, df_stock_codes, factor):
         DBSession = sessionmaker(bind=self._engine)
         session = DBSession()
         meta = MetaData(self._engine)
@@ -174,42 +174,54 @@ class C_Update_Full_History_Daily_Data(object):
         sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
         sql_read_des_sh = ('select id_tb, stock_code, quote_time  from tb_StockSHFactors where stock_code = %s')
 
-        error_list = []
         error = []
+        error_list = []
+        count = 0
+
         for idx, row in df_stock_codes.iterrows():
+            session = DBSession()
             stock_code = row['stock_code']
             sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == stock_code)).scalar()
             if sz_ret:
                 df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
                 df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
-                error = self.update_sp_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
-                # session.execute(stat)
-                print 'updated stock %s' % stock_code
+                if factor == 'sp':
+                    error = self.update_sp_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
+                elif factor == 'ep':
+                    error = self.update_ep_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
+                print 'updated stock %s, updated %s' % (stock_code, count)
             elif session.query(exists().where(SHHisDaily.columns['stock_code'] == stock_code)).scalar():
                 df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
                 df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
-                error = self.update_sp_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
-                #session.execute(stat)
-                print 'updated stock %s' % stock_code
+                if factor == 'sp':
+                    error = self.update_sp_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
+                elif factor == 'ep':
+                    error = self.update_ep_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
+                print 'updated stock %s, updated %s' % (stock_code, count)
             error_list.append(error)
-            session.commit()
+            count += 1
+            if count == 10:
+                print "Releasing connections"
+                session.commit()
+                session.close()
+                count = 0
+        session.commit()
         session.close()
         self.write_errors(error_list)
 
     def update_ep_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
         error_list = []
+        stat = des_table.update(). \
+            values(EP_TTM=bindparam('_EP_TTM')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
         try:
-            df_src = df_src_o[['quote_time', 'PE_TTM']]
+            df_src = df_src_o.loc[:, ('quote_time', 'PE_TTM')]
             df_src['EP_TTM'] = np.round(df_src['PE_TTM'].rdiv(1), 5)
-            df_src.drop(['PE_TTM'], axis=1, inplace=True)
+            df_src = df_src.loc[:, ('quote_time', 'EP_TTM')]
             df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
             df_des.fillna(0, inplace=True)
             # print df_des
             parameters = []
-
-            stat = des_table.update(). \
-                values(EP_TTM=bindparam('_EP_TTM')). \
-                where(and_(des_table.c.id_tb == bindparam('_id_tb')))
             for idx, row in df_des.iterrows():
                 # parameters.append({'_SP_TTM': row.SP_TTM, '_stock_code': stock_code, '_quote_time': row.quote_time})
                 parameters.append({'_EP_TTM': row.EP_TTM, '_id_tb': row.id_tb})
@@ -221,18 +233,19 @@ class C_Update_Full_History_Daily_Data(object):
 
     def update_sp_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
         error_list = []
+        parameters = []
+        stat = des_table.update(). \
+            values(SP_TTM=bindparam('_SP_TTM')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
         try:
-            df_src = df_src_o[['quote_time', 'PS_TTM']]
+            df_src = df_src_o.loc[:, ('quote_time', 'PS_TTM')]
             df_src['SP_TTM'] = np.round(df_src['PS_TTM'].rdiv(1), 5)
-            df_src.drop(['PS_TTM'], axis=1, inplace=True)
+            # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+            df_src = df_src.loc[:, ('quote_time', 'SP_TTM')]
             df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
             df_des.fillna(0, inplace=True)
             # print df_des
-            parameters = []
 
-            stat = des_table.update(). \
-                values(SP_TTM=bindparam('_SP_TTM')). \
-                where(and_(des_table.c.id_tb == bindparam('_id_tb')))
             for idx, row in df_des.iterrows():
                 # parameters.append({'_SP_TTM': row.SP_TTM, '_stock_code': stock_code, '_quote_time': row.quote_time})
                 parameters.append({'_SP_TTM': row.SP_TTM, '_id_tb': row.id_tb})
@@ -267,7 +280,7 @@ class C_Update_Full_History_Daily_Data(object):
 
         self.processes_pool(tasks=processes, processors=num_processor)
 
-    def multi_processors_update_direct_factors(self):
+    def multi_processors_update_direct_factors(self, factor):
         df_stock_codes = self.load_stockcodes()
         infor_length = df_stock_codes.count()[0]
         print infor_length
@@ -284,7 +297,7 @@ class C_Update_Full_History_Daily_Data(object):
             if i != num_processor:
                 print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
                 p = mp.Process(target=self.update_direct_factors,
-                               args=(df_stock_codes[index_beg:index_end],))
+                               args=(df_stock_codes[index_beg:index_end], factor))
                 processes.append(p)
 
                 index_beg = index_end
@@ -296,7 +309,8 @@ class C_Update_Full_History_Daily_Data(object):
 def main():
     upd = C_Update_Full_History_Daily_Data()
     # upd.multi_processors_update_industries()
-    upd.multi_processors_update_direct_factors()
+    upd.multi_processors_update_direct_factors('sp')
+    upd.multi_processors_update_direct_factors('ep')
 
 if __name__ == '__main__':
     main()
