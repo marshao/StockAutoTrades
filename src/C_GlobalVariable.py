@@ -13,7 +13,7 @@ class C_GlobalVariable(object):
     '''
 
     def __init__(self):
-        self._calcu_config = {'ubuntu_processors': 1,
+        self._calcu_config = {'ubuntu_processors': 6,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,

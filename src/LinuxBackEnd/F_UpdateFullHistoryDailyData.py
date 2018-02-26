@@ -73,8 +73,8 @@ class C_Update_Full_History_Daily_Data(object):
                     time.sleep(1)
             i += 1
 
-    def wirte_errors(self, error_list):
-        with open("errorlist.csv", "wb") as f:
+    def write_errors(self, error_list):
+        with open("errorlist.csv", "ab") as f:
             writer = csv.writer(f)
             writer.writerows(error_list)
 
@@ -169,62 +169,78 @@ class C_Update_Full_History_Daily_Data(object):
         SHFactors = Table('tb_StockSHFactors', meta, autoload=True)
         SZHisDaily = Table('tb_StockSZHisDaily', meta, autoload=True)
         SHHisDaily = Table('tb_StockSHHisDaily', meta, autoload=True)
+        sql_read_src_sz = ('select * from tb_StockSZHisDaily where stock_code = %s')
+        sql_read_src_sh = ('select * from tb_StockSHHisDaily where stock_code = %s')
+        sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
+        sql_read_des_sh = ('select id_tb, stock_code, quote_time  from tb_StockSHFactors where stock_code = %s')
+
         error_list = []
         error = []
         for idx, row in df_stock_codes.iterrows():
             stock_code = row['stock_code']
             sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == stock_code)).scalar()
             if sz_ret:
-                error = self.update_ep_ttm(stock_code, 'sz', SZFactors, session)
+                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
+                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
+                error = self.update_sp_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
                 # session.execute(stat)
                 print 'updated stock %s' % stock_code
             elif session.query(exists().where(SHHisDaily.columns['stock_code'] == stock_code)).scalar():
-                error = self.update_ep_ttm(stock_code, 'sh', SHFactors, session)
+                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
+                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
+                error = self.update_sp_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
                 #session.execute(stat)
                 print 'updated stock %s' % stock_code
             error_list.append(error)
             session.commit()
         session.close()
-        self.wirte_errors(error_list)
+        self.write_errors(error_list)
 
-    def update_ep_ttm(self, stock_code, market, des_table, session):
-
-        #meta = MetaData(self._engine)
-        sql_read_src_sz = ('select quote_time, PE_TTM from tb_StockSZHisDaily where stock_code = %s')
-        sql_read_src_sh = ('select quote_time, PE_TTM from tb_StockSHHisDaily where stock_code = %s')
-        sql_read_des_sz = ('select stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
-        sql_read_des_sh = ('select stock_code, quote_time  from tb_StockSHFactors where stock_code = %s')
+    def update_ep_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
         error_list = []
         try:
-            if market == 'sz':
-                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
-                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
-
-            else:
-                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
-                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
-
+            df_src = df_src_o[['quote_time', 'PE_TTM']]
             df_src['EP_TTM'] = np.round(df_src['PE_TTM'].rdiv(1), 5)
-            df_src.drop(['PE_TTM'], axis=1)
+            df_src.drop(['PE_TTM'], axis=1, inplace=True)
             df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
             df_des.fillna(0, inplace=True)
             # print df_des
             parameters = []
+
             stat = des_table.update(). \
                 values(EP_TTM=bindparam('_EP_TTM')). \
-                where(and_(des_table.c.stock_code == bindparam('_stock_code'),
-                           des_table.c.quote_time == bindparam('_quote_time')))
-
+                where(and_(des_table.c.id_tb == bindparam('_id_tb')))
             for idx, row in df_des.iterrows():
-                parameters.append({'_EP_TTM': row.EP_TTM, '_stock_code': stock_code, '_quote_time': row.quote_time})
-
+                # parameters.append({'_SP_TTM': row.SP_TTM, '_stock_code': stock_code, '_quote_time': row.quote_time})
+                parameters.append({'_EP_TTM': row.EP_TTM, '_id_tb': row.id_tb})
             session.execute(stat, parameters)
         except:
-            print "%s is in trouble" % stock_code
-            error_list.append(stock_code)
-
+            print "Updating EP_TTM with %s is in trouble" % stock_code
+            error_list.append((stock_code))
         return error_list
 
+    def update_sp_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
+        error_list = []
+        try:
+            df_src = df_src_o[['quote_time', 'PS_TTM']]
+            df_src['SP_TTM'] = np.round(df_src['PS_TTM'].rdiv(1), 5)
+            df_src.drop(['PS_TTM'], axis=1, inplace=True)
+            df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+            df_des.fillna(0, inplace=True)
+            # print df_des
+            parameters = []
+
+            stat = des_table.update(). \
+                values(SP_TTM=bindparam('_SP_TTM')). \
+                where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+            for idx, row in df_des.iterrows():
+                # parameters.append({'_SP_TTM': row.SP_TTM, '_stock_code': stock_code, '_quote_time': row.quote_time})
+                parameters.append({'_SP_TTM': row.SP_TTM, '_id_tb': row.id_tb})
+            session.execute(stat, parameters)
+        except:
+            print "Updating SP_TTM with %s is in trouble" % stock_code
+            error_list.append((stock_code))
+        return error_list
 
     def multi_processors_update_industries(self):
         df_new_infor = self.load_industry_classes()
