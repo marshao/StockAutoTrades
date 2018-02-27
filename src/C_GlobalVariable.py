@@ -13,7 +13,7 @@ class C_GlobalVariable(object):
     '''
 
     def __init__(self):
-        self._calcu_config = {'ubuntu_processors': 2,
+        self._calcu_config = {'ubuntu_processors': 1,
                               'trading_volume': 3000,
                               'stock_inhand_uplimit': 3500,
                               'cash_begin': 60000.0,
@@ -21,10 +21,10 @@ class C_GlobalVariable(object):
                               'period': 'm30',
                               'pro_db_engine': create_engine(
                                   'mysql+mysqldb://marshao:123@10.175.10.231/DB_StockDataBackTest?charset=utf8',
-                                  encoding='utf-8'),
+                                  encoding='utf-8', pool_size=150),
                               'dev_db_engine': create_engine(
                                   'mysql+mysqldb://marshao:123@10.176.50.233/DB_StockDataBackTest?charset=utf8',
-                                  encoding='utf-8')
+                                  encoding='utf-8', pool_size=150)
                               }
 
         self._master_config = {'ubuntu_input_dir': '/home/marshao/DataMiningProjects/Input/',
