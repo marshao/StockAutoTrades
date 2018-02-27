@@ -320,7 +320,7 @@ class C_Update_Full_History_Daily_Data(object):
             # count += 1
             if count == 30:
                 session.execute(stat, parameters)
-                # time.sleep(0.1)
+                time.sleep(0.1)
                 print "Releasing connections"
                 session.commit()
                 session.close()
