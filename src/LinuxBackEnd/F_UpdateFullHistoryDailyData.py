@@ -215,7 +215,7 @@ class C_Update_Full_History_Daily_Data(object):
         session.close()
         self.write_errors(error_list)
 
-    def dump_update_direct_factors(self, df_stock_codes, factor, market=None):
+    def bulk_update_direct_factors(self, df_stock_codes, factor, market=None):
 
         if market is None: market = 'sh'
         if factor is None:
@@ -267,6 +267,9 @@ class C_Update_Full_History_Daily_Data(object):
             print 'No such market'
             return
 
+        session.commit()
+        session.close()
+
         error = []
         error_list = []
         parameters = []
@@ -274,7 +277,7 @@ class C_Update_Full_History_Daily_Data(object):
 
         print "Start to update"
         for idx, row in df_stock_codes.iterrows():
-            session = DBSession()
+            # session = DBSession()
             stock_code = row['stock_code']
 
             try:
@@ -318,15 +321,20 @@ class C_Update_Full_History_Daily_Data(object):
                 print 'updated stock %s, updated %s, factor %s' % (stock_code, count, factor)
             error_list.append(error)
             # count += 1
-            if count == 50:
-                session.execute(stat, parameters)
-                time.sleep(0.1)
-                print "Releasing connections"
-                session.commit()
-                session.close()
+
+            if count == 200:
+                # session.execute(stat, parameters)
+                # print "Releasing connections"
+                # session.commit()
+                # session.close()
+                print "Execute updates"
+                self.concurrent_sql_execution(stat, parameters)
                 count = 0
-        session.commit()
-        session.close()
+
+        # session.execute(stat, parameters)
+        self.concurrent_sql_execution(stat, parameters)
+        # session.commit()
+        #session.close()
         self.write_errors(error_list)
 
     def update_single_stock_direct_factors(self, stock_code, factor):
@@ -368,7 +376,6 @@ class C_Update_Full_History_Daily_Data(object):
         error_list.append(error)
         session.commit()
         session.close()
-
 
     def update_ep_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
         error_list = []
@@ -499,7 +506,7 @@ class C_Update_Full_History_Daily_Data(object):
         for i in range(num_processor + 1):
             if i != num_processor:
                 print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
-                p = mp.Process(target=self.dump_update_direct_factors,
+                p = mp.Process(target=self.bulk_update_direct_factors,
                                args=(df_stock_codes[index_beg:index_end], factor, market))
                 processes.append(p)
 
@@ -508,6 +515,31 @@ class C_Update_Full_History_Daily_Data(object):
 
         self.processes_pool(tasks=processes, processors=num_processor)
 
+    def concurrent_sql_execution(self, stat, parameters):
+        num_processor = 4
+        infor_length = len(parameters)
+        index_beg = 0
+        index_end = infor_length / num_processor
+        processes = []
+
+        for i in range(num_processor + 1):
+            if i != num_processor:
+                print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
+                p = mp.Process(target=self.sql_execution,
+                               args=(stat, parameters[index_beg:index_end]))
+                processes.append(p)
+
+                index_beg = index_end
+                index_end = index_end + infor_length / num_processor
+
+        self.processes_pool(tasks=processes, processors=num_processor)
+
+    def sql_execution(self, stat, parameters):
+        DBSession = sessionmaker(bind=self._engine)
+        session = DBSession()
+        session.execute(stat, parameters)
+        session.commit()
+        session.close()
 
 def main():
     upd = C_Update_Full_History_Daily_Data()
