@@ -325,7 +325,7 @@ class C_Update_Full_History_Daily_Data(object):
             error_list.append(error)
             # count += 1
 
-            if count == 200:
+            if count == 400:
                 # session.execute(stat, parameters)
                 # print "Releasing connections"
                 # session.commit()
@@ -334,8 +334,8 @@ class C_Update_Full_History_Daily_Data(object):
                 self.concurrent_sql_execution(stat, parameters)
                 count = 0
 
-        session.execute(stat, parameters)
-        # self.concurrent_sql_execution(stat, parameters)
+        # session.execute(stat, parameters)
+        self.concurrent_sql_execution(stat, parameters)
         # session.commit()
         #session.close()
         self.write_errors(error_list)
