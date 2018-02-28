@@ -318,7 +318,7 @@ class C_Update_Full_History_Daily_Data(object):
                 print 'updated stock %s, updated %s, factor %s' % (stock_code, count, factor)
             error_list.append(error)
             # count += 1
-            if count == 30:
+            if count == 50:
                 session.execute(stat, parameters)
                 time.sleep(0.1)
                 print "Releasing connections"
