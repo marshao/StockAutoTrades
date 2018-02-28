@@ -449,7 +449,7 @@ class C_Update_Full_History_Daily_Data(object):
         error_list = []
         # print des_table
         stat = des_table.update(). \
-            values(BP_TTM=bindparam('_BP')). \
+            values(BP=bindparam('_BP')). \
             where(and_(des_table.c.id_tb == bindparam('_id_tb')))
         df_src = df_src_o.loc[:, ('quote_time', 'PB')]
         df_src['BP'] = np.round(df_src['PB'].rdiv(1), 5)
