@@ -274,6 +274,7 @@ class C_Update_Full_History_Daily_Data(object):
         error_list = []
         parameters = []
         count = 0
+        total_count = 0
 
         print "Start to update"
         for idx, row in df_stock_codes.iterrows():
@@ -289,6 +290,7 @@ class C_Update_Full_History_Daily_Data(object):
 
             if stock_ret and market == 'sz':
                 count += 1
+                total_count += 1
                 # df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz)
                 # df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz)
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
@@ -302,9 +304,10 @@ class C_Update_Full_History_Daily_Data(object):
                 elif factor == 'bp':
                     stat, parameters, error = self.update_bp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
 
-                print 'updated stock %s, updated %s, factor %s' % (stock_code, count, factor)
+                print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
             elif stock_ret and market == 'sh':
                 count += 1
+                total_count += 1
                 # df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
                 # df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
@@ -318,7 +321,7 @@ class C_Update_Full_History_Daily_Data(object):
                 elif factor == 'bp':
                     stat, parameters, error = self.update_bp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
 
-                print 'updated stock %s, updated %s, factor %s' % (stock_code, count, factor)
+                print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
             error_list.append(error)
             # count += 1
 
@@ -331,8 +334,8 @@ class C_Update_Full_History_Daily_Data(object):
                 self.concurrent_sql_execution(stat, parameters)
                 count = 0
 
-        # session.execute(stat, parameters)
-        self.concurrent_sql_execution(stat, parameters)
+        session.execute(stat, parameters)
+        # self.concurrent_sql_execution(stat, parameters)
         # session.commit()
         #session.close()
         self.write_errors(error_list)
@@ -519,18 +522,21 @@ class C_Update_Full_History_Daily_Data(object):
         num_processor = 4
         infor_length = len(parameters)
         index_beg = 0
-        index_end = infor_length / num_processor
+        task_length = infor_length / num_processor
+        index_end = task_length
         processes = []
 
-        for i in range(num_processor + 1):
-            if i != num_processor:
-                print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
-                p = mp.Process(target=self.sql_execution,
+        for i in range(num_processor):
+            print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
+            p = mp.Process(target=self.sql_execution,
                                args=(stat, parameters[index_beg:index_end]))
-                processes.append(p)
+            processes.append(p)
 
-                index_beg = index_end
-                index_end = index_end + infor_length / num_processor
+            index_beg = index_end
+            if i == num_processor - 1:
+                index_end = infor_length
+            else:
+                index_end = index_end + task_length
 
         self.processes_pool(tasks=processes, processors=num_processor)
 
@@ -544,7 +550,10 @@ class C_Update_Full_History_Daily_Data(object):
 def main():
     upd = C_Update_Full_History_Daily_Data()
     # upd.multi_processors_update_industries()
-    upd.multi_processors_update_direct_factors('sp', 'sh')
+    upd.multi_processors_update_direct_factors('bp', 'sz')
+    upd.multi_processors_update_direct_factors('bp', 'sh')
+    upd.multi_processors_update_direct_factors('cfp', 'sz')
+    upd.multi_processors_update_direct_factors('cfp', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
 
