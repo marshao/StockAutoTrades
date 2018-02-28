@@ -272,10 +272,9 @@ class C_Update_Full_History_Daily_Data(object):
 
         error = []
         error_list = []
-        parameters = []
         count = 0
         total_count = 0
-
+        parameters = []
         print "Start to update"
         for idx, row in df_stock_codes.iterrows():
             # session = DBSession()
@@ -332,6 +331,7 @@ class C_Update_Full_History_Daily_Data(object):
                 # session.close()
                 print "Execute updates"
                 self.concurrent_sql_execution(stat, parameters)
+                parameters = []
                 count = 0
 
         # session.execute(stat, parameters)
