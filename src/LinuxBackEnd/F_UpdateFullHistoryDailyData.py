@@ -240,7 +240,7 @@ class C_Update_Full_History_Daily_Data(object):
         elif factor == 'bp':
             sql_read_src_sz = ('select stock_code, quote_time, PB from tb_StockSZHisDaily')
             sql_read_src_sh = ('select stock_code, quote_time, PB from tb_StockSHHisDaily')
-        elif factor == 'pcf':
+        elif factor == 'cfp':
             sql_read_src_sz = ('select stock_code, quote_time, PCF_TTM from tb_StockSZHisDaily')
             sql_read_src_sh = ('select stock_code, quote_time, PCF_TTM from tb_StockSHHisDaily')
         else:
@@ -276,6 +276,12 @@ class C_Update_Full_History_Daily_Data(object):
         total_count = 0
         parameters = []
         print "Start to update"
+
+        # Gettign slices of stock_code after dedicated one
+        '''
+        idx = df_stock_codes[df_stock_codes.stock_code == 'sh603768'].index[0]
+        df_stock_codes = df_stock_codes.iloc[idx: , : ]
+        '''
         for idx, row in df_stock_codes.iterrows():
             # session = DBSession()
             stock_code = row['stock_code']
@@ -316,15 +322,15 @@ class C_Update_Full_History_Daily_Data(object):
                 elif factor == 'ep':
                     error = self.update_ep_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
                 elif factor == 'cfp':
-                    stat, parameters, error = self.update_cfp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
+                    stat, parameters, error = self.update_cfp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
                 elif factor == 'bp':
-                    stat, parameters, error = self.update_bp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
+                    stat, parameters, error = self.update_bp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
 
                 print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
             error_list.append(error)
             # count += 1
 
-            if count == 400:
+            if count == 200:
                 # session.execute(stat, parameters)
                 # print "Releasing connections"
                 # session.commit()
@@ -439,7 +445,7 @@ class C_Update_Full_History_Daily_Data(object):
         df_des.fillna(0, inplace=True)
 
         for idx, row in df_des.iterrows():
-            parameters.append({'_CFP_TTM': row.SP_TTM, '_id_tb': row.id_tb})
+            parameters.append({'_CFP_TTM': row.CFP_TTM, '_id_tb': row.id_tb})
             # print parameters
             # session.execute(stat, parameters)
         error_list.append((stock_code))
@@ -539,6 +545,7 @@ class C_Update_Full_History_Daily_Data(object):
                 index_end = index_end + task_length
 
         self.processes_pool(tasks=processes, processors=num_processor)
+        return
 
     def sql_execution(self, stat, parameters):
         DBSession = sessionmaker(bind=self._engine)
@@ -546,13 +553,14 @@ class C_Update_Full_History_Daily_Data(object):
         session.execute(stat, parameters)
         session.commit()
         session.close()
+        return
 
 def main():
     upd = C_Update_Full_History_Daily_Data()
     # upd.multi_processors_update_industries()
-    upd.multi_processors_update_direct_factors('bp', 'sz')
-    upd.multi_processors_update_direct_factors('bp', 'sh')
-    upd.multi_processors_update_direct_factors('cfp', 'sz')
+    # upd.multi_processors_update_direct_factors('bp', 'sz')
+    # upd.multi_processors_update_direct_factors('bp', 'sh')
+    # upd.multi_processors_update_direct_factors('cfp', 'sz')
     upd.multi_processors_update_direct_factors('cfp', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
