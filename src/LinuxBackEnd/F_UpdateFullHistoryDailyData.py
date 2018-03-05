@@ -243,6 +243,23 @@ class C_Update_Full_History_Daily_Data(object):
         elif factor == 'cfp':
             sql_read_src_sz = ('select stock_code, quote_time, PCF_TTM from tb_StockSZHisDaily')
             sql_read_src_sh = ('select stock_code, quote_time, PCF_TTM from tb_StockSHHisDaily')
+        elif factor == 'mc' or factor == 'ln_mc':
+            sql_read_src_sz = ('select stock_code, quote_time, total_equity from tb_StockSZHisDaily')
+            sql_read_src_sh = ('select stock_code, quote_time, total_equity from tb_StockSHHisDaily')
+        elif factor == 'fc' or factor == 'ln_fc':
+            sql_read_src_sz = ('select stock_code, quote_time, market_equity from tb_StockSZHisDaily')
+            sql_read_src_sh = ('select stock_code, quote_time, market_equity from tb_StockSHHisDaily')
+        elif factor == 'fc_mc':
+            sql_read_src_sz = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSZHisDaily')
+            sql_read_src_sh = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSHHisDaily')
+        elif factor == 'tc' or factor == 'ln_tc':
+            sql_read_src_sz = ('select stock_code, 报告日期 as quote_time, 总资产(万元) as total_asset '
+                               'from tb_StockMainFinancailIndicators '
+                               'where stock_code = "sz%";')
+            sql_read_src_sh = ('select stock_code, 报告日期 as quote_time, 总资产(万元) as total_asset '
+                               'from tb_StockMainFinancailIndicators '
+                               'where stock_code = "sh%";')
+
         else:
             print "No such factors"
             return
@@ -308,6 +325,20 @@ class C_Update_Full_History_Daily_Data(object):
                     stat, parameters, error = self.update_cfp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
                 elif factor == 'bp':
                     stat, parameters, error = self.update_bp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'mc':
+                    stat, parameters, error = self.update_mc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'fc':
+                    stat, parameters, error = self.update_fc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'tc':
+                    stat, parameters, error = self.update_tc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'ln_mc':
+                    stat, parameters, error = self.update_ln_mc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'ln_fc':
+                    stat, parameters, error = self.update_ln_fc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'ln_tc':
+                    stat, parameters, error = self.update_ln_tc(stock_code, SZFactors, df_src, df_des, parameters)
+                elif factor == 'fc_mc':
+                    stat, parameters, error = self.update_fc_mc(stock_code, SZFactors, df_src, df_des, parameters)
 
                 print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
             elif stock_ret and market == 'sh':
@@ -325,12 +356,26 @@ class C_Update_Full_History_Daily_Data(object):
                     stat, parameters, error = self.update_cfp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
                 elif factor == 'bp':
                     stat, parameters, error = self.update_bp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'mc':
+                    stat, parameters, error = self.update_mc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'fc':
+                    stat, parameters, error = self.update_fc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'tc':
+                    stat, parameters, error = self.update_tc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'ln_mc':
+                    stat, parameters, error = self.update_ln_mc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'ln_fc':
+                    stat, parameters, error = self.update_ln_fc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'ln_tc':
+                    stat, parameters, error = self.update_ln_tc(stock_code, SHFactors, df_src, df_des, parameters)
+                elif factor == 'fc_mc':
+                    stat, parameters, error = self.update_fc_mc(stock_code, SHFactors, df_src, df_des, parameters)
 
                 print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
             error_list.append(error)
             # count += 1
 
-            if count == 200:
+            if count == 400:
                 # session.execute(stat, parameters)
                 # print "Releasing connections"
                 # session.commit()
@@ -345,6 +390,7 @@ class C_Update_Full_History_Daily_Data(object):
         # session.commit()
         #session.close()
         self.write_errors(error_list)
+        return
 
     def update_single_stock_direct_factors(self, stock_code, factor):
         DBSession = sessionmaker(bind=self._engine)
@@ -472,6 +518,164 @@ class C_Update_Full_History_Daily_Data(object):
         error_list.append((stock_code))
         return stat, parameters, error_list
 
+    def update_mc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(MC=bindparam('_MC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'total_equity')]
+        df_src['MC'] = np.round(df_src['total_equity'], 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'MC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_MC': row.MC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_ln_mc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(LN_MC=bindparam('_LN_MC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'total_equity')]
+        df_src = df_src_o.loc[df_src['total_equity'] > 0, :]
+        df_src['LN_MC'] = np.round(np.log(df_src['total_equity']), 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'LN_MC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_LN_MC': row.LN_MC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_fc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(FC=bindparam('_FC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'market_equity')]
+        df_src['FC'] = np.round(df_src['market_equity'], 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'FC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_FC': row.FC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_ln_fc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(LN_FC=bindparam('_LN_FC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'market_equity')]
+        df_src = df_src_o.loc[df_src['market_equity'] > 0, :]
+        df_src['LN_FC'] = np.round(np.log(df_src['market_equity']), 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'LN_FC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_LN_FC': row.LN_FC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_tc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(TC=bindparam('_TC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'total_asset')]
+        df_src['TC'] = np.round(df_src['total_asset'], 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'TC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_TC': row.TC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_ln_tc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(LN_TC=bindparam('_LN_TC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'total_asset')]
+        df_src = df_src_o.loc[df_src['total_asset'] > 0, :]
+        df_src['LN_TC'] = np.round(np.log(df_src['total_asset']), 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'LN_TC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_LN_TC': row.LN_TC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def update_fc_mc(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+
+        # print des_table
+        stat = des_table.update(). \
+            values(FC_MC=bindparam('_FC_MC')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'market_equity', 'total_equity')]
+        df_src = df_src_o.loc[df_src['total_equity'] > 0, :]
+        df_src['LN_FC'] = np.round(df_src['market_equity'] / df_src['total_equity'], 5)
+        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
+        df_src = df_src.loc[:, ('quote_time', 'FC_MC')]
+        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
+        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
+        df_des.fillna(0, inplace=True)
+
+        for idx, row in df_des.iterrows():
+            parameters.append({'_FC_MC': row.FC_MC, '_id_tb': row.id_tb})
+        # print parameters
+        # session.execute(stat, parameters)
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
     def multi_processors_update_industries(self):
         df_new_infor = self.load_industry_classes()
         infor_length = df_new_infor.count()[0]
@@ -548,7 +752,9 @@ class C_Update_Full_History_Daily_Data(object):
         return
 
     def sql_execution(self, stat, parameters):
-        DBSession = sessionmaker(bind=self._engine)
+        # gv = glb.C_GlobalVariable()
+        engine = glb.C_GlobalVariable().get_master_config()['db_engine']
+        DBSession = sessionmaker(bind=engine)
         session = DBSession()
         session.execute(stat, parameters)
         session.commit()
@@ -561,7 +767,15 @@ def main():
     # upd.multi_processors_update_direct_factors('bp', 'sz')
     # upd.multi_processors_update_direct_factors('bp', 'sh')
     # upd.multi_processors_update_direct_factors('cfp', 'sz')
-    upd.multi_processors_update_direct_factors('cfp', 'sh')
+    # upd.multi_processors_update_direct_factors('cfp', 'sh')
+    # upd.multi_processors_update_direct_factors('mc', 'sh')
+    # upd.multi_processors_update_direct_factors('mc', 'sz')
+    # upd.multi_processors_update_direct_factors('fc', 'sz')
+    # upd.multi_processors_update_direct_factors('fc', 'sh')
+    upd.multi_processors_update_direct_factors('fc_mc', 'sz')
+    upd.multi_processors_update_direct_factors('fc_mc', 'sh')
+    # upd.multi_processors_update_direct_factors('tc', 'sz')
+    #upd.multi_processors_update_direct_factors('tc', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
 
