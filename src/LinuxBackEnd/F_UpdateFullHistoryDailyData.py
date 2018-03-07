@@ -215,6 +215,116 @@ class C_Update_Full_History_Daily_Data(object):
         session.close()
         self.write_errors(error_list)
 
+    def source_loading(self, factor, stock_code=None):
+        done = True
+        # Using factors to load different source columns
+        sql_read_src_sz = []
+        sql_read_src_sh = []
+        if stock_code is None:
+            if factor == 'sp':
+                sql_read_src_sz = ('select stock_code, quote_time, PS_TTM from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, PS_TTM from tb_StockSHHisDaily')
+            elif factor == 'ep':
+                sql_read_src_sz = ('select stock_code, quote_time, PE_TTM from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, PE_TTM from tb_StockSHHisDaily')
+            elif factor == 'bp':
+                sql_read_src_sz = ('select stock_code, quote_time, PB from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, PB from tb_StockSHHisDaily')
+            elif factor == 'cfp':
+                sql_read_src_sz = ('select stock_code, quote_time, PCF_TTM from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, PCF_TTM from tb_StockSHHisDaily')
+            elif factor == 'mc' or factor == 'ln_mc':
+                sql_read_src_sz = ('select stock_code, quote_time, total_equity from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, total_equity from tb_StockSHHisDaily')
+            elif factor == 'fc' or factor == 'ln_fc':
+                sql_read_src_sz = ('select stock_code, quote_time, market_equity from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, market_equity from tb_StockSHHisDaily')
+            elif factor == 'fc_mc':
+                sql_read_src_sz = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSZHisDaily')
+                sql_read_src_sh = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSHHisDaily')
+            elif factor == 'tc' or factor == 'ln_tc':
+                sql_read_src_sz = (
+                    'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sz%%"')
+                sql_read_src_sh = (
+                    'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sh%%"')
+            else:
+                print "No such factors"
+                done = False
+        else:
+            if factor == 'sp':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, PS_TTM from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, PS_TTM from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'ep':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, PE_TTM from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, PE_TTM from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'bp':
+                sql_read_src_sz = ('select stock_code, quote_time, PB from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = ('select stock_code, quote_time, PB from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'cfp':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, PCF_TTM from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, PCF_TTM from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'mc' or factor == 'ln_mc':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, total_equity from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, total_equity from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'fc' or factor == 'ln_fc':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, market_equity from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, market_equity from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'fc_mc':
+                sql_read_src_sz = (
+                'select stock_code, quote_time, market_equity, total_equity from tb_StockSZHisDaily where stock_code = %s')
+                sql_read_src_sh = (
+                'select stock_code, quote_time, market_equity, total_equity from tb_StockSHHisDaily where stock_code = %s')
+            elif factor == 'tc' or factor == 'ln_tc':
+                sql_read_src_sz = (
+                    'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
+                sql_read_src_sh = (
+                    'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
+            else:
+                print "No such factors"
+                done = False
+
+        return done, sql_read_src_sz, sql_read_src_sh
+
+    def run_update(self, factor, stock_code, Market_Factors, df_src, df_des, parameters):
+        error = []
+        stat = []
+        session = []
+        if factor == 'sp':
+            stat, parameters, error = self.update_sp_ttm(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'ep':
+            error = self.update_ep_ttm(stock_code, 'sz', Market_Factors, session, df_src, df_des)
+        elif factor == 'cfp':
+            stat, parameters, error = self.update_cfp_ttm(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'bp':
+            stat, parameters, error = self.update_bp_ttm(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'mc':
+            stat, parameters, error = self.update_mc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'fc':
+            stat, parameters, error = self.update_fc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'tc':
+            stat, parameters, error = self.update_tc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'ln_mc':
+            stat, parameters, error = self.update_ln_mc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'ln_fc':
+            stat, parameters, error = self.update_ln_fc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'ln_tc':
+            stat, parameters, error = self.update_ln_tc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'fc_mc':
+            stat, parameters, error = self.update_fc_mc(stock_code, Market_Factors, df_src, df_des, parameters)
+        else:
+            print " Unkonwn factor in run_update"
+        return stat, parameters, error
+
     def bulk_update_direct_factors(self, df_stock_codes, factor, market=None):
 
         if market is None: market = 'sh'
@@ -231,38 +341,8 @@ class C_Update_Full_History_Daily_Data(object):
         SHFactors = Table('tb_StockSHFactors', meta, autoload=True)
 
         # Using factors to load different source columns
-        if factor == 'sp':
-            sql_read_src_sz = ('select stock_code, quote_time, PS_TTM from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, PS_TTM from tb_StockSHHisDaily')
-        elif factor == 'ep':
-            sql_read_src_sz = ('select stock_code, quote_time, PE_TTM from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, PE_TTM from tb_StockSHHisDaily')
-        elif factor == 'bp':
-            sql_read_src_sz = ('select stock_code, quote_time, PB from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, PB from tb_StockSHHisDaily')
-        elif factor == 'cfp':
-            sql_read_src_sz = ('select stock_code, quote_time, PCF_TTM from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, PCF_TTM from tb_StockSHHisDaily')
-        elif factor == 'mc' or factor == 'ln_mc':
-            sql_read_src_sz = ('select stock_code, quote_time, total_equity from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, total_equity from tb_StockSHHisDaily')
-        elif factor == 'fc' or factor == 'ln_fc':
-            sql_read_src_sz = ('select stock_code, quote_time, market_equity from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, market_equity from tb_StockSHHisDaily')
-        elif factor == 'fc_mc':
-            sql_read_src_sz = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSZHisDaily')
-            sql_read_src_sh = ('select stock_code, quote_time, market_equity, total_equity from tb_StockSHHisDaily')
-        elif factor == 'tc' or factor == 'ln_tc':
-            sql_read_src_sz = ('select stock_code, 报告日期 as quote_time, 总资产(万元) as total_asset '
-                               'from tb_StockMainFinancailIndicators '
-                               'where stock_code = "sz%";')
-            sql_read_src_sh = ('select stock_code, 报告日期 as quote_time, 总资产(万元) as total_asset '
-                               'from tb_StockMainFinancailIndicators '
-                               'where stock_code = "sh%";')
-
-        else:
-            print "No such factors"
-            return
+        done, sql_read_src_sz, sql_read_src_sh = self.source_loading(factor)
+        if not done: return
 
         # Load Destination tables
         sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors')
@@ -302,7 +382,7 @@ class C_Update_Full_History_Daily_Data(object):
         for idx, row in df_stock_codes.iterrows():
             # session = DBSession()
             stock_code = row['stock_code']
-
+            t0 = time.clock()
             try:
                 # sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == stock_code)).scalar()
                 # sh_ret = session.query(exists().where(SHHisDaily.columns['stock_code'] == stock_code)).scalar()
@@ -313,73 +393,24 @@ class C_Update_Full_History_Daily_Data(object):
             if stock_ret and market == 'sz':
                 count += 1
                 total_count += 1
-                # df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz)
-                # df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz)
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
                 df_des = df_des_o.loc[df_des_o['stock_code'] == stock_code, :]
-                if factor == 'sp':
-                    stat, parameters, error = self.update_sp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'ep':
-                    error = self.update_ep_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
-                elif factor == 'cfp':
-                    stat, parameters, error = self.update_cfp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'bp':
-                    stat, parameters, error = self.update_bp_ttm(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'mc':
-                    stat, parameters, error = self.update_mc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'fc':
-                    stat, parameters, error = self.update_fc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'tc':
-                    stat, parameters, error = self.update_tc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'ln_mc':
-                    stat, parameters, error = self.update_ln_mc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'ln_fc':
-                    stat, parameters, error = self.update_ln_fc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'ln_tc':
-                    stat, parameters, error = self.update_ln_tc(stock_code, SZFactors, df_src, df_des, parameters)
-                elif factor == 'fc_mc':
-                    stat, parameters, error = self.update_fc_mc(stock_code, SZFactors, df_src, df_des, parameters)
-
-                print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
+                stat, parameters, error = self.run_update(factor, stock_code, SZFactors, df_src, df_des, parameters)
+                print 'updated stock %s, task %s, updated %s, factor %s, time consumed %s' % (
+                stock_code, count, total_count, factor, (time.clock() - t0))
             elif stock_ret and market == 'sh':
                 count += 1
                 total_count += 1
-                # df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
-                # df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
                 df_des = df_des_o.loc[df_des_o['stock_code'] == stock_code, :]
-                if factor == 'sp':
-                    stat, parameters, error = self.update_sp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'ep':
-                    error = self.update_ep_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
-                elif factor == 'cfp':
-                    stat, parameters, error = self.update_cfp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'bp':
-                    stat, parameters, error = self.update_bp_ttm(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'mc':
-                    stat, parameters, error = self.update_mc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'fc':
-                    stat, parameters, error = self.update_fc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'tc':
-                    stat, parameters, error = self.update_tc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'ln_mc':
-                    stat, parameters, error = self.update_ln_mc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'ln_fc':
-                    stat, parameters, error = self.update_ln_fc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'ln_tc':
-                    stat, parameters, error = self.update_ln_tc(stock_code, SHFactors, df_src, df_des, parameters)
-                elif factor == 'fc_mc':
-                    stat, parameters, error = self.update_fc_mc(stock_code, SHFactors, df_src, df_des, parameters)
 
-                print 'updated stock %s, task %s, updated %s, factor %s' % (stock_code, count, total_count, factor)
+                stat, parameters, error = self.run_update(factor, stock_code, SHFactors, df_src, df_des, parameters)
+                print 'updated stock %s, task %s, updated %s, factor %s , time consumned %s' % (
+                stock_code, count, total_count, factor, (time.clock() - t0))
             error_list.append(error)
             # count += 1
 
-            if count == 400:
-                # session.execute(stat, parameters)
-                # print "Releasing connections"
-                # session.commit()
-                # session.close()
+            if count == 100:
                 print "Execute updates"
                 self.concurrent_sql_execution(stat, parameters)
                 parameters = []
@@ -387,12 +418,16 @@ class C_Update_Full_History_Daily_Data(object):
 
         # session.execute(stat, parameters)
         self.concurrent_sql_execution(stat, parameters)
-        # session.commit()
-        #session.close()
         self.write_errors(error_list)
         return
 
-    def update_single_stock_direct_factors(self, stock_code, factor):
+    def single_stock_bulk_update_direct_factors(self, stock_codes, factor, market=None):
+
+        if market is None: market = 'sh'
+        if factor is None:
+            print "please specify a factor to update"
+            return
+
         DBSession = sessionmaker(bind=self._engine)
         session = DBSession()
         meta = MetaData(self._engine)
@@ -400,37 +435,147 @@ class C_Update_Full_History_Daily_Data(object):
         # Delare Table
         SZFactors = Table('tb_StockSZFactors', meta, autoload=True)
         SHFactors = Table('tb_StockSHFactors', meta, autoload=True)
-        SZHisDaily = Table('tb_StockSZHisDaily', meta, autoload=True)
-        SHHisDaily = Table('tb_StockSHHisDaily', meta, autoload=True)
-        sql_read_src_sz = ('select * from tb_StockSZHisDaily where stock_code = %s')
-        sql_read_src_sh = ('select * from tb_StockSHHisDaily where stock_code = %s')
-        # sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
-        sql_read_des_sz = ('select * from tb_StockSZFactors where stock_code = %s')
-        sql_read_des_sh = ('select *  from tb_StockSHFactors where stock_code = %s')
+
+        for idx, row in stock_codes.iterrows():
+            stock_code = row['stock_code']
+            t0 = time.clock()
+            # Using factors to load different source columns
+            done, sql_read_src_sz, sql_read_src_sh = self.source_loading(factor, stock_code)
+            if not done: return
+
+            # Load Destination tables
+            sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
+            sql_read_des_sh = ('select id_tb, stock_code, quote_time from tb_StockSHFactors where stock_code = %s')
+
+            if market == 'sz':
+                print "Start to read source table"
+                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
+                # stock_codes = df_src_o['stock_code'].unique()
+                print "Start to read des table"
+                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
+            elif market == 'sh':
+                print "Start to read source table"
+                df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
+                # stock_codes = df_src_o['stock_code'].unique()
+                print "Start to read des table"
+                df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
+            else:
+                print 'No such market'
+                return
+
+            session.commit()
+            session.close()
+
+            error = []
+            error_list = []
+            count = 0
+            total_count = 0
+            parameters = []
+            print "Start to update"
+
+            # Gettign slices of stock_code after dedicated one
+
+
+            stock_ret = True
+
+            if stock_ret and market == 'sz':
+                count += 1
+                total_count += 1
+                stat, parameters, error = self.run_update(factor, stock_code, SZFactors, df_src, df_des, parameters)
+                print 'updated stock %s, task %s, updated %s, factor %s, time consumed %s' % (
+                stock_code, count, total_count, factor, (time.clock() - t0))
+            elif stock_ret and market == 'sh':
+                count += 1
+                total_count += 1
+                stat, parameters, error = self.run_update(factor, stock_code, SHFactors, df_src, df_des, parameters)
+                print 'updated stock %s, task %s, updated %s, factor %s , time consumned %s' % (
+                stock_code, count, total_count, factor, (time.clock() - t0))
+
+            if count == 100:
+                print "Execute updates"
+                self.concurrent_sql_execution(stat, parameters)
+                parameters = []
+                count = 0
+            error_list.append(error)
+
+        # session.execute(stat, parameters)
+        self.concurrent_sql_execution(stat, parameters)
+        self.write_errors(error_list)
+        return
+
+    def single_stock_update_direct_factors(self, stock_code, factor, market=None):
+
+        if market is None: market = 'sh'
+        if factor is None:
+            print "please specify a factor to update"
+            return
+
+        DBSession = sessionmaker(bind=self._engine)
+        session = DBSession()
+        meta = MetaData(self._engine)
+
+        # Delare Table
+        SZFactors = Table('tb_StockSZFactors', meta, autoload=True)
+        SHFactors = Table('tb_StockSHFactors', meta, autoload=True)
+
+        # Using factors to load different source columns
+        done, sql_read_src_sz, sql_read_src_sh = self.source_loading(factor, stock_code)
+        if not done: return
+
+        # Load Destination tables
+        sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
+        sql_read_des_sh = ('select id_tb, stock_code, quote_time from tb_StockSHFactors where stock_code = %s')
+
+        if market == 'sz':
+            print "Start to read source table"
+            df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
+            # stock_codes = df_src_o['stock_code'].unique()
+            print "Start to read des table"
+            df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
+        elif market == 'sh':
+            print "Start to read source table"
+            df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
+            # stock_codes = df_src_o['stock_code'].unique()
+            print "Start to read des table"
+            df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
+        else:
+            print 'No such market'
+            return
+
+        session.commit()
+        session.close()
 
         error = []
         error_list = []
         count = 0
-        sz_ret = session.query(exists().where(SZHisDaily.columns['stock_code'] == stock_code)).scalar()
-        if sz_ret:
-            df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
-            df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
-            if factor == 'sp':
-                error = self.update_sp_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
-            elif factor == 'ep':
-                error = self.update_ep_ttm(stock_code, 'sz', SZFactors, session, df_src, df_des)
-            print 'updated stock %s in ShenZhen, updated %s' % (stock_code, count)
-        elif session.query(exists().where(SHHisDaily.columns['stock_code'] == stock_code)).scalar():
-            df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
-            df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
-            if factor == 'sp':
-                error = self.update_sp_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
-            elif factor == 'ep':
-                error = self.update_ep_ttm(stock_code, 'sh', SHFactors, session, df_src, df_des)
-            print 'updated stock %s in ShangHai, updated %s' % (stock_code, count)
+        total_count = 0
+        parameters = []
+        print "Start to update"
+
+        # Gettign slices of stock_code after dedicated one
+
+        t0 = time.clock()
+        stock_ret = True
+
+        if stock_ret and market == 'sz':
+            count += 1
+            total_count += 1
+            stat, parameters, error = self.run_update(factor, stock_code, SZFactors, df_src, df_des, parameters)
+            print 'updated stock %s, task %s, updated %s, factor %s, time consumed %s' % (
+            stock_code, count, total_count, factor, (time.clock() - t0))
+        elif stock_ret and market == 'sh':
+            count += 1
+            total_count += 1
+            stat, parameters, error = self.run_update(factor, stock_code, SHFactors, df_src, df_des, parameters)
+            print 'updated stock %s, task %s, updated %s, factor %s , time consumned %s' % (
+            stock_code, count, total_count, factor, (time.clock() - t0))
+
         error_list.append(error)
-        session.commit()
-        session.close()
+
+        # session.execute(stat, parameters)
+        self.concurrent_sql_execution(stat, parameters)
+        self.write_errors(error_list)
+        return
 
     def update_ep_ttm(self, stock_code, market, des_table, session, df_src_o, df_des):
         error_list = []
@@ -617,39 +762,35 @@ class C_Update_Full_History_Daily_Data(object):
             where(and_(des_table.c.id_tb == bindparam('_id_tb')))
         df_src = df_src_o.loc[:, ('quote_time', 'total_asset')]
         df_src['TC'] = np.round(df_src['total_asset'], 5)
-        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
         df_src = df_src.loc[:, ('quote_time', 'TC')]
-        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
-        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
-        df_des.fillna(0, inplace=True)
+        df_des = self.fill_daily_for_sessonal_factors(df_src, df_des, 'TC')
 
         for idx, row in df_des.iterrows():
             parameters.append({'_TC': row.TC, '_id_tb': row.id_tb})
-        # print parameters
-        # session.execute(stat, parameters)
+
         error_list.append((stock_code))
         return stat, parameters, error_list
 
     def update_ln_tc(self, stock_code, des_table, df_src_o, df_des, parameters):
         error_list = []
 
-        # print des_table
+        #Statment to run
         stat = des_table.update(). \
             values(LN_TC=bindparam('_LN_TC')). \
             where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+
+        #Factor Value Calculation
         df_src = df_src_o.loc[:, ('quote_time', 'total_asset')]
         df_src = df_src_o.loc[df_src['total_asset'] > 0, :]
         df_src['LN_TC'] = np.round(np.log(df_src['total_asset']), 5)
-        # df_src.drop(['PS_TTM'], axis=1, inplace=True)
         df_src = df_src.loc[:, ('quote_time', 'LN_TC')]
-        # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
-        df_des = pd.merge(df_des, df_src, how='inner', on=['quote_time'])
-        df_des.fillna(0, inplace=True)
+        # Fill out missing data
+        df_des = self.fill_daily_for_sessonal_factors(df_src, df_des, 'LN_TC')
 
+        #Build parameters
         for idx, row in df_des.iterrows():
             parameters.append({'_LN_TC': row.LN_TC, '_id_tb': row.id_tb})
-        # print parameters
-        # session.execute(stat, parameters)
+
         error_list.append((stock_code))
         return stat, parameters, error_list
 
@@ -662,7 +803,7 @@ class C_Update_Full_History_Daily_Data(object):
             where(and_(des_table.c.id_tb == bindparam('_id_tb')))
         df_src = df_src_o.loc[:, ('quote_time', 'market_equity', 'total_equity')]
         df_src = df_src_o.loc[df_src['total_equity'] > 0, :]
-        df_src['LN_FC'] = np.round(df_src['market_equity'] / df_src['total_equity'], 5)
+        df_src['FC_MC'] = np.round(df_src['market_equity'] / df_src['total_equity'], 5)
         # df_src.drop(['PS_TTM'], axis=1, inplace=True)
         df_src = df_src.loc[:, ('quote_time', 'FC_MC')]
         # df_des = df_des.loc[:, ('id_tb', 'stock_code', 'quote_time')]
@@ -675,6 +816,34 @@ class C_Update_Full_History_Daily_Data(object):
         # session.execute(stat, parameters)
         error_list.append((stock_code))
         return stat, parameters, error_list
+
+    def fill_daily_for_sessonal_factors(self, df_src, df_des, factor):
+        '''
+        Fill out sessonal destination df missing daily values.
+        :param df_src:
+        :param df_des:
+        :return: merged df_des
+        '''
+        # t0 = time.clock()
+        src_length = df_src.count()[0]
+        df_des.set_index(['quote_time'], inplace=True)
+        print df_des
+        for idx, row in df_src.sort_values(by='quote_time', ascending=1).iterrows():
+            df_des.loc[df_des.index >= row['quote_time'], factor] = row[factor]
+
+        '''
+        for i in range(0,src_length+1):
+            if i < (src_length) and i> 0:
+                df_des.loc[(df_des.index < df_src.loc[i-1, 'quote_time']) & (
+                    df_des.index >= df_src.loc[i, 'quote_time']), factor] = df_src.loc[i, factor]
+            elif i==(src_length):
+                df_des.loc[(df_des.index < df_src.loc[src_length-1, 'quote_time']), factor] = df_src.loc[src_length-1, factor]
+            else:
+                df_des.loc[(df_des.index >= df_src.loc[i, 'quote_time']), factor] = df_src.loc[i, factor]
+        '''
+        df_des.fillna(0, inplace=True)
+        # print "Time useage of fill missing is %s" % (time.clock() - t0)
+        return df_des
 
     def multi_processors_update_industries(self):
         df_new_infor = self.load_industry_classes()
@@ -772,10 +941,17 @@ def main():
     # upd.multi_processors_update_direct_factors('mc', 'sz')
     # upd.multi_processors_update_direct_factors('fc', 'sz')
     # upd.multi_processors_update_direct_factors('fc', 'sh')
-    upd.multi_processors_update_direct_factors('fc_mc', 'sz')
-    upd.multi_processors_update_direct_factors('fc_mc', 'sh')
-    # upd.multi_processors_update_direct_factors('tc', 'sz')
+    # upd.multi_processors_update_direct_factors('ln_mc', 'sh')
+    # upd.multi_processors_update_direct_factors('ln_mc', 'sz')
+    # upd.multi_processors_update_direct_factors('ln_fc', 'sz')
+    # upd.multi_processors_update_direct_factors('ln_fc', 'sh')
+    # upd.multi_processors_update_direct_factors('fc_mc', 'sz')
+    # upd.multi_processors_update_direct_factors('fc_mc', 'sh')
+    #upd.multi_processors_update_direct_factors('tc', 'sz')
     #upd.multi_processors_update_direct_factors('tc', 'sh')
+    upd.multi_processors_update_direct_factors('ln_tc', 'sz')
+    # upd.single_stock_update_direct_factors('sz000554', 'ln_tc', 'sz')
+    #upd.multi_processors_update_direct_factors('ln_tc', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
 
