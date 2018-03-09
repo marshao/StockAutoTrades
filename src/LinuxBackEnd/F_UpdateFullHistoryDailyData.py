@@ -8,6 +8,7 @@ import sys
 sys.path.append('/home/marshao/DataMiningProjects/Project_StockAutoTrade_LinuxBackEnd/StockAutoTrades/src')
 
 import time, os
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
@@ -907,16 +908,27 @@ class C_Update_Full_History_Daily_Data(object):
         :param des_col:
         :return:
         '''
-        df_src['year'] = df_src['quote_time'].year
-        df_src['month'] = df_src['quote_time'].month
-        df_src[des_col] = df_src[
-            np.log(df_src[src_col] - df_src.loc[(df_src['year'] - 1) & (df_src['month']), src_col])]
-        print df_src
-        time.sleep(100)
+        sq_diff = []
+        df_src[des_col] = 0
+        i = 0
+        for idx, row in df_src.iterrows():
+            year = row['quote_time'].year
+            month = row['quote_time'].month
+            op_rev = row[src_col]
+            if i >= 4:
+                sq_diff.append([year, month, op_rev])
+                if (sq_diff[0][1] == sq_diff[4][1]) and ((sq_diff[0][0] - sq_diff[4][0]) == 1):
+                    df_src.loc[idx, des_col] = np.round((np.log(sq_diff[0][2]) - np.log(sq_diff[4][2])), 5)
+                else:
+                    break
+                sq_diff.pop(0)
+            else:
+                sq_diff.append([year, month, op_rev])
+            i += 1
         # replace infinite value
         df_src.loc[(df_src[des_col] == np.inf) | (df_src[des_col] == -np.inf), des_col] = -99.0
+        df_src.loc[df_src[des_col] == 0.000000, des_col] = -99.0
         df_src.fillna(-99.0, inplace=True)
-
         return df_src
 
     def fill_daily_for_sessonal_factors(self, df_src, df_des, factor):
@@ -1051,9 +1063,11 @@ def main():
     #upd.multi_processors_update_direct_factors('tc', 'sh')
     #upd.multi_processors_update_direct_factors('ln_tc', 'sz')
     #upd.multi_processors_update_direct_factors('ln_tc', 'sh')
-    #upd.single_stock_update_direct_factors('sz000001', 'opg_ttm', 'sz')
-    upd.multi_processors_update_direct_factors('opg_ttm', 'sz')
-    upd.multi_processors_update_direct_factors('opg_ttm', 'sh')
+    # upd.single_stock_update_direct_factors('sz000001', 'opg_sq', 'sz')
+    # upd.multi_processors_update_direct_factors('opg_ttm', 'sz')
+    # upd.multi_processors_update_direct_factors('opg_ttm', 'sh')
+    upd.multi_processors_update_direct_factors('opg_sq', 'sz')
+    upd.multi_processors_update_direct_factors('opg_sq', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
 
