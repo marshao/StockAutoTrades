@@ -247,7 +247,7 @@ class C_Update_Full_History_Daily_Data(object):
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sz%%"')
                 sql_read_src_sh = (
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sh%%"')
-            elif factor == 'opg_ttm':
+            elif factor == 'opg_ttm' or factor == 'opg_sq':
                 sql_read_src_sz = ('select stock_code, quote_time, op_revenue from tb_StockFinancialReports')
                 sql_read_src_sh = ('select stock_code, quote_time, op_revenue from tb_StockFinancialReports')
             else:
@@ -292,7 +292,7 @@ class C_Update_Full_History_Daily_Data(object):
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
                 sql_read_src_sh = (
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
-            elif factor == 'opg_ttm':
+            elif factor == 'opg_ttm' or factor == 'opg_sq':
                 sql_read_src_sz = (
                     'select stock_code, quote_time, op_revenue from tb_StockFinancialReports where stock_code = %s')
                 sql_read_src_sh = (
@@ -331,6 +331,8 @@ class C_Update_Full_History_Daily_Data(object):
             stat, parameters, error = self.update_fc_mc(stock_code, Market_Factors, df_src, df_des, parameters)
         elif factor == 'opg_ttm':
             stat, parameters, error = self.update_opg_ttm(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'opg_sq':
+            stat, parameters, error = self.update_opg_sq(stock_code, Market_Factors, df_src, df_des, parameters)
         else:
             print " Unkonwn factor in run_update"
         return stat, parameters, error
@@ -861,6 +863,22 @@ class C_Update_Full_History_Daily_Data(object):
         error_list.append((stock_code))
         return stat, parameters, error_list
 
+    def update_opg_sq(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+        stat = des_table.update(). \
+            values(OPG_SQ=bindparam('_OPG_SQ')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'op_revenue')]
+        df_src = self.cal_sq_growth(df_src, src_col='op_revenue', des_col='OPG_SQ')
+        df_des = self.fill_daily_for_sessonal_factors(df_src, df_des, 'OPG_SQ')
+        df_des.reset_index(inplace=True)
+        df_des = df_des.loc[:, ('id_tb', 'quote_time', 'OPG_SQ')]
+        for idx, row in df_des.iterrows():
+            parameters.append({'_OPG_SQ': row.OPG_SQ, '_id_tb': row.id_tb})
+
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
     def cal_ttm_growth(self, df_src, src_col, des_col):
         '''
         From src_col to calculated ttm growth to des col
@@ -880,6 +898,26 @@ class C_Update_Full_History_Daily_Data(object):
         df_src.fillna(-99.0, inplace=True)
 
         return  df_src
+
+    def cal_sq_growth(self, df_src, src_col, des_col):
+        '''
+        From src_col to calculated same quarter growth to des col
+        :param df_src:
+        :param src_col:
+        :param des_col:
+        :return:
+        '''
+        df_src['year'] = df_src['quote_time'].year
+        df_src['month'] = df_src['quote_time'].month
+        df_src[des_col] = df_src[
+            np.log(df_src[src_col] - df_src.loc[(df_src['year'] - 1) & (df_src['month']), src_col])]
+        print df_src
+        time.sleep(100)
+        # replace infinite value
+        df_src.loc[(df_src[des_col] == np.inf) | (df_src[des_col] == -np.inf), des_col] = -99.0
+        df_src.fillna(-99.0, inplace=True)
+
+        return df_src
 
     def fill_daily_for_sessonal_factors(self, df_src, df_des, factor):
         '''
