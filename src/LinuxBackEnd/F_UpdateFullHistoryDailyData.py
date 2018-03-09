@@ -247,6 +247,9 @@ class C_Update_Full_History_Daily_Data(object):
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sz%%"')
                 sql_read_src_sh = (
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code like "sh%%"')
+            elif factor == 'opg_ttm':
+                sql_read_src_sz = ('select stock_code, quote_time, op_revenue from tb_StockFinancialReports')
+                sql_read_src_sh = ('select stock_code, quote_time, op_revenue from tb_StockFinancialReports')
             else:
                 print "No such factors"
                 done = False
@@ -289,6 +292,11 @@ class C_Update_Full_History_Daily_Data(object):
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
                 sql_read_src_sh = (
                     'select stock_code, quote_time, total_asset from tb_StockMainFinancialIndicators where stock_code = %s')
+            elif factor == 'opg_ttm':
+                sql_read_src_sz = (
+                    'select stock_code, quote_time, op_revenue from tb_StockFinancialReports where stock_code = %s')
+                sql_read_src_sh = (
+                    'select stock_code, quote_time, op_revenue from tb_StockFinancialReports where stock_code = %s')
             else:
                 print "No such factors"
                 done = False
@@ -321,6 +329,8 @@ class C_Update_Full_History_Daily_Data(object):
             stat, parameters, error = self.update_ln_tc(stock_code, Market_Factors, df_src, df_des, parameters)
         elif factor == 'fc_mc':
             stat, parameters, error = self.update_fc_mc(stock_code, Market_Factors, df_src, df_des, parameters)
+        elif factor == 'opg_ttm':
+            stat, parameters, error = self.update_opg_ttm(stock_code, Market_Factors, df_src, df_des, parameters)
         else:
             print " Unkonwn factor in run_update"
         return stat, parameters, error
@@ -395,7 +405,10 @@ class C_Update_Full_History_Daily_Data(object):
                 total_count += 1
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
                 df_des = df_des_o.loc[df_des_o['stock_code'] == stock_code, :]
-                stat, parameters, error = self.run_update(factor, stock_code, SZFactors, df_src, df_des, parameters)
+                if not df_des.empty and not df_src.empty:
+                    stat, parameters, error = self.run_update(factor, stock_code, SZFactors, df_src, df_des, parameters)
+                else:
+                    print "Stock %s is empty in either src or des table"%stock_code
                 print 'updated stock %s, task %s, updated %s, factor %s, time consumed %s' % (
                 stock_code, count, total_count, factor, (time.clock() - t0))
             elif stock_ret and market == 'sh':
@@ -403,8 +416,10 @@ class C_Update_Full_History_Daily_Data(object):
                 total_count += 1
                 df_src = df_src_o.loc[df_src_o['stock_code'] == stock_code, :]
                 df_des = df_des_o.loc[df_des_o['stock_code'] == stock_code, :]
-
-                stat, parameters, error = self.run_update(factor, stock_code, SHFactors, df_src, df_des, parameters)
+                if not df_des.empty and not df_src.empty:
+                    stat, parameters, error = self.run_update(factor, stock_code, SHFactors, df_src, df_des, parameters)
+                else:
+                    print "Stock %s is empty in either src or des table"%stock_code
                 print 'updated stock %s, task %s, updated %s, factor %s , time consumned %s' % (
                 stock_code, count, total_count, factor, (time.clock() - t0))
             error_list.append(error)
@@ -412,18 +427,18 @@ class C_Update_Full_History_Daily_Data(object):
 
             if count == 100:
                 print "Execute updates"
-                self.concurrent_sql_execution(stat, parameters)
+                self.multi_processors_sql_execution(stat, parameters)
                 parameters = []
                 count = 0
 
         # session.execute(stat, parameters)
-        self.concurrent_sql_execution(stat, parameters)
+        if len(parameters) != 0:
+            self.multi_processors_sql_execution(stat, parameters)
         self.write_errors(error_list)
         return
 
     def single_stock_bulk_update_direct_factors(self, stock_codes, factor, market=None):
 
-        if market is None: market = 'sh'
         if factor is None:
             print "please specify a factor to update"
             return
@@ -436,28 +451,44 @@ class C_Update_Full_History_Daily_Data(object):
         SZFactors = Table('tb_StockSZFactors', meta, autoload=True)
         SHFactors = Table('tb_StockSHFactors', meta, autoload=True)
 
+        error = []
+        error_list = []
+        count = 0
+        stat = []
+        total_count = 0
+        parameters = []
+
         for idx, row in stock_codes.iterrows():
             stock_code = row['stock_code']
+
+            if (market is not None) and (stock_code[0:2] == market):
+                # Using factors to load different source columns
+                done, sql_read_src_sz, sql_read_src_sh = self.source_loading(factor, stock_code)
+                if not done:
+                    return
+            if (market is not None) and (stock_code[0:2] != market):
+                continue
+            elif market is None:
+                market = stock_code[0:2]
+
+
             t0 = time.clock()
-            # Using factors to load different source columns
-            done, sql_read_src_sz, sql_read_src_sh = self.source_loading(factor, stock_code)
-            if not done: return
 
             # Load Destination tables
             sql_read_des_sz = ('select id_tb, stock_code, quote_time from tb_StockSZFactors where stock_code = %s')
             sql_read_des_sh = ('select id_tb, stock_code, quote_time from tb_StockSHFactors where stock_code = %s')
 
             if market == 'sz':
-                print "Start to read source table"
+                #print "Start to read SZ source table"
                 df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sz, params=[stock_code])
                 # stock_codes = df_src_o['stock_code'].unique()
-                print "Start to read des table"
+                #print "Start to read SZ des table"
                 df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sz, params=[stock_code])
             elif market == 'sh':
-                print "Start to read source table"
+                #print "Start to read SH source table"
                 df_src = pd.read_sql(con=self._engine, sql=sql_read_src_sh, params=[stock_code])
                 # stock_codes = df_src_o['stock_code'].unique()
-                print "Start to read des table"
+                #print "Start to read SH des table"
                 df_des = pd.read_sql(con=self._engine, sql=sql_read_des_sh, params=[stock_code])
             else:
                 print 'No such market'
@@ -466,17 +497,10 @@ class C_Update_Full_History_Daily_Data(object):
             session.commit()
             session.close()
 
-            error = []
-            error_list = []
-            count = 0
-            total_count = 0
-            parameters = []
-            print "Start to update"
-
-            # Gettign slices of stock_code after dedicated one
-
-
             stock_ret = True
+            if df_des.empty or df_src.empty:
+                print "Stock %s is empty either in source or destination tables."%stock_code
+                stock_ret = False
 
             if stock_ret and market == 'sz':
                 count += 1
@@ -491,15 +515,16 @@ class C_Update_Full_History_Daily_Data(object):
                 print 'updated stock %s, task %s, updated %s, factor %s , time consumned %s' % (
                 stock_code, count, total_count, factor, (time.clock() - t0))
 
-            if count == 100:
+            if count == 200:
                 print "Execute updates"
-                self.concurrent_sql_execution(stat, parameters)
+                self.multi_processors_sql_execution(stat, parameters)
                 parameters = []
                 count = 0
             error_list.append(error)
 
-        # session.execute(stat, parameters)
-        self.concurrent_sql_execution(stat, parameters)
+        if len(parameters) != 0:
+            self.multi_processors_sql_execution(stat, parameters)
+
         self.write_errors(error_list)
         return
 
@@ -545,17 +570,18 @@ class C_Update_Full_History_Daily_Data(object):
         session.commit()
         session.close()
 
+        stock_ret = True
         error = []
         error_list = []
         count = 0
         total_count = 0
         parameters = []
+        t0 = time.clock()
         print "Start to update"
 
-        # Gettign slices of stock_code after dedicated one
-
-        t0 = time.clock()
-        stock_ret = True
+        if df_des.empty or df_src.empty:
+            print "Stock %s is empty either in source or destination tables." % stock_code
+            stock_ret = False
 
         if stock_ret and market == 'sz':
             count += 1
@@ -573,7 +599,9 @@ class C_Update_Full_History_Daily_Data(object):
         error_list.append(error)
 
         # session.execute(stat, parameters)
-        self.concurrent_sql_execution(stat, parameters)
+        if len(parameters) != 0:
+            self.multi_processors_sql_execution(stat, parameters)
+
         self.write_errors(error_list)
         return
 
@@ -817,6 +845,42 @@ class C_Update_Full_History_Daily_Data(object):
         error_list.append((stock_code))
         return stat, parameters, error_list
 
+    def update_opg_ttm(self, stock_code, des_table, df_src_o, df_des, parameters):
+        error_list = []
+        stat = des_table.update(). \
+            values(OPG_TTM=bindparam('_OPG_TTM')). \
+            where(and_(des_table.c.id_tb == bindparam('_id_tb')))
+        df_src = df_src_o.loc[:, ('quote_time', 'op_revenue')]
+        df_src = self.cal_ttm_growth(df_src, src_col='op_revenue', des_col='OPG_TTM')
+        df_des = self.fill_daily_for_sessonal_factors(df_src, df_des, 'OPG_TTM')
+        df_des.reset_index(inplace=True)
+        df_des = df_des.loc[:, ('id_tb', 'quote_time', 'OPG_TTM')]
+        for idx, row in df_des.iterrows():
+            parameters.append({'_OPG_TTM': row.OPG_TTM, '_id_tb': row.id_tb})
+
+        error_list.append((stock_code))
+        return stat, parameters, error_list
+
+    def cal_ttm_growth(self, df_src, src_col, des_col):
+        '''
+        From src_col to calculated ttm growth to des col
+        :param df_src:
+        :param src_col:
+        :param des_col:
+        :return:
+        '''
+        df_src.sort_values(by='quote_time', ascending=1, inplace=True)
+        # Calculating TTM with rolling
+        df_src['ttm'] = df_src[src_col].rolling(4).sum()
+        #Calculating log growth
+        df_src[des_col] = np.round(np.log(df_src.ttm).diff(), 5)
+        df_src.sort_values(by='quote_time', ascending=0, inplace=True)
+        # replace infinite value
+        df_src.loc[(df_src[des_col] == np.inf) | (df_src[des_col] == -np.inf), des_col] = -99.0
+        df_src.fillna(-99.0, inplace=True)
+
+        return  df_src
+
     def fill_daily_for_sessonal_factors(self, df_src, df_des, factor):
         '''
         Fill out sessonal destination df missing daily values.
@@ -825,9 +889,8 @@ class C_Update_Full_History_Daily_Data(object):
         :return: merged df_des
         '''
         # t0 = time.clock()
-        src_length = df_src.count()[0]
+        #src_length = df_src.count()[0]
         df_des.set_index(['quote_time'], inplace=True)
-        print df_des
         for idx, row in df_src.sort_values(by='quote_time', ascending=1).iterrows():
             df_des.loc[df_des.index >= row['quote_time'], factor] = row[factor]
 
@@ -871,7 +934,6 @@ class C_Update_Full_History_Daily_Data(object):
         self.processes_pool(tasks=processes, processors=num_processor)
 
     def multi_processors_update_direct_factors(self, factor=None, market=None):
-        if market is None: market = 'sh'
 
         df_stock_codes = self.load_stockcodes()
         infor_length = df_stock_codes.count()[0]
@@ -888,7 +950,7 @@ class C_Update_Full_History_Daily_Data(object):
         for i in range(num_processor + 1):
             if i != num_processor:
                 print "i:%s,  index_beg %s , index_end %s " % (i, index_beg, index_end)
-                p = mp.Process(target=self.bulk_update_direct_factors,
+                p = mp.Process(target=self.single_stock_bulk_update_direct_factors,
                                args=(df_stock_codes[index_beg:index_end], factor, market))
                 processes.append(p)
 
@@ -897,7 +959,7 @@ class C_Update_Full_History_Daily_Data(object):
 
         self.processes_pool(tasks=processes, processors=num_processor)
 
-    def concurrent_sql_execution(self, stat, parameters):
+    def multi_processors_sql_execution(self, stat, parameters):
         num_processor = 4
         infor_length = len(parameters)
         index_beg = 0
@@ -949,9 +1011,11 @@ def main():
     # upd.multi_processors_update_direct_factors('fc_mc', 'sh')
     #upd.multi_processors_update_direct_factors('tc', 'sz')
     #upd.multi_processors_update_direct_factors('tc', 'sh')
-    upd.multi_processors_update_direct_factors('ln_tc', 'sz')
-    # upd.single_stock_update_direct_factors('sz000554', 'ln_tc', 'sz')
+    #upd.multi_processors_update_direct_factors('ln_tc', 'sz')
     #upd.multi_processors_update_direct_factors('ln_tc', 'sh')
+    #upd.single_stock_update_direct_factors('sz000001', 'opg_ttm', 'sz')
+    upd.multi_processors_update_direct_factors('opg_ttm', 'sz')
+    upd.multi_processors_update_direct_factors('opg_ttm', 'sh')
     #upd.multi_processors_update_direct_factors('ep')
     #upd.update_single_stock_direct_factors('sh600835', 'sp')
 
