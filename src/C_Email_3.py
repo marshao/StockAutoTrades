@@ -15,7 +15,7 @@ class C_Email(object):
 
     def __init__(self):
         self._sender = 'meng.qiang01@mail.com'
-        self._receiver = ['mars.guan@gmail.com']
+        self._receiver = ['mars.guan@foxmail.com']
         # self._username = '1814241918'
         self._username = 'meng.qiang01@mail.com'
         # self._pwd = 'New_2014'
@@ -31,8 +31,8 @@ class C_Email(object):
 
         #server = smtplib.SMTP_SSL('smtp.gmail.com:465')
         server = smtplib.SMTP('smtp.mail.com:587')
-        #server.ehlo()
-        #server.starttls()
+        server.ehlo()
+        server.starttls()
 
         server.login(self._username, self._pwd)
         server.sendmail(self._sender, self._receiver, message)
